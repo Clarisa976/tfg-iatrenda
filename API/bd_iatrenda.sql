@@ -1,0 +1,35 @@
+CREATE DATABASE IF NOT EXISTS bd_iatrenda;
+USE bd_iatrenda;
+
+-- Roles
+CREATE TABLE IF NOT EXISTS roles (
+    id_rol INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_rol VARCHAR(50) NOT NULL
+);
+
+-- Usuarios (admin y profesionales)
+CREATE TABLE IF NOT EXISTS usuarios (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    id_rol INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_usuarios_rol
+      FOREIGN KEY (id_rol) REFERENCES roles(id_rol)
+      ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Pacientes
+CREATE TABLE IF NOT EXISTS pacientes (
+    id_paciente INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    fecha_nacimiento DATE,
+    email VARCHAR(100),
+    telefono VARCHAR(20),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
