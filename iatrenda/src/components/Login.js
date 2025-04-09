@@ -20,7 +20,6 @@ function Login() {
       if (data.ok) {
         setMensaje("Bienvenido, " + data.usuario.nombre);
       } else {
-        // data.ok = false
         setMensaje(data.mensaje || data.error || "Error de credenciales");
       }
     } catch (error) {
