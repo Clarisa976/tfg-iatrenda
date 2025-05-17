@@ -28,7 +28,8 @@ body {
 }
 
 .logo {
-  height: 40px;
+  width: 120px;
+  height: auto;
   /* Mantiene proporción */
 }
 
