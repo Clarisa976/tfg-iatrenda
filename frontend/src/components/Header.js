@@ -1,95 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useRef, useEffect } from 'react';
 import { Menu, X, User } from 'lucide-react';
 import '../styles.css';
 
-
-export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [role, setRole] = useState(null);
+const Header = () => {
+  const [navOpen, setNavOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
+  const userRef = useRef(null);
 
   useEffect(() => {
-    axios.get('/api/session.php')
-      .then(res => setRole(res.data.role))
-      .catch(() => setRole(null));
-  }, []);
+    const handleClickOutside = e => {
+      if (userOpen && userRef.current && !userRef.current.contains(e.target) && !e.target.closest('.user-icon')) {
+        setUserOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userOpen]);
 
-  const toggleMenu = () => {
-    setMenuOpen(open => !open);
-    if (userMenuOpen) setUserMenuOpen(false);
-  };
-  const toggleUser = () => {
-    setUserMenuOpen(open => !open);
-    if (menuOpen) setMenuOpen(false);
-  };
+  const userRole = null; // 'paciente'|'profesional'|'administrador'|null
+  const userMenuItems = userRole === 'paciente'
+    ? ['Mi perfil','Tareas para casa','Historial clínico','Mis citas','Cerrar sesión']
+    : userRole === 'profesional'
+      ? ['Mi perfil','Pacientes','Agenda','Cerrar sesión']
+      : userRole === 'administrador'
+        ? ['Usuarios','Informes','Agenda global','Cerrar sesión']
+        : [];
 
   return (
-    <header className="site-header">
-      <div className="header-content">
-        {/* Logo izquierda */}
-        <a href="/">
-          <img
-            src="https://iatrenda-petaka.s3.eu-west-3.amazonaws.com/images/logo_petaka.webp"
-            alt="Petaka logo"
-            className="logo"
-          />
-        </a>
-
-        {/* Iconos derecha */}
-        <div className="right-icons">
-          <button className="icon-btn" onClick={toggleMenu}>
-            {menuOpen ? <X /> : <Menu />}
+    <header className="header">
+      <div className="top-bar">
+        <div className="logo">
+          <a href="/"><img src="https://iatrenda-petaka.s3.eu-west-3.amazonaws.com/images/logo_petaka.webp" alt="Logo" /></a>
+        </div>
+        <div className="icons">
+          <button
+            className="icon menu-icon"
+            onClick={() => setNavOpen(!navOpen)}
+          >
+            {navOpen ? <X size={24}/> : <Menu size={24}/>}          
           </button>
-          <button className="icon-btn" onClick={toggleUser}>
-            <User />
+          <button
+            className={`icon user-icon ${userOpen ? 'active' : ''}`}
+            onClick={() => setUserOpen(!userOpen)}
+          >
+            <User size={24}/>
           </button>
         </div>
-
-        {/* Menú hamburguesa */}
-        {menuOpen && (
-          <nav className="mobile-nav">
-            <a href="/" className="nav-link">Inicio</a>
-            <a href="/quienes-somos" className="nav-link">Quiénes somos</a>
-            <a href="/servicios" className="nav-link">Servicios</a>
-            <a href="/reservar" className="btn-reserve">Reserve su cita</a>
-          </nav>
-        )}
-
-        {/* Menú usuario */}
-        {userMenuOpen && (
-          <nav className="user-nav">
-            {role === 'paciente' && (
-              <>
-                <a href="/perfil" className="nav-link">Mi perfil</a>
-                <a href="/tareas" className="nav-link">Tareas para casa</a>
-                <a href="/historial" className="nav-link">Historial clínico</a>
-                <a href="/citas" className="nav-link">Mis citas</a>
-                <a href="/logout" className="nav-link">Cerrar sesión</a>
-              </>
-            )}
-            {role === 'profesional' && (
-              <>
-                <a href="/perfil" className="nav-link">Mi perfil</a>
-                <a href="/pacientes" className="nav-link">Pacientes</a>
-                <a href="/agenda" className="nav-link">Agenda</a>
-                <a href="/logout" className="nav-link">Cerrar sesión</a>
-              </>
-            )}
-            {role === 'administrador' && (
-              <>
-                <a href="/usuarios" className="nav-link">Usuarios</a>
-                <a href="/informes" className="nav-link">Informes</a>
-                <a href="/agenda-global" className="nav-link">Agenda global</a>
-                <a href="/logout" className="nav-link">Cerrar sesión</a>
-              </>
-            )}
-            {role === null && (
-              <a href="/acceso" className="nav-link">Acceso</a>
-            )}
-          </nav>
-        )}
       </div>
+
+      <div className={`dropdown-menu ${navOpen ? 'open' : ''}`}>  
+        <nav className="nav-links">
+          <a href="/">Inicio</a>
+          <a href="/quienes">Quienes somos</a>
+          <a href="/servicios">Servicios</a>
+          <a href="/reserva" className="btn-reserve">Reserve su cita</a>
+        </nav>
+      </div>
+
+      {userOpen && (
+        <>
+          <div ref={userRef} className="user-dropdown">
+            {userRole
+              ? userMenuItems.map((item,i) => <a key={i} href="#">{item}</a>)
+              : <a href="/login">Acceso</a>
+            }
+          </div>
+
+          <div className="overlay show" onClick={()=> setUserOpen(false)}/>
+          <div className="sidebar show">
+            <button className="close-btn" onClick={() => setUserOpen(false)}><X size={20}/></button>
+            <div className="sidebar-links">
+              {userRole
+                ? userMenuItems.map((item,i) => <a key={i} href="#">{item}</a>)
+                : <a href="/login">Acceso</a>
+              }
+            </div>
+          </div>
+        </>
+      )}
     </header>
   );
 }
+
+export default Header;

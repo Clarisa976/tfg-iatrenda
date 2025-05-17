@@ -1,67 +1,58 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type, Accept, Origin, Authorization");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\Factory\AppFactory;
 
-require_once "src/funciones_CTES_servicios.php";
-require __DIR__ . '/Slim/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
-$app = new \Slim\App;
+// cargar env
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
-//Login sin tokens
-$app->post('/login', function($request) {
-    $email    = $request->getParam("email");    // Recogemos "email"
-    $password = $request->getParam("password"); // Recogemos "password"
+// configuraciones CORS
+$app = AppFactory::create();
+$app->addRoutingMiddleware();
+$errorMiddleware = $app->addErrorMiddleware(true, true, true);
 
-    $respuesta = loginEmailPassword($email, $password);
-    echo json_encode($respuesta);
+$app->add(function (Request $req, RequestHandlerInterface $handler) {
+    $response = $handler->handle($req);
+    return $response
+        ->withHeader('Access-Control-Allow-Origin', '*')
+        ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 });
 
+require __DIR__ . '/src/funciones_CTES_servicios.php';
 
-
-//GET /pacientes
-$app->get('/pacientes', function () {
-    $resultado = obtener_pacientes();
-    echo json_encode($resultado);
+// Login
+$app->post('/login', function (Request $request, Response $response) {
+    $params = (array)$request->getParsedBody();
+    $res = loginEmailPassword($params['email'] ?? '', $params['password'] ?? '');
+    $response->getBody()->write(json_encode($res));
+    return $response->withHeader('Content-Type','application/json');
 });
 
-// GET /pacientes/{id}
-$app->get('/pacientes/{id}', function ($request) {
-    $id_paciente = $request->getAttribute("id");
-    $resultado = obtener_paciente_por_id($id_paciente);
-    echo json_encode($resultado);
+// Pacientes
+$app->get('/pacientes', function (Request $req, Response $res) {
+    $out = obtener_pacientes();
+    $res->getBody()->write(json_encode($out));
+    return $res->withHeader('Content-Type','application/json');
 });
-
-//POST /crearPacientes
-$app->post('/crearPacientes', function ($request) {
-    // Recogemos los parámetros que llegan por POST
-    $nombre           = $request->getParam("nombre");
-    $apellidos        = $request->getParam("apellidos");
-    $fecha_nacimiento = $request->getParam("fecha_nacimiento");
-    $email            = $request->getParam("email");
-    $telefono         = $request->getParam("telefono");
-
-    $datos_paciente = [
-        "nombre"            => $nombre ?? "",
-        "apellidos"         => $apellidos ?? "",
-        "fecha_nacimiento"  => $fecha_nacimiento ?? null,
-        "email"             => $email ?? "",
-        "telefono"          => $telefono ?? ""
-    ];
-
-    $resultado = crear_paciente($datos_paciente);
-    echo json_encode($resultado);
+$app->get('/pacientes/{id}', function (Request $req, Response $res, array $args) {
+    $out = obtener_paciente_por_id($args['id']);
+    $res->getBody()->write(json_encode($out));
+    return $res->withHeader('Content-Type','application/json');
 });
-
-
-//DELETE /pacientes/{id}
-$app->delete('/pacientes/{id}', function ($request) {
-    $id_paciente = $request->getAttribute("id");
-
-    $resultado = borrar_paciente($id_paciente);
-    echo json_encode($resultado);
+$app->post('/crearPacientes', function (Request $req, Response $res) {
+    $data = (array)$req->getParsedBody();
+    $out = crear_paciente($data);
+    $res->getBody()->write(json_encode($out));
+    return $res->withHeader('Content-Type','application/json');
 });
-
+$app->delete('/pacientes/{id}', function (Request $req, Response $res, array $args) {
+    $out = borrar_paciente($args['id']);
+    $res->getBody()->write(json_encode($out));
+    return $res->withHeader('Content-Type','application/json');
+});
 
 $app->run();
-?>

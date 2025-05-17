@@ -1,202 +1,63 @@
 <?php
+// cargamos env
+$host = getenv('DB_HOST');
+$db   = getenv('DB_NAME');
+$user = getenv('DB_USER');
+$pass = getenv('DB_PASS');
 
-define("SERVIDOR_BD", "localhost");
-define("USUARIO_BD", "jose");
-define("CLAVE_BD", "josefa");
-define("NOMBRE_BD", "bd_iatrenda");
-
-
-// Login con email y password
-function loginEmailPassword($email, $password)
-{
+function conectar() {
+    global $host, $db, $user, $pass;
     try {
-        $conexion = new PDO(
-            "mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD,
-            USUARIO_BD,
-            CLAVE_BD,
-            array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'")
-        );
-    }  catch (PDOException $e) {
-        $respuesta["ok"] = false;
-        $respuesta["error"] = "No se pudo conectar a la BD: " . $e->getMessage();
-        return $respuesta;
-    }
-
-    try {
-        $sql = "SELECT * FROM usuarios WHERE email = ? AND password = MD5(?)";
-        $sentencia = $conexion->prepare($sql);
-        $sentencia->execute([$email, $password]);
-    } catch (PDOException $e) {
-        $respuesta["error"] = "Error al consultar la BD: " . $e->getMessage();
-        return $respuesta;
-    }
-
-    if ($sentencia->rowCount() > 0) {
-        $usuario = $sentencia->fetch(PDO::FETCH_ASSOC);
-        $respuesta["ok"] = true;
-        $respuesta["usuario"] = [
-            "id_usuario" => $usuario["id_usuario"],
-            "nombre"     => $usuario["nombre"],
-            "email"      => $usuario["email"]
-            // etc
-        ];
-    } else {
-        $respuesta["ok"] = false;
-        $respuesta["mensaje"] = "Email o password incorrectos";
-    }
-
-    return $respuesta;
-}
-
-
-
-// Listar de todos los pacientes
-function obtener_pacientes() {
-
-    try {
-        $conexion = new PDO(
-            "mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD,
-            USUARIO_BD,
-            CLAVE_BD,
-            array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'")
-        );
-    } catch (PDOException $e) {
-        $respuesta["error"] = "No he podido conectarme a la BD: " . $e->getMessage();
-        return $respuesta;
-    }
-
-    try {
-        $consulta = "SELECT * FROM pacientes ORDER BY id_paciente DESC";
-        $sentencia = $conexion->prepare($consulta);
-        $sentencia->execute();
-    } catch (PDOException $e) {
-        $sentencia = null;
-        $conexion = null;
-        $respuesta["error"] = "No he podido realizar la consulta: " . $e->getMessage();
-        return $respuesta;
-    }
-
-    $respuesta["pacientes"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
-
-    $sentencia = null;
-    $conexion = null;
-
-    return $respuesta;
-}
-//Listar un paciente por su ID
-function obtener_paciente_por_id($id) {
-    
-    try {
-        $conexion = new PDO(
-            "mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD,
-            USUARIO_BD,
-            CLAVE_BD,
-            [PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"]
-        );
-        $conexion->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    } catch (PDOException $e) {
-        $respuesta["error"] = "No he podido conectarme a la BD: " . $e->getMessage();
-        return $respuesta;
-    }
-
-    try {
-        $sql = "SELECT * FROM pacientes WHERE id_paciente = ?";
-        $sentencia = $conexion->prepare($sql);
-        $sentencia->execute([$id]);
-    } catch (PDOException $e) {
-        $respuesta["error"] = "Error al consultar la BD: " . $e->getMessage();
-        return $respuesta;
-    }
-
-    if ($sentencia->rowCount() > 0) {
-        $respuesta["paciente"] = $sentencia->fetch(PDO::FETCH_ASSOC);
-    } else {
-        $respuesta["mensaje"] = "No se encontró un paciente con ese ID.";
-    }
-
-    $sentencia = null;
-    $conexion = null;
-    return $respuesta;
-}
-
-//Función para crear un paciente nuevo
-function crear_paciente($datos_paciente) {
-
-    // Conectamos a la BD
-    try {
-        $conexion = new PDO(
-            "mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD,
-            USUARIO_BD,
-            CLAVE_BD,
-            array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'")
-        );
-    } catch (PDOException $e) {
-        $respuesta["error"] = "Imposible conectar: " . $e->getMessage();
-        return $respuesta;
-    }
-
-
-    // Insertar el paciente
-    try {
-        $consulta = "INSERT INTO pacientes (nombre, apellidos, fecha_nacimiento, email, telefono)
-                     VALUES (?, ?, ?, ?, ?)";
-        $sentencia = $conexion->prepare($consulta);
-        $sentencia->execute([
-            $datos_paciente["nombre"],
-            $datos_paciente["apellidos"],
-            $datos_paciente["fecha_nacimiento"],
-            $datos_paciente["email"],
-            $datos_paciente["telefono"]
+        return new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ]);
-
-        // Devolvemos mensaje 
-        $respuesta["mensaje"] = "Paciente insertado correctamente en la BD";
-        $respuesta["id_paciente"] = $conexion->lastInsertId();
     } catch (PDOException $e) {
-        $respuesta["error"] = "Imposible realizar el INSERT: " . $e->getMessage();
-        return $respuesta;
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+        exit;
     }
-
-    // Cerrar
-    $sentencia = null;
-    $conexion = null;
-    return $respuesta;
 }
 
-// Función para borrar un paciente por su ID
+function loginEmailPassword($email, $password) {
+    $pdo = conectar();
+    $stmt = $pdo->prepare('SELECT * FROM persona p JOIN persona_rol pr ON p.id_persona=pr.id_persona JOIN rol r ON pr.id_rol=r.id_rol WHERE p.email=? AND p.password=MD5(?) AND pr.activo=1');
+    $stmt->execute([$email, $password
+]);
+    if ($u=$stmt->fetch(PDO::FETCH_ASSOC)) {
+        return ['ok'=>true,'usuario'=>[
+            'id'=>$u['id_persona'],'tipo'=>$u['nombre']
+        ]];
+    }
+    return ['ok'=>false,'mensaje'=>'Email o clave incorrectos'];
+}
+
+function obtener_pacientes() {
+    $pdo = conectar();
+    $stmt = $pdo->query('SELECT * FROM persona p JOIN paciente pa ON p.id_persona=pa.id_persona_paciente');
+    return ['pacientes'=>$stmt->fetchAll(PDO::FETCH_ASSOC)];
+}
+
+function obtener_paciente_por_id($id) {
+    $pdo = conectar();
+    $stmt = $pdo->prepare('SELECT * FROM persona p JOIN paciente pa ON p.id_persona=pa.id_persona_paciente WHERE p.id_persona=?');
+    $stmt->execute([$id
+]);
+    return ['paciente'=>$stmt->fetch(PDO::FETCH_ASSOC)];
+}
+
+function crear_paciente($d) {
+    $pdo = conectar();
+    $stmt = $pdo->prepare('INSERT INTO persona (nombre, apellido1, apellido2, email) VALUES (?,?,?,?)');
+    $stmt->execute([$d['nombre'], $d['apellidos'], '', $d['email']]);
+    $id = $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO paciente (id_persona_paciente) VALUES (?)')->execute([$id
+]);
+    return ['ok'=>true,'id_paciente'=>$id];
+}
+
 function borrar_paciente($id) {
-    // Conectar
-    try {
-        $conexion = new PDO(
-            "mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD,
-            USUARIO_BD,
-            CLAVE_BD,
-            array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'")
-        );
-    } catch (PDOException $e) {
-        $respuesta["error"] = "No he podido conectarme a la BD: " . $e->getMessage();
-        return $respuesta;
-    }
-
-    // Borrar
-    try {
-        $consulta = "DELETE FROM pacientes WHERE id_paciente = ?";
-        $sentencia = $conexion->prepare($consulta);
-        $sentencia->execute([$id]);
-
-        // Si rowCount() > 0, se borró un registro
-        if ($sentencia->rowCount() > 0) {
-            $respuesta["mensaje"] = "Paciente borrado correctamente.";
-        } else {
-            $respuesta["mensaje"] = "No había ningún paciente con ese ID.";
-        }
-    } catch (PDOException $e) {
-        $respuesta["error"] = "No he podido realizar la consulta: " . $e->getMessage();
-    }
-
-    // Cerrar
-    $sentencia = null;
-    $conexion = null;
-    return $respuesta;
+    $pdo = conectar();
+    $pdo->prepare('DELETE FROM paciente WHERE id_persona_paciente=?')->execute([$id
+]);
+    return ['ok'=>true];
 }
-?>

@@ -5,9 +5,8 @@ function App() {
   return (
     <>
       <Header />
-      {/* resto de la página */}
+      <main>{/* contenido */}</main>
     </>
   );
 }
-
 export default App;
