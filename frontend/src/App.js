@@ -3,6 +3,8 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import QuienesSomos from './components/QuienesSomos';
 import Servicios from './components/Servicios';
+import Resenas from './components/Resenas';
+import Footer from './components/Footer';
 import './styles.css';
 
 function App() {
@@ -12,6 +14,8 @@ function App() {
       <Hero />
       <QuienesSomos />
       <Servicios />
+      <Resenas />
+      <Footer />
     </>
   );
 }
