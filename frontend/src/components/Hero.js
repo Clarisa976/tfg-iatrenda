@@ -13,7 +13,7 @@ const Hero = () => (
       <h1 className="hero__title hero__title--green">Petaka</h1>
       <h2 className="hero__title hero__title--blue">Clínica logopédica</h2>
       <p className="hero__subtitle">Mejoramos tu comunicación</p>
-      <a href="/reserva" className="hero__button">Reserva tu cita</a>
+      <a href="/reserva" className="btn-reserva">Reserve su cita</a>
     </div>
   </section>
 );

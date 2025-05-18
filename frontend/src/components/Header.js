@@ -51,9 +51,9 @@ const Header = () => {
       <div className={`dropdown-menu ${navOpen ? 'open' : ''}`}>  
         <nav className="nav-links">
           <a href="/">Inicio</a>
-          <a href="/quienes">Quienes somos</a>
+          <a href="/quienes">Quiénes somos</a>
           <a href="/servicios">Servicios</a>
-          <a href="/reserva" className="btn-reserve">Reserve su cita</a>
+          <a href="/reservar" className="btn-reserva">Reserve su cita</a>
         </nav>
       </div>
 
