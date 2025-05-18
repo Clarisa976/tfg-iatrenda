@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Menu, X, User } from 'lucide-react';
 import '../styles.css';
 
+    const logoImg = process.env.REACT_APP_LOGO_IMG;
 const Header = () => {
   const [navOpen, setNavOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
@@ -30,7 +31,7 @@ const Header = () => {
     <header className="header">
       <div className="top-bar">
         <div className="logo">
-          <a href="/"><img src="https://iatrenda-petaka.s3.eu-west-3.amazonaws.com/images/logo_petaka.webp" alt="Logo" /></a>
+          <a href="/"><img src={logoImg} alt="Logo" /></a>
         </div>
         <div className="icons">
           <button
@@ -51,8 +52,8 @@ const Header = () => {
       <div className={`dropdown-menu ${navOpen ? 'open' : ''}`}>  
         <nav className="nav-links">
           <a href="/">Inicio</a>
-          <a href="/quienes">Quiénes somos</a>
-          <a href="/servicios">Servicios</a>
+          <a href="/#about">Quiénes somos</a>
+          <a href="/#servicios">Servicios</a>
           <a href="/reservar" className="btn-reserva">Reserve su cita</a>
         </nav>
       </div>
