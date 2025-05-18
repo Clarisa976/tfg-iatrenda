@@ -16,11 +16,17 @@
 body {
   font-family: 'Inter', sans-serif;
 }
+a {
+  cursor: pointer;
+}
 
 .header {
   background: #fff;
-  position: relative;
+  position: sticky; 
+  top: 0;
   z-index: 1000;
+  padding-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .top-bar {
@@ -573,6 +579,92 @@ body {
 
 /* Fin de estilos para el Footer */
 
+/* Scroll para arriba */
+/* Scroll-to-top */
+.scroll-top {
+  position: fixed;
+  right: 1rem;
+  bottom: 1.5rem;
+  color: var(--green);
+  background-color: transparent;
+  border: none;
+  border-radius: 50%;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;  
+  z-index: 1000;
+}
+
+
+
+/* Fin de scroll para arriba */
+.cookie-banner {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #17213c;
+  color: #fff;
+  text-align: center;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1000;
+}
+
+.cookie-text p {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.cookie-leer {
+  margin-top: 0.25rem;
+  text-decoration: none;
+}
+
+.cookie-leer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cookie-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.cookie-reject,
+.cookie-accept {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cookie-reject {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #fff;
+}
+
+.cookie-accept {
+  background: var(--green);
+  color: #fff;
+  border: none;
+}
+
+
+/* Estilos para el banner de cookies */
+
+
 /* MEDIA QUERY PARA TABLET Y DESKTOP */
 
 @media(min-width:768px) {
@@ -762,5 +854,19 @@ body {
     text-align: center;
   }
   /* Fin de estilos para el Footer */
+
+  /* Estilos para el banner de cookies */
+  .cookie-banner {
+    flex-wrap: nowrap;
+  }
+  .cookie-banner__text {
+    flex: 1;
+    margin-bottom: 0;
+    text-align: left;
+  }
+  .cookie-banner__actions {
+    flex: 0;
+  }
+  /* Fin de estilos para el banner de cookies */
 }
 

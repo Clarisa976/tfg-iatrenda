@@ -37,7 +37,7 @@ const services = [
 
 export default function Servicios() {
   return (
-    <section id="services" className="services">
+    <section id="servicios" className="services">
       <h2 className="services__header">Nuestras especialidades</h2>
       <div className="services__list">
         {services.map((svc, idx) => (

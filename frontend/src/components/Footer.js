@@ -7,7 +7,9 @@ export default function Footer() {
   return (
     <footer className="footer">
       <div className="footer__logo">
+         <a href="/">
         <img src={logo2} alt="Clínica Petaka" />
+        </a>
       </div>
       <div className="footer__grid">
         {/* CONTÁCTANOS */}

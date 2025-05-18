@@ -43,6 +43,46 @@ const reviews = [
     rating: 4,
     text: 'Excelente trato y resultados maravillosos con mi hijo.',
     avatar: placeholderImg
+  },
+    {
+    id: 6,
+    name: 'José Antonio',
+    date: '2025-05-13',
+    rating: 5,
+    text: 'Recomendable al 100%. Equipo muy profesional y amigable. Me ayudaron mucho durante mi tratamiento. Los echaré de menos ;)',
+    avatar: placeholderImg
+  },
+  {
+    id: 7,
+    name: 'Luis Pérez',
+    date: '2025-05-12',
+    rating: 1,
+    text: 'Muy profesionales, aunque el segundo mes tuvimos algún retraso.',
+    avatar: placeholderImg
+  },
+  {
+    id: 8,
+    name: 'María López',
+    date: '2025-05-13',
+    rating: 3,
+    text: '¡Recomendable 100%! Mi pronunciación mejoró un montón.',
+    avatar: placeholderImg
+  },
+   {
+    id: 9,
+    name: 'Ana García',
+    date: '2025-05-13',
+    rating: 2,
+    text: 'Excelente trato y resultados maravillosos con mi hijo.',
+    avatar: placeholderImg
+  }, 
+  {
+    id: 10,
+    name: 'Ana García',
+    date: '2025-05-11',
+    rating: 4,
+    text: 'Excelente trato y resultados maravillosos con mi hijo.',
+    avatar: placeholderImg
   }
 ];
 
