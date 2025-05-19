@@ -103,7 +103,7 @@ a {
   font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-size: 16px;
-  color: #ffffff;
+  color: #000;
   background-color: var(--green);
   text-decoration: none;
   border-radius: 4px;
@@ -303,7 +303,7 @@ a {
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   font-size: 14px;
-  color: #828282;
+  color: #4f4f4f;
   margin: 0.25rem 0 0;
   text-align: left;
 }
@@ -360,7 +360,7 @@ a {
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   font-size: 12px;
-  color: #828282;
+  color: #4f4f4f;
   text-align: left;
 }
 
@@ -429,7 +429,7 @@ a {
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   font-size: 12px;
-  color: #828282;
+  color: #4f4f4f;
 }
 .resenas__google-logo {
   width: 20px;
@@ -475,7 +475,7 @@ a {
 /* Estilos para el Footer */
 .footer {
   background-color: var(--blue);
-  color: #fff;
+  color: #000;
   padding: 2rem 1rem;
   text-align: center;
   font-family: 'Montserrat', sans-serif;
@@ -510,7 +510,7 @@ a {
 }
 
 .footer__icon {
-  color: #fff;
+  color: #000;
   min-width: 24px;
   min-height: 24px;
 }
@@ -521,7 +521,7 @@ a {
   font-weight: 400;
   text-align: left;
   margin: 0;
-  color: #fff;
+  color: #000;
 }
 
 /* Redes sociales */
@@ -532,7 +532,7 @@ a {
 }
 
 .footer__socials a {
-  color: #fff;
+  color: #000;
   padding: 0.5rem;
   display: inline-flex;
   align-items: center;
@@ -563,7 +563,7 @@ a {
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 400;
-  color: #fff;
+  color: #000;
   text-decoration: underline;
   display: inline-block;
 }
