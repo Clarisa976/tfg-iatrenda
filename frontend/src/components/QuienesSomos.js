@@ -4,7 +4,7 @@ import { Heart, CheckCircle, ChartBar } from 'lucide-react';
 export default function QuienesSomos() {
 
   return (
-    <section id="about" className="about">
+    <section id="quienes-somos" className="about">
       <h2 className="about__title">Sobre nosotros</h2>
       <p className="about__text">
         En Clínica Petaka ayudamos a niños y adultos a mejorar su voz y lenguaje con terapias personalizadas y cercanas.

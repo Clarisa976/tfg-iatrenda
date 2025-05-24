@@ -1,96 +1,78 @@
 // src/components/Header.js
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Menu, X, User } from 'lucide-react';
 import '../styles.css';
+import LoginModal from './LoginModal';
 
-// Asegúrate de tener en tu .env:
-// REACT_APP_API_URL=http://localhost/Proyectos/TFG/backend
+
+function useOutsideClick(refs, when, callback) {
+  useEffect(() => {
+    if (!when) return;
+
+    function listener(e) {
+      const clickedInside = refs.some(
+        ref => ref.current && ref.current.contains(e.target)
+      );
+      if (!clickedInside) callback(e);
+    }
+
+    document.addEventListener('mousedown', listener);
+    return () => document.removeEventListener('mousedown', listener);
+  }, [refs, when, callback]);
+}
+
 axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 
 export default function Header() {
   const logoImg = process.env.REACT_APP_LOGO_IMG;
-  const [navOpen, setNavOpen]       = useState(false);
-  const [userOpen, setUserOpen]     = useState(false);
-  const [loginOpen, setLoginOpen]   = useState(false);
-  const [email, setEmail]           = useState('');
-  const [password, setPassword]     = useState('');
-  const [fieldError, setFieldError] = useState('');
-  const [apiError, setApiError]     = useState('');
-  const [userRole, setUserRole]     = useState(null); // 'paciente'|'profesional'|'administrador'
 
-  const userRef  = useRef(null);
-  const modalRef = useRef(null);
+  /* Estado */
+  const [navOpen, setNavOpen] = useState(false);  // menú principal (<768 px)
+  const [userOpen, setUserOpen] = useState(false);  // menú usuario
+  const [loginOpen, setLoginOpen] = useState(false);  // modal login
+  const [userRole, setUserRole] = useState(null);   // 'paciente' | 'profesional' | 'admin'
 
-  // Cerrar menú usuario al hacer click fuera
-  useEffect(() => {
-    function onClickOutside(e) {
-      if (
-        userOpen &&
-        userRef.current &&
-        !userRef.current.contains(e.target) &&
-        !e.target.closest('.user-icon')
-      ) {
-        setUserOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [userOpen]);
+  const dropdownRef = useRef(null); // menú usuario móvil
+  const sidebarRef = useRef(null); // sidebar tablet+desktop
 
-  // Cerrar modal al hacer click fuera
-  useEffect(() => {
-    function onClickOutside(e) {
-      if (loginOpen && modalRef.current && !modalRef.current.contains(e.target)) {
-        setLoginOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [loginOpen]);
+  /* Cerrar menú usuario al pinchar fuera */
+  useOutsideClick(
+    [dropdownRef, sidebarRef],
+    userOpen,
+    () => setUserOpen(false)
+  );
 
-  const handleAccessClick = (e) => {
+  /* Cerrar menú principal móvil al pinchar fuera */
+  useOutsideClick(
+    [],
+    navOpen && window.innerWidth < 768,
+    () => setNavOpen(false)
+  );
+
+  /* Handlers */
+  const handleAccessClick = useCallback(e => {
     e.preventDefault();
-    setUserOpen(false);
-    setLoginOpen(true);
+    setLoginOpen(true);   // abrir modal
+    setUserOpen(false);   // cerrar menú detrás
+  }, []);
+
+  const handleLoginSuccess = usuario => {
+    setUserRole(usuario.rol);
+    setLoginOpen(false);
   };
 
- const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    setFieldError('');
-    setApiError('');
-    if (!email || !password) {
-      setFieldError('Este campo no puede quedar vacío');
-      return;
-    }
-    try {
-      console.log("🔐 Enviando login con:", { email, password });
-      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/login`, { email, password });
-      console.log("📝 Respuesta del backend:", data);
-      if (!data.ok) {
-        setApiError(data.mensaje || 'Email o contraseña incorrectos');
-        return;
-      }
-      setUserRole(data.usuario.rol); // "paciente", "profesional", etc
-      setLoginOpen(false);
-    } catch (err) {
-      setApiError('Error de conexión');
-      if (err.response) {
-        console.error("❗ Error de respuesta del servidor:", err.response.data);
-        setApiError(err.response.data.mensaje || 'Error al iniciar sesión');
-      }else if (err.request) {
-        console.error("❗ Error de solicitud:", err.request);
-        setApiError('No se pudo conectar con el servidor');
-      } else {
-        setApiError('Error desconocido');
-        console.log("⚠️ Error en fetch/axios:", err);
-      }
-      
-    }
+  /* ir a la sección y cerrar menús */
+  const handleNavLink = (e, id) => {
+    e.preventDefault();                 // evita que cambie el hash
+    const section = document.getElementById(id);
+    if (section) section.scrollIntoView({ behavior: 'smooth' });
+
+    setNavOpen(false);                  // cierra menú hamburguesa
+    setUserOpen(false);                 // y sidebar si estuviese abierto
   };
 
-
-  // Menú según rol
+  /* Menú según rol */
   const userMenuItems = {
     paciente: [
       { label: 'Mi perfil', href: '/perfil' },
@@ -105,7 +87,7 @@ export default function Header() {
       { label: 'Agenda', href: '/agenda' },
       { label: 'Cerrar sesión', href: '/logout' },
     ],
-    administrador: [
+    admin: [
       { label: 'Usuarios', href: '/usuarios' },
       { label: 'Informes', href: '/informes' },
       { label: 'Agenda global', href: '/agenda-global' },
@@ -117,33 +99,41 @@ export default function Header() {
     <>
       <header className="header">
         <div className="top-bar">
+          {/* Logo*/}
           <div className="logo">
-            <a href="/"><img src={logoImg} alt="Petaka" /></a>
+            <a href="/">
+              <img src={logoImg} alt="Petaka" />
+            </a>
           </div>
+
+          {/* Iconos */}
           <div className="icons">
+            {/* Hamburguesa móvil */}
             <button
               className="icon menu-icon"
               onClick={() => setNavOpen(o => !o)}
               aria-label="Menú principal"
             >
-              {navOpen ? <X size={24}/> : <Menu size={24}/>}
+              {navOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
+
+            {/* Usuario */}
             <button
               className={`icon user-icon${userOpen ? ' active' : ''}`}
               onClick={() => setUserOpen(o => !o)}
               aria-label="Acceso usuario"
             >
-              <User size={24}/>
+              <User size={24} />
             </button>
           </div>
         </div>
 
-        {/* Menú principal */}
-        <div className={`dropdown-menu${navOpen ? ' open' : ''}`}>
+        {/* Menú principal móvil */}
+        <div className={`menu-desplegable${navOpen ? ' open' : ''}`}>
           <nav className="nav-links">
-            <a href="#inicio">Inicio</a>
-            <a href="#about">Quiénes somos</a>
-            <a href="#servicios">Servicios</a>
+            <a href="#top" onClick={(e) => handleNavLink(e, 'top')}>Inicio</a>
+            <a href="#quienes-somos" onClick={(e) => handleNavLink(e, 'quienes-somos')}>Quiénes somos</a>
+            <a href="#servicios" onClick={(e) => handleNavLink(e, 'servicios')}>Servicios</a>
             <a href="#reserva" className="btn-reserva">Reserve su cita</a>
           </nav>
         </div>
@@ -152,21 +142,32 @@ export default function Header() {
         {userOpen && (
           <>
             {/* Dropdown móvil */}
-            <div ref={userRef} className="user-dropdown">
+            <div ref={dropdownRef} className="user-dropdown">
               {userRole
-                ? userMenuItems.map((it,i)=><a key={i} href={it.href}>{it.label}</a>)
+                ? userMenuItems.map(({ href, label }) => (
+                  <a key={href} href={href}>{label}</a>
+                ))
                 : <a href="#" onClick={handleAccessClick}>Acceso</a>
               }
             </div>
-            {/* Overlay + Sidebar tablet+desktop */}
-            <div className="overlay show" onClick={()=>setUserOpen(false)}/>
-            <aside className="sidebar show">
-              <button className="close-btn" onClick={()=>setUserOpen(false)} aria-label="Cerrar menú usuario">
-                <X size={20}/>
+
+            {/* Overlay + sidebar (tablet / desktop) */}
+            <div className="overlay show" onClick={() => setUserOpen(false)} />
+
+            <aside ref={sidebarRef} className="sidebar show">
+              <button
+                className="close-btn"
+                onClick={() => setUserOpen(false)}
+                aria-label="Cerrar menú usuario"
+              >
+                <X size={20} />
               </button>
+
               <div className="sidebar-links">
                 {userRole
-                  ? userMenuItems.map((it,i)=><a key={i} href={it.href}>{it.label}</a>)
+                  ? userMenuItems.map(({ href, label }) => (
+                    <a key={href} href={href}>{label}</a>
+                  ))
                   : <a href="#" onClick={handleAccessClick}>Acceso</a>
                 }
               </div>
@@ -177,41 +178,10 @@ export default function Header() {
 
       {/* Modal de Login */}
       {loginOpen && (
-        <div className="modal-backdrop">
-          <div className="modal" ref={modalRef}>
-            <button className="modal-close" onClick={()=>setLoginOpen(false)}>×</button>
-            <h2 className="modal-title">Inicia sesión</h2>
-            {apiError && <div className="api-error">{apiError}</div>}
-            <form onSubmit={handleLoginSubmit}>
-              <div className="field">
-                <label htmlFor="email">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className={fieldError && !email ? 'invalid' : ''}
-                />
-                {fieldError && !email && <span className="field-error">Este campo no puede quedar vacío</span>}
-              </div>
-              <div className="field">
-                <label htmlFor="password">Contraseña</label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className={fieldError && !password ? 'invalid' : ''}
-                />
-                {fieldError && !password && <span className="field-error">Este campo no puede quedar vacío</span>}
-              </div>
-              <div className="actions">
-                <a href="/reset-password" className="forgot">¿Olvidé mi contraseña?</a>
-                <button type="submit" className="btn-submit">Entrar</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <LoginModal
+          onClose={() => setLoginOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
+        />
       )}
     </>
   );
