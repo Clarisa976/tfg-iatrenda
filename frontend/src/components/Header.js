@@ -32,7 +32,6 @@ export default function Header() {
   const [userOpen, setUserOpen] = useState(false);  // menú usuario
   const [loginOpen, setLoginOpen] = useState(false);  // modal login
   const [userRole, setUserRole] = useState(null);   // 'paciente' | 'profesional' | 'admin'
-  
 
   const dropdownRef = useRef(null); // menú usuario móvil
   const sidebarRef = useRef(null); // sidebar tablet+desktop
@@ -133,7 +132,7 @@ export default function Header() {
         <div className={`menu-desplegable${navOpen ? ' open' : ''}`}>
           <nav className="nav-links">
             <a href="#top" onClick={(e) => handleNavLink(e, 'top')}>Inicio</a>
-            <a href="#quienes-somos" onClick={(e) => handleNavLink(e, 'quienes-somos')}>Quiénes somos</a>
+            <a href="#quienes-somos" onClick={(e) => handleNavLink(e,'quienes-somos')}>Quiénes somos</a>
             <a href="#servicios" onClick={(e) => handleNavLink(e, 'servicios')}>Servicios</a>
             <a href="#reserva" className="btn-reserva">Reserve su cita</a>
           </nav>
