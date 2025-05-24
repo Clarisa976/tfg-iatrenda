@@ -701,7 +701,7 @@ html {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(47, 47, 47, 0.8);
+  background: rgba(47, 47, 47, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -731,7 +731,7 @@ html {
   font-family: 'Montserrat', sans-serif;
   font-weight: 700;
   font-size: 20px;
-  color: #2F80ED;
+  color: var(--blue);
   margin-bottom: 1.5rem;
   text-align: center;
 }

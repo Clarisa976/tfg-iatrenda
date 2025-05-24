@@ -32,6 +32,7 @@ export default function Header() {
   const [userOpen, setUserOpen] = useState(false);  // menú usuario
   const [loginOpen, setLoginOpen] = useState(false);  // modal login
   const [userRole, setUserRole] = useState(null);   // 'paciente' | 'profesional' | 'admin'
+  
 
   const dropdownRef = useRef(null); // menú usuario móvil
   const sidebarRef = useRef(null); // sidebar tablet+desktop

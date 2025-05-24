@@ -9,10 +9,8 @@ import ScrollArriba from './components/ScrollArriba';
 import LoginModal from './components/LoginModal';
 
 import './styles.css';
-import 'react-datepicker/dist/react-datepicker.css';
 
-
-export default function App() {
+function App() {
   const [user, setUser] = useState(null);           // null = no hay sesión iniciada
   const [loginOpen, setLoginOpen] = useState(false);
 
@@ -24,9 +22,10 @@ export default function App() {
 
   return (
     <>
-      <Header
-        user={user}
-        onAccessClick={() => setLoginOpen(true)} />
+      <Header 
+        user={user} 
+        onAccessClick={() => setLoginOpen(true)} 
+      />
 
       <Hero />
       <QuienesSomos />
@@ -35,7 +34,7 @@ export default function App() {
       <ScrollArriba />
       <Footer />
 
-      {/* Modal de login */}
+      {/* El modal SOLO se renderiza si loginOpen es true */}
       {loginOpen && (
         <LoginModal
           onClose={() => setLoginOpen(false)}
@@ -46,4 +45,4 @@ export default function App() {
   );
 }
 
-
+export default App;

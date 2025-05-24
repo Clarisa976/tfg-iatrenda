@@ -35,7 +35,7 @@ const services = [
   }
 ];
 
-export default function Servicios() {
+export default function Servicios({ onReservarCita }) {
   return (
     <section id="servicios" className="services">
       <h2 className="services__header">Nuestras especialidades</h2>
@@ -51,7 +51,7 @@ export default function Servicios() {
         ))}
       </div>
       <div className="services__cta">
-        <a href="#reserva" className="btn-reserva">Reserve su cita</a>
+        <a href="#reserva" className="btn-reserva" onClick= {onReservarCita}>Reserve su cita</a>
       </div>
     </section>
   );
