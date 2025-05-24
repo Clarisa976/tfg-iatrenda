@@ -76,10 +76,35 @@ $app->post('/login', function (Request $req): Response {
     return jsonResponse($resultado);
 });
 
+
+
+/* POST /reservar-cita {nombre, email, telefono, motivo, fecha, hora} */
+
+$app->post('/reservar-cita', function (Request $req): Response {
+    $data = $req->getParsedBody() ?? [];
+
+    // Extraemos campos
+    $nombre = trim($data['nombre'] ?? '');
+    $email  = trim($data['email']  ?? '');
+    $tel    = trim($data['tel']    ?? '');
+    $motivo = trim($data['motivo'] ?? '');
+    $fecha  = trim($data['fecha']  ?? '');
+
+    // Llamamos a la función que hace TODO: persona↔paciente + cita
+    $res = reservarCita($nombre, $email, $tel, $motivo, $fecha);
+
+    // Devuelve el mismo payload de la función, con el código adecuado
+    return jsonResponse(
+        ['ok'=>$res['ok'], 'mensaje'=>$res['mensaje']],
+        $res['ok'] ? 200 : ($res['status'] ?? 400)
+    );
+});
+
+
+
 $app->get('/', fn() => jsonResponse(['ok'=>true, 'mensaje'=>'API Slim funcionando']));
 
 $app->run();
-
 /* ------------------------------------------------------------ */
 function jsonResponse(array $payload, int $code = 200): Response
 {

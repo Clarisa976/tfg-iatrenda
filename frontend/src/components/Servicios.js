@@ -51,7 +51,7 @@ export default function Servicios({ onReservarCita }) {
         ))}
       </div>
       <div className="services__cta">
-        <a href="#reserva" className="btn-reserva" onClick= {onReservarCita}>Reserve su cita</a>
+        <a href="#reserva" className="btn-reserva"  onClick={e => { e.preventDefault(); onReservarCita(); }}>Reserve su cita</a>
       </div>
     </section>
   );

@@ -875,6 +875,47 @@ html {
   opacity: 1;
 }
 
+.centered-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3000;
+}
+
+.toast-card {
+  background: var(--white);
+  padding: 2rem;
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  text-align: center;
+}
+
+.toast-card.success  { border-top: 4px solid #27ae60; }
+.toast-card.error    { border-top: 4px solid var(--red); }
+
+.toast-icon {
+  margin-bottom: 1rem;
+}
+
+.toast-icon.success { color: #27ae60; }
+.toast-icon.error   { color: var(--red); }
+
+.toast-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 20px;
+  margin: 0.5rem 0;
+}
+
+.toast-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--gray);
+  margin: 0;
+}
+
 /* Fin de estilos para la modal de reservar cita */
 
 
