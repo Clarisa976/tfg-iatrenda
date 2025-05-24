@@ -811,6 +811,73 @@ html {
 
 /* Fin de estilos para la ventana modal de Login */
 
+/* Estilos para la modal de reservar cita */
+.appt-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--blue);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.field textarea {
+  width: 100%;
+}
+.field textarea.invalid,
+.field textarea.invalid:focus {
+  border-color: var(--red);
+}
+
+.consent-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;          
+  color: var(--gray);          
+}
+
+.consent-line a {
+  color: var(--gray);
+  text-decoration: underline;
+}
+.consent-line a:hover {
+  color: var(--blue);
+}
+.consent-line input[type="checkbox"] {
+  /* eliminamos apariencia nativa */
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--blue);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  background: #fff;
+}
+
+.consent-line input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 0.1rem;
+  left: 0.3rem;
+  width: 0.25rem;
+  height: 0.5rem;
+  border: solid var(--blue);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out;
+}
+
+.consent-line input[type="checkbox"]:checked::after {
+  opacity: 1;
+}
+
+/* Fin de estilos para la modal de reservar cita */
+
+
 /* MEDIA QUERY PARA TABLET Y DESKTOP */
 
 @media(min-width:768px) {

@@ -6,7 +6,7 @@ import { setHours, setMinutes } from 'date-fns';
 import { Toast, ToastBody } from 'reactstrap';
 
 import 'react-datepicker/dist/react-datepicker.css';
-import 'bootstrap/dist/css/bootstrap.min.css'; 
+
 
 registerLocale('es', es);
 
@@ -14,7 +14,7 @@ const HORA_INICIO = 10;   // 10 h
 const HORA_FIN    = 17;   // última cita 17-18 h
 
 export default function ReservarCitaModal({ onClose }) {
-  /* ───────── estado ───────── */
+  /* estado */
   const [form, setForm] = useState({
     nombre:'', email:'', tel:'', motivo:'',
     fecha:null, acepto:false,
@@ -25,7 +25,7 @@ export default function ReservarCitaModal({ onClose }) {
 
   const set = (k,v)=>setForm(p=>({...p,[k]:v}));
 
-  /* ───────── validación ───────── */
+  /* validación */
   const validar = () => {
     const e = {};
     if (!form.nombre.trim())  e.nombre = 'Este campo no puede quedar vacío';
@@ -37,7 +37,7 @@ export default function ReservarCitaModal({ onClose }) {
     return !Object.keys(e).length;
   };
 
-  /* ───────── envío ───────── */
+  /* envío */
   const handleSubmit = async ev=>{
     ev.preventDefault();
     if(!validar()){ nombreRef.current?.focus(); return; }
@@ -57,7 +57,7 @@ export default function ReservarCitaModal({ onClose }) {
     }
   };
 
-  /* ───────── restricciones fecha/hora ───────── */
+  /* restricciones fecha/hora */
   const esDiaLaboral = d => { const w=d.getDay(); return w>=1 && w<=5; };
   const esHoraLaboral= d => {
     const h=d.getHours(); return h>=HORA_INICIO && h<=HORA_FIN;
