@@ -47,40 +47,42 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Header user={user} onAccessClick={() => setLoginOpen(true)} onReservarCita={abrirCita} />
+      <Header user={user} onAccessClick={() => setLoginOpen(true)} onReservarCita={abrirCita} onLogout={() => setUser(null)} />
 
-      <Routes>
-        <Route path="/" element={<Inicio onReservarCita={abrirCita} />} />
-        <Route path="/crear-contrasena" element={<CrearContrasena />} />
+      <main style={{ flex: 1 }}>
+        <Routes>
+          <Route path="/" element={<Inicio onReservarCita={abrirCita} />} />
+          <Route path="/crear-contrasena" element={<CrearContrasena />} />
 
-        {/* Rutas Admin */}
-        {(user?.rol?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin') && (
-          <>
-            <Route path="/admin/usuarios" element={<Usuarios />} />
-            <Route path="/admin/notificaciones" element={<Notificaciones />} />
-            <Route path="/admin/agenda-global" element={<AgendaGlobal />} />
-            <Route path="/admin/informes" element={<InformesYLogs />} />
-          </>
-        )}
+          {/* Rutas Admin */}
+          {(user?.rol?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin') && (
+            <>
+              <Route path="/admin/usuarios" element={<Usuarios />} />
+              <Route path="/admin/notificaciones" element={<Notificaciones />} />
+              <Route path="/admin/agenda-global" element={<AgendaGlobal />} />
+              <Route path="/admin/informes" element={<InformesYLogs />} />
+            </>
+          )}
 
-        {/* Rutas Profesional */}
-        {(user?.rol?.toLowerCase() === 'profesional' || user?.role?.toLowerCase() === 'profesional') && (
-          <>
-            <Route path="/profesional/mi-perfil" element={<PerfilProfesional />} />
-            <Route path="/profesional/pacientes" element={<PacientesProfesional />} />
-            <Route path="/profesional/paciente/:id" element={<PerfilPacienteProfesional />} />
-            <Route path="/profesional/agenda" element={<AgendaProfesional />} />
-          </>
-        )}
+          {/* Rutas Profesional */}
+          {(user?.rol?.toLowerCase() === 'profesional' || user?.role?.toLowerCase() === 'profesional') && (
+            <>
+              <Route path="/profesional/mi-perfil" element={<PerfilProfesional />} />
+              <Route path="/profesional/pacientes" element={<PacientesProfesional />} />
+              <Route path="/profesional/paciente/:id" element={<PerfilPacienteProfesional />} />
+              <Route path="/profesional/agenda" element={<AgendaProfesional />} />
+            </>
+          )}
 
-        {/* Rutas Paciente */}
+          {/* Rutas Paciente */}
 
 
-        {/* Redirigir si intenta acceder sin permiso */}
-        <Route path="/admin/*" element={<Navigate to="/" replace />} />
-        <Route path="/profesional/*" element={<Navigate to="/" replace />} />
-        <Route path="/paciente/*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Redirigir si intenta acceder sin permiso */}
+          <Route path="/admin/*" element={<Navigate to="/" replace />} />
+          <Route path="/profesional/*" element={<Navigate to="/" replace />} />
+          <Route path="/paciente/*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
 
       {/* Modales */}
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLoginSuccess={handleLoginSuccess} />}
