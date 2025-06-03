@@ -1,5 +1,5 @@
 import React from 'react';
-import '../styles.css';
+import '../../styles.css';
 const heroImg = process.env.REACT_APP_HERO_IMG;
 const Hero = ({ onReservarCita }) => (
   <section className="hero">

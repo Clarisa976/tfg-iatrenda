@@ -7,6 +7,9 @@ RewriteEngine On
 # absolute physical path to the directory that contains this htaccess file.
 #
 
+# Allow direct access to uploads directory
+RewriteCond %{REQUEST_URI} ^/uploads/.*$
+RewriteRule ^(.*)$ - [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [QSA,L]

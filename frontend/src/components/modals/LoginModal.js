@@ -85,8 +85,12 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
         body: JSON.stringify({ email, password: pass }),
       });
       const data = await res.json();
+      console.log('Respuesta login:', data);
 
       if (data.ok) {
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
         onLoginSuccess({ ...data.usuario, role: data.usuario.rol_nombre });
       } else {
         setErrors({ ...newErr, api: 'Email o contraseña incorrectos' });

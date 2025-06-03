@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import DatePicker, { registerLocale } from 'react-datepicker';
-import es from 'date-fns/locale/es';
 import { setHours, setMinutes, format } from 'date-fns';
+import es from 'date-fns/locale/es';
 
-import 'react-datepicker/dist/react-datepicker.css';
+
 
 registerLocale('es', es);
 

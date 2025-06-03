@@ -1,0 +1,151 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { BarChart2, FileDown, Calendar } from 'lucide-react';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import '../../styles.css';
+
+/* helpers fecha — mes actual -------------------------------------------- */
+const now = new Date();
+const year = now.getFullYear();
+const month = now.getMonth() + 1;                       // 1-12
+const mesES = now.toLocaleDateString('es-ES',
+  { month: 'long', year: 'numeric' }).replace(/^./, m => m.toUpperCase());
+
+// Array de meses en español para el selector
+const meses = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+// Años disponibles para el selector (desde 2023 hasta el año actual)
+const años = Array.from({ length: year - 2022 }, (_, i) => 2023 + i);
+
+export default function InformesYLogs() {
+
+  const [stats, setStats] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(month);
+  const [selectedYear, setSelectedYear] = useState(year);
+  const token = localStorage.getItem('token');
+
+  /* ───────── carga estadísticas (sin async directo en useEffect) */
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const url = `${process.env.REACT_APP_API_URL}/admin/informes?year=${selectedYear}&month=${selectedMonth}`;
+        const { data } = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (data.ok) setStats(data.data);
+      } catch { toast.error('No se pudieron obtener las estadísticas'); }
+    }
+    fetchStats();
+  }, [token, selectedMonth, selectedYear]);
+
+  /* ───────── descarga CSV de logs */
+  const descargarLogs = async () => {
+    try {
+      // Construir la URL con los parámetros de año y mes
+      const url = `${process.env.REACT_APP_API_URL}/admin/logs?year=${selectedYear}&month=${selectedMonth}`;
+      
+      const res = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      const blob = new Blob([res.data], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `logs_${selectedYear}_${String(selectedMonth).padStart(2, '0')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      toast.success('Logs descargados correctamente');
+    } catch (error) {
+      console.error('Error al descargar logs:', error);
+      toast.error('No se pudieron descargar los logs');
+    }
+  };
+
+  // Formatea la fecha seleccionada para mostrar
+  const fechaSeleccionada = new Date(selectedYear, selectedMonth - 1).toLocaleDateString('es-ES', 
+    { month: 'long', year: 'numeric' }).replace(/^./, m => m.toUpperCase());
+
+  /* UI ------------------------------------------------------------------ */
+  return (
+    <div className="usuarios-container" style={{ maxWidth: 880 }}>
+      <h2 className="usuarios-title" style={{ marginBottom: '1rem' }}>
+        Informes y Logs
+      </h2>
+
+      {/* Selector de fecha */}
+      <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <Calendar size={18} />
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            className="select-field"
+          >
+            {meses.map((mes, index) => (
+              <option key={index + 1} value={index + 1}>{mes}</option>
+            ))}
+          </select>
+          
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="select-field"
+          >
+            {años.map(año => (
+              <option key={año} value={año}>{año}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* estadísticas */}
+      <h3>Estadísticas - {fechaSeleccionada}</h3>
+      {stats ? (
+        <div className="stats-grid">
+          <div className="stat-card">
+            <BarChart2 size={28} />
+            <div>
+              <p className="stat-number">{stats.total_citas}</p>
+              <p className="stat-label">Citas totales</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <BarChart2 size={28} />
+            <div>
+              <p className="stat-number">{stats.citas_confirmadas}</p>
+              <p className="stat-label">Confirmadas</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <BarChart2 size={28} />
+            <div>
+              <p className="stat-number red">{stats.citas_canceladas}</p>
+              <p className="stat-label">Canceladas</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <BarChart2 size={28} />
+            <div>
+              <p className="stat-number">{stats.usuarios_activos}</p>
+              <p className="stat-label">Usuarios activos</p>
+            </div>
+          </div>
+        </div>
+      ) : <p>Cargando…</p>}
+
+      {/* logs */}
+      <h3 style={{ marginTop: '2.5rem' }}>Logs</h3>
+      <p>Descarga el histórico de eventos registrados para {fechaSeleccionada}:</p>
+      <a className="btn-reserva blue" onClick={descargarLogs}>
+        <FileDown size={18} style={{ marginRight: 8 }} />
+        Descargar CSV
+      </a>
+    </div>
+  );
+}
