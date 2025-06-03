@@ -85,13 +85,11 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
         body: JSON.stringify({ email, password: pass }),
       });
       const data = await res.json();
-      console.log('Respuesta login:', data);
-
-      if (data.ok) {
+      console.log('Respuesta login:', data);      if (data.ok) {
         if (data.token) {
           localStorage.setItem('token', data.token);
         }
-        onLoginSuccess({ ...data.usuario, role: data.usuario.rol_nombre });
+        onLoginSuccess({ ...data.usuario, role: data.usuario.rol });
       } else {
         setErrors({ ...newErr, api: 'Email o contraseña incorrectos' });
       }
@@ -141,17 +139,15 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
               className={errors.pass ? 'invalid' : ''}
             />
             {errors.pass && <span className="field-error">{errors.pass}</span>}
-          </div>
-
-          {/* Acciones */}
+          </div>          {/* Acciones */}
           <div className="actions">
-            <a
-              href="#"
+            <button
+              type="button"
               className="forgot"
-              onClick={e => { e.preventDefault(); setFpOpen(true); }}
+              onClick={() => setFpOpen(true)}
             >
               Olvidé mi contraseña
-            </a>
+            </button>
 
             <button type="submit" className="btn-submit btn-full">
               Entrar

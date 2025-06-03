@@ -15,7 +15,7 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
   const sidebarRef = useRef(null);
   const navigate = useNavigate();
 
-  const userRole = user?.rol || null;
+  const userRole = user?.rol || user?.role || null;
 
   /* ------------- cierres automáticos (click fuera) --------------- */
   useEffect(() => {

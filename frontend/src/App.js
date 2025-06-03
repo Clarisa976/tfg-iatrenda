@@ -54,7 +54,7 @@ export default function App() {
         <Route path="/crear-contrasena" element={<CrearContrasena />} />
 
         {/* Rutas Admin */}
-        {user?.rol?.toLowerCase() === 'admin' && (
+        {(user?.rol?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin') && (
           <>
             <Route path="/admin/usuarios" element={<Usuarios />} />
             <Route path="/admin/notificaciones" element={<Notificaciones />} />
@@ -64,7 +64,7 @@ export default function App() {
         )}
 
         {/* Rutas Profesional */}
-        {user?.rol?.toLowerCase() === 'profesional' && (
+        {(user?.rol?.toLowerCase() === 'profesional' || user?.role?.toLowerCase() === 'profesional') && (
           <>
             <Route path="/profesional/mi-perfil" element={<PerfilProfesional />} />
             <Route path="/profesional/pacientes" element={<PacientesProfesional />} />

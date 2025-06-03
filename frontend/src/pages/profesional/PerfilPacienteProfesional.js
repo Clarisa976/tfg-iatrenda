@@ -50,10 +50,10 @@ const getFileUrl = (path) => {
   // Añadimos un timestamp para evitar problemas de caché del navegador
   const finalUrl = `${baseUrl}/uploads/${fileName}?t=${Date.now()}`;
   
-  console.log('Path original:', path);
+ /* console.log('Path original:', path);
   console.log('Nombre del archivo:', fileName);
   console.log('Base URL:', baseUrl);
-  console.log('URL final construida:', finalUrl);
+  console.log('URL final construida:', finalUrl);*/
   
   return finalUrl;
 };
@@ -71,13 +71,12 @@ const estadoColor={
 export default function PerfilPacienteProfesional(){
   const {id}=useParams();
 
-  /* ---------------- estado ---------------- */
-  const [data,setData]   = useState(null);      // payload completo
+  /* ---------------- estado ---------------- */  const [data,setData]   = useState(null);      // payload completo
   const [tab,setTab]     = useState('perfil');
   const [edit,setEdit]   = useState(false);
   const [drop,setDrop]   = useState(null);      // id_cita con dropdown
   const [repro,setRepro] = useState({show:false,id:null,fecha:''});
-  const [selT,setSelT]   = useState(null);      // tratamiento abierto
+  const [selT,setSelT]   = useState(null);
   const [toast,setToast] = useState({show:false,ok:true,t:'',m:''});
 
   /* formularios perfil */
@@ -272,9 +271,9 @@ export default function PerfilPacienteProfesional(){
   );
   const Trat=(
     <>
-      <h4>Tareas / Tratamientos</h4>
+      <h4>Tareas</h4>
       {(data.tratamientos||[]).length===0
-        ? <p>No hay tratamientos aún.</p>
+        ? <p>No hay tareas aún.</p>
         : <ul className="lista-simple tratamientos-lista">
             {data.tratamientos.map(t=>(
               <li key={t.id_tratamiento}
@@ -290,9 +289,13 @@ export default function PerfilPacienteProfesional(){
               </li>
             ))}
           </ul>}      <SubirTratamiento onDone={fetchData}/>
-      {selT && <ModalTratamiento idPac={id} treat={selT}
-                                 onClose={()=>setSelT(null)}
-                                 onChange={fetchData}/>}
+      {selT && (
+        <>
+          <ModalTratamiento idPac={id} treat={selT}
+                           onClose={()=>setSelT(null)}
+                           onChange={fetchData}/>
+        </>
+      )}
     </>
   );
 
@@ -384,7 +387,7 @@ export default function PerfilPacienteProfesional(){
       <h2 className="usuarios-title">{pPer.nombre} {pPer.apellido1}</h2>
       <div className="tab-bar">
         <TabBtn label="Perfil" sel={tab==='perfil'}   onClick={()=>setTab('perfil')}/>
-        <TabBtn label="Tratamientos" sel={tab==='trat'} onClick={()=>setTab('trat')}/>
+        <TabBtn label="Tareas" sel={tab==='trat'} onClick={()=>setTab('trat')}/>
         <TabBtn label="Historial" sel={tab==='docs'}   onClick={()=>setTab('docs')}/>
         <TabBtn label="Citas" sel={tab==='citas'}     onClick={()=>setTab('citas')}/>
       </div>
@@ -414,111 +417,172 @@ export default function PerfilPacienteProfesional(){
    =================================================================== */
 function ModalTratamiento({idPac,treat,onClose,onChange}){
   const tk = localStorage.getItem('token');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState('');
   
   const del = async ()=>{
-    if(!window.confirm('¿Eliminar tratamiento?')) return;
+    setIsDeleting(true);
+    setError('');
     try{
       await axios.delete(`/prof/pacientes/${idPac}/tareas/${treat.id_tratamiento}`,{
         headers:{Authorization:`Bearer ${tk}`}
       });
       onChange();
-    }catch(e){ alert('Error al eliminar'); }
+      onClose();
+    }catch(e){ 
+      console.error('Error al eliminar:', e);
+      setError('Error al eliminar la tarea. Inténtalo de nuevo.');
+      setIsDeleting(false);
+    }
   };
   
   return(
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:'600px'}}>
-        <div className="modal-header">
-          <h3>{treat.titulo||'Sin título'}</h3>
-          <button className="modal-close" onClick={onClose}><X/></button>
-        </div>
-        <div className="modal-body">
-          <p><strong>Inicio:</strong>{' '}
-             {new Date(treat.fecha_inicio||Date.now()).toLocaleDateString()}</p>
-          {treat.fecha_fin && (
-            <p><strong>Fin:</strong>{' '}
-              {new Date(treat.fecha_fin).toLocaleDateString()}</p>)}
-          {treat.frecuencia_sesiones && (
-            <p><strong>Frecuencia:</strong> {treat.frecuencia_sesiones} /semana</p>)}          <h4>Descripción</h4>
-          <p>{treat.notas||'Sin descripción'}</p>
-          
-          {/* Sección de adjuntos múltiples */}
-          {treat.documentos && treat.documentos.length > 0 && (
-            <div className="tratamiento-attachment" style={{marginTop: '20px'}}>
-              <h4>📎 Archivos adjuntos ({treat.documentos.length})</h4>
-              {treat.documentos.map((documento, index) => {
-                const docFileUrl = getFileUrl(documento.ruta);
-                const isDocImage = isImage(documento.ruta);
-                
-                return (
-                  <div key={documento.id_documento || index} style={{marginBottom: '15px', padding: '10px', border: '1px solid #eee', borderRadius: '4px'}}>
-                    <h5 style={{margin: '0 0 10px 0', color: '#333'}}>
-                      {documento.nombre_archivo || `Documento ${index + 1}`}
-                    </h5>
-                    
-                    {isDocImage ? (
-                      <div className="image-container" style={{ textAlign: 'center' }}>
-                        <img 
-                          src={docFileUrl} 
-                          alt={`Adjunto ${index + 1} del tratamiento`} 
-                          style={{
-                            maxWidth: '100%', 
-                            maxHeight: '300px',
-                            border: '1px solid #ddd',
+    <>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:'600px'}}>
+          <div className="modal-header">
+            <h3>{treat.titulo||'Sin título'}</h3>
+            <button className="modal-close" onClick={onClose}><X/></button>
+          </div>
+          <div className="modal-body">
+            <p><strong>Inicio:</strong>{' '}
+               {new Date(treat.fecha_inicio||Date.now()).toLocaleDateString()}</p>
+            {treat.fecha_fin && (
+              <p><strong>Fin:</strong>{' '}
+                {new Date(treat.fecha_fin).toLocaleDateString()}</p>)}
+            {treat.frecuencia_sesiones && (
+              <p><strong>Frecuencia:</strong> {treat.frecuencia_sesiones} /semana</p>)}          
+            <h4>Descripción</h4>
+            <p>{treat.notas||'Sin descripción'}</p>
+            
+            {/* Sección de adjuntos múltiples */}
+            {treat.documentos && treat.documentos.length > 0 && (
+              <div className="tratamiento-attachment" style={{marginTop: '20px'}}>
+                <h4>📎 Archivos adjuntos ({treat.documentos.length})</h4>
+                {treat.documentos.map((documento, index) => {
+                  const docFileUrl = getFileUrl(documento.ruta);
+                  const isDocImage = isImage(documento.ruta);
+                  
+                  return (
+                    <div key={documento.id_documento || index} style={{marginBottom: '15px', padding: '10px', border: '1px solid #eee', borderRadius: '4px'}}>
+                      <h5 style={{margin: '0 0 10px 0', color: '#333'}}>
+                        {documento.nombre_archivo || `Documento ${index + 1}`}
+                      </h5>
+                      
+                      {isDocImage ? (
+                        <div className="image-container" style={{ textAlign: 'center' }}>
+                          <img 
+                            src={docFileUrl} 
+                            alt={`Adjunto ${index + 1} de la tarea`} 
+                            style={{
+                              maxWidth: '100%', 
+                              maxHeight: '300px',
+                              border: '1px solid #ddd',
+                              borderRadius: '4px',
+                              display: 'block',
+                              margin: '10px auto'
+                            }}
+                            onError={(e) => {
+                              console.error('Error al cargar imagen:', docFileUrl);
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'block';
+                            }}
+                          />
+                          <div style={{ 
+                            display: 'none',
+                            border: '1px dashed #f44336', 
+                            padding: '15px', 
                             borderRadius: '4px',
-                            display: 'block',
-                            margin: '10px auto'
-                          }}
-                          onError={(e) => {
-                            console.error('Error al cargar imagen:', docFileUrl);
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
-                        <div style={{ 
-                          display: 'none',
-                          border: '1px dashed #f44336', 
-                          padding: '15px', 
-                          borderRadius: '4px',
-                          backgroundColor: '#ffeaa7'
-                        }}>
-                          <p>⚠️ No se pudo visualizar la imagen</p>
-                          <p><small>Ruta: {documento.ruta}</small></p>
+                            backgroundColor: '#ffeaa7'
+                          }}>
+                            <p>⚠️ No se pudo visualizar la imagen</p>
+                            <p><small>Ruta: {documento.ruta}</small></p>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="file-link" style={{ textAlign: 'center', margin: '15px 0' }}>
-                        <a 
-                          href={docFileUrl} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          style={{
-                            background: '#4a90e2',
-                            color: 'white',
-                            padding: '8px 15px',
-                            borderRadius: '4px',
-                            textDecoration: 'none',
-                            display: 'inline-block'
-                          }}
-                        >
-                          📄 Ver archivo: {documento.nombre_archivo || 'Documento'}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <div className="modal-footer">
-          <button className="btn-delete" onClick={del}><Trash2 size={18}/> Eliminar</button>
-          <button className="btn-cancel" onClick={onClose}>Cerrar</button>
+                      ) : (
+                        <div className="file-link" style={{ textAlign: 'center', margin: '15px 0' }}>
+                          <a 
+                            href={docFileUrl} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            style={{
+                              background: '#4a90e2',
+                              color: 'white',
+                              padding: '8px 15px',
+                              borderRadius: '4px',
+                              textDecoration: 'none',
+                              display: 'inline-block'
+                            }}
+                          >
+                            📄 Ver archivo: {documento.nombre_archivo || 'Documento'}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}        
+          </div>
+          <div className="modal-footer">
+            <button className="btn-delete" onClick={() => setShowDeleteModal(true)}>
+              <Trash2 size={18}/> Eliminar
+            </button>
+            <button className="btn-cancel" onClick={onClose}>Cerrar</button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal de confirmación de eliminación - renderizado por separado con z-index mayor */}
+      {showDeleteModal && (
+        <div className="modal-backdrop" onClick={() => setShowDeleteModal(false)} style={{zIndex: 10000}}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'400px'}}>
+            <div className="modal-header">
+              <h3>Confirmar eliminación</h3>
+            </div>
+            <div className="modal-body">
+              <p>¿Estás seguro de que quieres eliminar esta tarea?</p>
+              <p><strong>{treat.titulo || 'Sin título'}</strong></p>
+              <p style={{color: '#666', fontSize: '0.9em'}}>Esta acción no se puede deshacer.</p>
+              {error && (
+                <div style={{
+                  background: '#fee',
+                  border: '1px solid #fcc',
+                  padding: '10px',
+                  borderRadius: '4px',
+                  marginTop: '10px',
+                  color: '#c33'
+                }}>
+                  {error}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn-cancel" 
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-delete" 
+                onClick={del}
+                disabled={isDeleting}
+                style={{opacity: isDeleting ? 0.6 : 1}}
+              >
+                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
+
+
 
 /* ===================================================================
    SubirTratamiento  (creación)
@@ -534,8 +598,18 @@ function SubirTratamiento({onDone}){
   const [fechaInicio,setFechaInicio]=useState('');
   const [fechaFin,setFechaFin]=useState('');
   const [frecuencia,setFrecuencia]=useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const subir=async()=>{
-    if(!tit||!desc) return alert('Título y descripción obligatorios');
+    if(!tit||!desc) {
+      setError('Título y descripción son obligatorios');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    
     try{
       const fd=new FormData();
       fd.append('titulo',tit);
@@ -556,22 +630,36 @@ function SubirTratamiento({onDone}){
       setFechaFin('');
       setFrecuencia('');
       setFile(null);
+      setError('');
       setShow(false);
       
       // Actualizar datos
       onDone();
     }catch(e){
-      alert('Error al guardar tratamiento: ' + (e.response?.data?.mensaje || e.message));
+      setError('Error al guardar tratamiento: ' + (e.response?.data?.mensaje || e.message));
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if(!show) return <button className="btn-save" onClick={()=>setShow(true)}>Añadir tratamiento</button>;
+  if(!show) return <button className="btn-save" onClick={()=>setShow(true)}>Añadir tarea</button>;
 
   return(
-    <div className="modal-backdrop" onClick={()=>setShow(false)}>
-      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:'600px'}}>
-        <div className="modal-header"><h3>Nuevo tratamiento</h3></div>
+    <div className="modal-backdrop" onClick={()=>setShow(false)}>      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:'600px'}}>
+        <div className="modal-header"><h3>Nueva tarea</h3></div>
         <div className="modal-body">
+          {error && (
+            <div style={{
+              background: '#fee',
+              border: '1px solid #fcc',
+              padding: '10px',
+              borderRadius: '4px',
+              marginBottom: '15px',
+              color: '#c33'
+            }}>
+              {error}
+            </div>
+          )}
           <div className="field full"><label>Título*</label>
             <input value={tit} onChange={e=>setTit(e.target.value)}/></div>
           <div className="field full"><label>Descripción*</label>
@@ -591,8 +679,17 @@ function SubirTratamiento({onDone}){
             <input type="file" onChange={e=>setFile(e.target.files[0])}/></div>
         </div>
         <div className="modal-footer">
-          <button className="btn-cancel" onClick={()=>setShow(false)}>Cancelar</button>
-          <button className="btn-save" onClick={subir}>Guardar</button>
+          <button className="btn-cancel" onClick={()=>setShow(false)} disabled={isLoading}>
+            Cancelar
+          </button>
+          <button 
+            className="btn-save" 
+            onClick={subir}
+            disabled={isLoading}
+            style={{opacity: isLoading ? 0.6 : 1}}
+          >
+            {isLoading ? 'Guardando...' : 'Guardar'}
+          </button>
         </div>
       </div>
     </div>
@@ -607,38 +704,72 @@ function SubirDocumento({onDone}){
   const tk = localStorage.getItem('token');
   const [show,setShow]=useState(false);
   const [file,setFile]=useState(null);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const subir=async()=>{
-    if(!file) return alert('Elige un archivo');
+    if(!file) {
+      setError('Debes seleccionar un archivo');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    
     try {
-      const fd=new FormData(); fd.append('file',file);
+      const fd=new FormData(); 
+      fd.append('file',file);
       await axios.post(`/prof/pacientes/${id}/documentos`,fd,{
         headers:{Authorization:`Bearer ${tk}`,'Content-Type':'multipart/form-data'}
       });
       
       // Limpiar formulario y cerrar modal
       setFile(null);
+      setError('');
       setShow(false);
       
       // Actualizar datos
       onDone();
     } catch(e) {
-      alert('Error al subir documento: ' + (e.response?.data?.mensaje || e.message));
+      setError('Error al subir documento: ' + (e.response?.data?.mensaje || e.message));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   if(!show) return <button className="btn-save" onClick={()=>setShow(true)}>Añadir documento</button>;
 
-  return(
-    <div className="modal-backdrop" onClick={()=>setShow(false)}>
+  return(    <div className="modal-backdrop" onClick={()=>setShow(false)}>
       <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:'460px'}}>
         <div className="modal-header"><h3>Subir documento</h3></div>
         <div className="modal-body">
+          {error && (
+            <div style={{
+              background: '#fee',
+              border: '1px solid #fcc',
+              padding: '10px',
+              borderRadius: '4px',
+              marginBottom: '15px',
+              color: '#c33'
+            }}>
+              {error}
+            </div>
+          )}
           <div className="field full"><label>Archivo*</label>
             <input type="file" onChange={e=>setFile(e.target.files[0])}/></div>
         </div>
         <div className="modal-footer">
-          <button className="btn-cancel" onClick={()=>setShow(false)}>Cancelar</button>
-          <button className="btn-save" onClick={subir}>Subir</button>
+          <button className="btn-cancel" onClick={()=>setShow(false)} disabled={isLoading}>
+            Cancelar
+          </button>
+          <button 
+            className="btn-save" 
+            onClick={subir}
+            disabled={isLoading}
+            style={{opacity: isLoading ? 0.6 : 1}}
+          >
+            {isLoading ? 'Subiendo...' : 'Subir'}
+          </button>
         </div>
       </div>
     </div>
