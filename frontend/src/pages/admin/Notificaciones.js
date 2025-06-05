@@ -4,52 +4,99 @@ import { toast } from 'react-toastify';
 import '../../styles.css';
 
 export default function Notificaciones() {
-  const [items,   setItems] = useState([]);
-  const [loading, setLoad]  = useState(true);
+  const [items, setItems] = useState([]);
+  const [loading, setLoad] = useState(true);
 
-  /* ─────────────── carga inicial ─────────────── */
-  useEffect(()=>{ cargar(); },[]);
+  // Configurar axios una sola vez al montar el componente
+  useEffect(() => {
+    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
+    axios.defaults.baseURL = baseURL;
+    axios.defaults.withCredentials = true;
+    
+    cargar();
+  }, []);
 
   const cargar = async () => {
-    try{
+    try {
       setLoad(true);
       const token = localStorage.getItem('token');
-      if (token) axios.defaults.headers.common['Authorization']=`Bearer ${token}`;
-      const { data } = await axios.get('/notificaciones');
-      setItems(data.data || []);
-      /* avisa al Header del nuevo total */
-      window.dispatchEvent(new CustomEvent('noti-count',{detail:(data.data||[]).length}));
-    }catch(e){ console.error(e); }
-    setLoad(false);
-  };
-
-  /* ─────────────── confirmar / rechazar ─────────────── */
-  const accion = async (id, tipoAcc) => {
-    try{
-      await axios.post(`/notificaciones/${id}`, { accion:tipoAcc });
-      toast.success(`Cita ${tipoAcc==='CONFIRMAR'?'confirmada':'cancelada'}`);
-      setItems(lst=>{
-        const nuevo = lst.filter(x=>x.id!==id);
-        /* actualiza Header inmediatamente */
-        window.dispatchEvent(new CustomEvent('noti-count',{detail:nuevo.length}));
-        return nuevo;
+      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
+      
+      const response = await fetch(`${baseURL}/notificaciones`, {
+        method: 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Accept': 'application/json'
+        },
+        credentials: 'include'
       });
-    }catch{
-      toast.error('No se pudo procesar');
+      
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      setItems(data.data || []);
+      window.dispatchEvent(new CustomEvent('noti-count', {detail: (data.data || []).length}));
+    } catch (error) {
+      console.error('Error cargando notificaciones:', error);
+      toast.error('Error al cargar las notificaciones: ' + (error.message || 'Error desconocido'));
+    } finally {
+      setLoad(false);
+    }
+  };  const accion = async (id, tipoAcc) => {
+    try {
+      const token = localStorage.getItem('token');
+      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
+      
+      console.log(`Enviando solicitud a ${baseURL}/notificaciones/${id} con acción ${tipoAcc}`);
+      
+      // Usar fetch en lugar de axios para seguir el mismo patrón que cargar()
+      const response = await fetch(`${baseURL}/notificaciones/${id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ accion: tipoAcc }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Respuesta del servidor:', data);
+      
+      if (data.ok) {
+        toast.success(`Cita ${tipoAcc === 'CONFIRMAR' ? 'confirmada' : 'cancelada'}`);
+        setItems(lst => {
+          const nuevo = lst.filter(x => x.id !== id);
+          window.dispatchEvent(new CustomEvent('noti-count', {detail: nuevo.length}));
+          return nuevo;
+        });
+      } else {
+        throw new Error(data.mensaje || 'Error desconocido');
+      }
+    } catch (error) {
+      console.error('Error procesando acción:', error);
+      toast.error(error.message || 'No se pudo procesar la acción');
     }
   };
 
-  /* ───────────────  UI  ─────────────── */
   return (
     <div className="usuarios-container">
       <div className="usuarios-header">
         <h2 className="usuarios-title">Notificaciones pendientes</h2>
-        <a className="btn-agregar" onClick={cargar}>Actualizar</a>
+        <button className="btn-agregar" onClick={cargar}>Actualizar</button>
       </div>
 
-      {loading? (
+      {loading ? (
         <p>Cargando…</p>
-      ) : items.length===0 ? (
+      ) : items.length === 0 ? (
         <p>No hay notificaciones.</p>
       ) : (
         <table className="usuarios-table">
@@ -63,17 +110,25 @@ export default function Notificaciones() {
             </tr>
           </thead>
           <tbody>
-            {items.map(n=>(
+            {items.map(n => (
               <tr key={n.id}>
                 <td>{n.fecha}</td>
                 <td className="mayusculas">{n.paciente}</td>
                 <td className="mayusculas">{n.profesional}</td>
-                <td>{n.tipo.replace(/_/g,' ')}</td>
+                <td>{n.tipo.replace(/_/g, ' ')}</td>
                 <td>
-                  <button className="btn-primary"
-                          onClick={()=>accion(n.id,'CONFIRMAR')}>Confirmar</button>{' '}
-                  <button className="btn-secondary"
-                          onClick={()=>accion(n.id,'RECHAZAR')}>Rechazar</button>
+                  <button 
+                    className="btn-primary"
+                    onClick={() => accion(n.id, 'CONFIRMAR')}
+                  >
+                    Confirmar
+                  </button>{' '}
+                  <button 
+                    className="btn-secondary"
+                    onClick={() => accion(n.id, 'RECHAZAR')}
+                  >
+                    Rechazar
+                  </button>
                 </td>
               </tr>
             ))}

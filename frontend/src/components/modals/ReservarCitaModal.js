@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import axios from 'axios';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { setHours, setMinutes, format } from 'date-fns';
 import es from 'date-fns/locale/es';
@@ -16,50 +15,116 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
     nombre: '', email: '', tel: '', motivo: '', fecha: null, acepto: false,
   });
   const [errs, setErrs] = useState({});
+// eslint-disable-next-line no-unused-vars
+  const [loading, setLoading] = useState(false);
   const nombreRef = useRef(null);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
   const validar = () => {
     const e = {};
     if (!form.nombre.trim()) e.nombre = 'Este campo no puede quedar vacío';
-    if (!form.email.trim()) e.email = 'Este campo no puede quedar vacío';
+    
+    // Validación de email
+    if (!form.email.trim()) {
+      e.email = 'Este campo no puede quedar vacío';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      e.email = 'Introduce un email válido';
+    }
+    
+    // Validación de teléfono (opcional pero debe ser válido si se proporciona)
+    if (form.tel && form.tel.trim() && !/^[0-9]{9}$/.test(form.tel.trim())) {
+      e.tel = 'Introduce un número de teléfono válido (9 dígitos)';
+    }
+    
     if (!form.motivo.trim()) e.motivo = 'Este campo no puede quedar vacío';
-if (!form.fecha) {
-     e.fecha = 'Seleccione un día y hora';
-   } else {
-     // Validar que no sea anterior a hoy
-     const hoy = new Date();
-     hoy.setHours(0,0,0,0);
-     if (form.fecha < hoy) {
-       e.fecha = 'No puedes reservar en una fecha pasada';
-     }
-   }
+    
+    if (!form.fecha) {
+      e.fecha = 'Seleccione un día y hora';
+    } else {
+      // Validar que no sea anterior a hoy
+      const hoy = new Date();
+      hoy.setHours(0,0,0,0);
+      if (form.fecha < hoy) {
+        e.fecha = 'No puedes reservar en una fecha pasada';
+      }
+    }
     if (!form.acepto) e.acepto = 'Debe aceptar los términos';
     setErrs(e);
     return !Object.keys(e).length;
   };
-
   const handleSubmit = async ev => {
     ev.preventDefault();
     if (!validar()) {
       nombreRef.current?.focus();
       return;
     }
-
-    try {
-      const fechaStr = format(form.fecha, 'yyyy-MM-dd HH:mm:ss');
-      await axios.post(`${process.env.REACT_APP_API_URL}/reservar-cita`, {
+    
+    setLoading(true);
+    
+    try {      const fechaStr = format(form.fecha, 'yyyy-MM-dd HH:mm:ss');
+      console.log("Enviando datos de cita:", {
         nombre: form.nombre,
         email: form.email,
-        tel: form.tel,
+        tel: form.tel || '',
         motivo: form.motivo,
         fecha: fechaStr,
       });
-      onSuccess('¡Reserva enviada! Te avisaremos cuando el equipo confirme tu cita');
-    } catch (err) {
-      const msg = err.response?.data?.mensaje || 'Error al reservar la cita';
+      console.log("Tipo de dato del teléfono:", typeof(form.tel || ''));
+      console.log("Valor exacto del teléfono:", JSON.stringify(form.tel || ''));
+      
+      // Usar fetch con manejo adecuado de CORS
+      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
+      const url = `${baseURL}/reservar-cita`;
+      
+      console.log(`Enviando solicitud a ${url}`);
+        const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          nombre: form.nombre,
+          email: form.email,
+          tel: form.tel ? form.tel.trim() : '', // Enviar cadena vacía en lugar de null si no hay teléfono
+          motivo: form.motivo,
+          fecha: fechaStr
+        })
+      });
+      
+      // Manejar respuesta no-JSON
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Si no es JSON, tratar como texto y luego intentar parsearlo
+        const text = await response.text();
+        console.log("Respuesta en texto plano:", text);
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Error al parsear respuesta:", e);
+          throw new Error(`El servidor respondió con un formato no esperado: ${text.substring(0, 100)}`);
+        }
+      }
+      
+      console.log("Respuesta del servidor:", data);
+      
+      if (!response.ok) {
+        throw new Error(data.mensaje || `Error del servidor: ${response.status}`);
+      }
+      
+      if (data.ok) {
+        onSuccess('¡Reserva enviada! Te avisaremos cuando el equipo confirme tu cita');
+      } else {
+        throw new Error(data.mensaje || 'Error al reservar la cita');
+      }    } catch (err) {
+      console.error("Error reservando cita:", err);
+      const msg = err.message || 'Error al reservar la cita';
       onError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,14 +156,18 @@ if (!form.fecha) {
               className={errs.email ? 'invalid' : ''}
             />
             {errs.email && <span className="field-error">{errs.email}</span>}
-          </div>
-          {/* Teléfono */}
+          </div>          {/* Teléfono */}
           <div className="field">
             <label>Teléfono</label>
             <input
               value={form.tel}
               onChange={e => set('tel', e.target.value)}
+              className={errs.tel ? 'invalid' : ''}
+              placeholder="(Opcional) 9 dígitos"
+              type="tel"
+              pattern="[0-9]{9}"
             />
+            {errs.tel && <span className="field-error">{errs.tel}</span>}
           </div>
           {/* Motivo */}
           <div className="field">
@@ -146,11 +215,14 @@ if (!form.fecha) {
             <span>
               He leído y acepto los <a href="/terminos">Términos y condiciones de uso</a>
             </span>
-          </div>
-          {errs.acepto && <span className="field-error">{errs.acepto}</span>}
+          </div>          {errs.acepto && <span className="field-error">{errs.acepto}</span>}
 
-          <button type="submit" className="btn-submit btn-full">
-            Confirmar cita
+          <button 
+            type="submit" 
+            className="btn-submit btn-full" 
+            disabled={loading}
+          >
+            {loading ? 'Procesando...' : 'Confirmar cita'}
           </button>
         </form>
       </div>

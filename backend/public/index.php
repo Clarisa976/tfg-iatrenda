@@ -1,18 +1,6 @@
 <?php
 declare(strict_types=1);
 
-// Configuración CORS manual para todos los métodos
-header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization");
-header("Access-Control-Allow-Credentials: true");
-
-// Manejar preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
 use Dotenv\Dotenv;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -28,26 +16,45 @@ $dotenv->load();
 error_log('DB_USER: ' . getenv('DB_USER'));
 error_log('DB_PASS: ' . getenv('DB_PASS'));
 
+/* Permitir CORS */
+header('Access-Control-Allow-Origin: http://localhost:3000');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Credentials: true');
+
+/* Si es una solicitud OPTIONS, terminar aquí */
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 /* Slim ------------------------------------------------------- */
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();          // JSON → $request->getParsedBody()
 
-// Configuración CORS mejorada
-$app->add(function ($request, $handler) {
-    $response = $handler->handle($request);
-    return $response
-        ->withHeader('Access-Control-Allow-Origin','http://localhost:3000')
-        ->withHeader('Access-Control-Allow-Headers','X-Requested-With, Content-Type, Accept, Origin, Authorization')
-        ->withHeader('Access-Control-Allow-Methods','GET, POST, PUT, DELETE, OPTIONS')
-        ->withHeader('Access-Control-Allow-Credentials','true');
+// Middleware para manejar las solicitudes OPTIONS de CORS
+$app->options('/{routes:.+}', function (Request $request, Response $response) {
+    return $response->withStatus(200);
 });
-$app->options('/{routes:.+}', function ($req, $res) { return $res;});
+
+// Nota: Ya no necesitamos CORS middleware adicional ya que manejamos CORS a nivel de PHP
+// antes de que Slim procese la solicitud
 
 // helper JSON
-function jsonResponse(array $payload,int $code=200): Response {
-    $r = new \Slim\Psr7\Response($code);
-    $r->getBody()->write(json_encode($payload));
-    return $r->withHeader('Content-Type','application/json');
+function jsonResponse(array $payload, int $code=200): Response {
+    try {
+        $jsonString = json_encode($payload, JSON_THROW_ON_ERROR);
+        $r = new \Slim\Psr7\Response($code);
+        $r->getBody()->write($jsonString);
+        return $r
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store');
+    } catch (\Exception $e) {
+        error_log('Error al generar respuesta JSON: ' . $e->getMessage());
+        $r = new \Slim\Psr7\Response(500);
+        $r->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'Error interno del servidor']));
+        return $r->withHeader('Content-Type', 'application/json');
+    }
 }
 /* ---------- RUTAS ---------- */
 
@@ -75,23 +82,42 @@ $app->post('/login', function (Request $req): Response {
 /* POST /reservar-cita  */
 
 $app->post('/reservar-cita', function (Request $req): Response {
-    $data = $req->getParsedBody() ?? [];
+    try {
+        $data = $req->getParsedBody() ?? [];
+        error_log('Recibida solicitud de reserva: ' . json_encode($data));
+        
+        // Extraemos campos
+        $nombre = trim($data['nombre'] ?? '');
+        $email  = trim($data['email']  ?? '');
+        $tel    = trim($data['tel']    ?? '');
+        $motivo = trim($data['motivo'] ?? '');
+        $fecha  = trim($data['fecha']  ?? '');
+        
+        // Validación básica
+        if (empty($nombre) || empty($email) || empty($motivo) || empty($fecha)) {
+            error_log('Faltan campos obligatorios en la solicitud de reserva');
+            return jsonResponse(
+                ['ok' => false, 'mensaje' => 'Faltan campos obligatorios para la cita'],
+                400
+            );
+        }
 
-    // Extraemos campos
-    $nombre = trim($data['nombre'] ?? '');
-    $email  = trim($data['email']  ?? '');
-    $tel    = trim($data['tel']    ?? '');
-    $motivo = trim($data['motivo'] ?? '');
-    $fecha  = trim($data['fecha']  ?? '');
+        // Llamamos a la función que hace TODO: persona↔paciente + cita
+        $res = reservarCita($nombre, $email, $tel, $motivo, $fecha);
+        error_log('Resultado de reservarCita: ' . json_encode($res));
 
-    // Llamamos a la función que hace TODO: persona↔paciente + cita
-    $res = reservarCita($nombre, $email, $tel, $motivo, $fecha);
-
-    // Devuelve el mismo payload de la función, con el código adecuado
-    return jsonResponse(
-        ['ok'=>$res['ok'], 'mensaje'=>$res['mensaje']],
-        $res['ok'] ? 200 : ($res['status'] ?? 400)
-    );
+        // Devuelve el mismo payload de la función, con el código adecuado
+        return jsonResponse(
+            ['ok'=>$res['ok'], 'mensaje'=>$res['mensaje']],
+            $res['ok'] ? 200 : ($res['status'] ?? 400)
+        );
+    } catch (\Exception $e) {
+        error_log('Error al procesar solicitud de reserva: ' . $e->getMessage());
+        return jsonResponse(
+            ['ok' => false, 'mensaje' => 'Error al procesar la solicitud: ' . $e->getMessage()],
+            500
+        );
+    }
 });
 
 /** GET /consentimiento — lee el último consentimiento del usuario */
@@ -266,10 +292,30 @@ $app->post('/notificaciones/{id}', function ($req,$res,$args){
     $uid = (int)$val['usuario']['id_persona'];
     $rol = strtolower($val['usuario']['rol']);
 
+    // Loguear para depuración
+    error_log("Procesando notificación: ID=$idCita, Acción=$acc, Usuario=$uid, Rol=$rol");
+
     $ok = procesarNotificacion($idCita,$acc,$uid,$rol);
     return $ok
       ? jsonResponse(['ok'=>true])
       : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo procesar'],500);
+});
+
+// Handler específico para OPTIONS en /notificaciones/{id}
+$app->options('/notificaciones/{id}', function ($request, $response, $args) {
+    $origin = $request->getHeaderLine('Origin');
+    $allowedOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+    $useOrigin = in_array($origin, $allowedOrigins) ? $origin : '*';
+    
+    error_log("CORS OPTIONS para /notificaciones/{id}: Origin=$origin");
+    
+    return $response
+        ->withHeader('Access-Control-Allow-Origin', $useOrigin)
+        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+        ->withHeader('Access-Control-Allow-Credentials', 'true')
+        ->withHeader('Access-Control-Max-Age', '86400')
+        ->withStatus(204);
 });
 
 
@@ -771,11 +817,130 @@ $app->delete('/prof/pacientes/{id}/tareas/{idTratamiento}', function($req, $res,
             null,
             'DELETE'
         );
-        
-        return jsonResponse(['ok' => true, 'mensaje' => 'Tratamiento eliminado correctamente']);
+          return jsonResponse(['ok' => true, 'mensaje' => 'Tarea eliminado correctamente']);
     } catch (Throwable $e) {
         $db->rollBack();
-        error_log('Error al eliminar tratamiento: ' . $e->getMessage());
+        error_log('Error al eliminar tarea: ' . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
+    }
+});
+
+/** POST /prof/pacientes/{id}/documentos — sube documento al historial clínico */
+$app->post('/prof/pacientes/{id}/documentos', function($req, $res, $args){
+    $val = validateToken();
+    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+
+    $idPac = (int)$args['id'];
+    $idProf = (int)$val['usuario']['id_persona'];
+    
+    // Verificar propiedad (que el profesional tiene al menos una cita con el paciente)
+    $db = conectar();
+    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
+    $q->execute([$idPac, $idProf]);
+    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);    // Obtener archivo subido
+    $file = $req->getUploadedFiles()['file'] ?? null;    // Obtener datos del formulario
+    $d = $req->getParsedBody();
+    $diagnosticoPreliminar = $d['diagnostico_preliminar'] ?? '';
+    // No extraer diagnostico_final ya que es para completar después
+    
+    if (!$file) {
+        return jsonResponse(['ok' => false, 'mensaje' => 'No se proporcionó ningún archivo'], 400);
+    }
+    
+    if ($file->getError() !== UPLOAD_ERR_OK) {
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error al subir el archivo'], 400);
+    }    try {
+        // Crear documento en el historial - solo con diagnóstico preliminar
+        $resultado = crearDocumentoHistorial($idPac, $idProf, $file, $diagnosticoPreliminar);
+        
+        // Registrar en logs
+        logEvento(
+            $idProf, 
+            $idPac,
+            'documento_historial',
+            null,
+            null,
+            'Documento subido al historial',
+            'INSERT'
+        );
+        
+        return jsonResponse($resultado);
+    } catch (Throwable $e) {
+        error_log('Error al subir documento al historial: ' . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
+    }
+});
+
+/** DELETE /prof/pacientes/{id}/documentos/{doc_id} — elimina documento del historial clínico */
+$app->delete('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $args){
+    $val = validateToken();
+    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+
+    $idPac = (int)$args['id'];
+    $idDoc = (int)$args['doc_id'];
+    $idProf = (int)$val['usuario']['id_persona'];
+    
+    // Verificar propiedad (que el profesional tiene al menos una cita con el paciente)
+    $db = conectar();
+    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
+    $q->execute([$idPac, $idProf]);
+    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
+    
+    try {
+        $db->beginTransaction();
+        
+        // 1. Obtener información del documento
+        $stDoc = $db->prepare("
+            SELECT d.*, h.id_paciente
+            FROM documento_clinico d
+            JOIN historial_clinico h ON d.id_historial = h.id_historial
+            WHERE d.id_documento = ? AND h.id_paciente = ?
+        ");
+        $stDoc->execute([$idDoc, $idPac]);
+        $documento = $stDoc->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$documento) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
+        }
+        
+        // 2. Eliminar documento de la BD
+        $stDel = $db->prepare("DELETE FROM documento_clinico WHERE id_documento = ?");
+        $stDel->execute([$idDoc]);
+          // 3. Eliminar archivo físico si existe
+        if (!empty($documento['ruta'])) {
+            $rutaCompleta = __DIR__ . '/../public/' . $documento['ruta'];
+            if (file_exists($rutaCompleta)) {
+                unlink($rutaCompleta);
+            } else {
+                // Intentar con la ruta alternativa en caso de error
+                $rutaAlternativa = __DIR__ . '/' . $documento['ruta'];
+                if (file_exists($rutaAlternativa)) {
+                    unlink($rutaAlternativa);
+                }
+            }
+        }
+          // Registrar en logs
+        logEvento(
+            $idProf, 
+            $idPac,
+            'documento_historial',
+            (string)$idDoc,
+            null,
+            'Documento eliminado del historial',
+            'DELETE'
+        );
+        
+        $db->commit();
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Documento eliminado correctamente'
+        ]);
+    } catch (Throwable $e) {
+        $db->rollBack();
+        error_log('Error al eliminar documento: ' . $e->getMessage());
         return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
     }
 });
@@ -862,6 +1027,77 @@ $app->post('/migrate/documentos', function (Request $request, Response $response
 
 
 /* corre la aplicación */
+
+/* PUT /prof/pacientes/{id}/documentos/{doc_id} — actualiza diagnóstico final de un documento */
+$app->put('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $args){
+    $val = validateToken();
+    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+
+    $idPac = (int)$args['id'];
+    $idDoc = (int)$args['doc_id'];
+    $idProf = (int)$val['usuario']['id_persona'];
+    
+    // Verificar propiedad (que el profesional tiene al menos una cita con el paciente)
+    $db = conectar();
+    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
+    $q->execute([$idPac, $idProf]);
+    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
+      // Obtener datos del body
+    $body = $req->getParsedBody();
+    $diagnosticoFinal = $body['diagnostico_final'] ?? '';
+    
+    // Debug log
+    error_log('PUT request to update diagnosis - ID Paciente: ' . $idPac . ', ID Documento: ' . $idDoc . ', Diagnóstico Final: ' . $diagnosticoFinal);
+    
+    try {
+        $db->beginTransaction();
+        
+        // 1. Obtener información del documento
+        $stDoc = $db->prepare("
+            SELECT d.*, h.id_paciente, h.id_historial
+            FROM documento_clinico d
+            JOIN historial_clinico h ON d.id_historial = h.id_historial
+            WHERE d.id_documento = ? AND h.id_paciente = ?
+        ");
+        $stDoc->execute([$idDoc, $idPac]);
+        $documento = $stDoc->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$documento) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
+        }        // 2. Actualizar el diagnóstico final en el historial
+        $stUpdate = $db->prepare("
+            UPDATE historial_clinico 
+            SET diagnostico_final = ? 
+            WHERE id_historial = ?
+        ");
+        $stUpdate->execute([$diagnosticoFinal, $documento['id_historial']]);
+        
+        // 3. Para futura referencia, debemos considerar mover el campo diagnostico_final a la tabla documento_clinico
+        // para permitir diagnósticos individuales por documento
+        
+        // 4. Registrar en logs
+        logEvento(
+            $idProf, 
+            $idPac,
+            'historial_clinico',
+            'diagnostico_final',
+            $documento['diagnostico_final'] ?? '',
+            $diagnosticoFinal,
+            'UPDATE'
+        );
+        $db->commit();
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Diagnóstico final actualizado correctamente'
+        ]);
+    } catch (Throwable $e) {
+        $db->rollBack();
+        error_log('Error al actualizar diagnóstico: ' . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
+    }
+});
 
 $app->run();
 /* ------------------------------------------------------------ */

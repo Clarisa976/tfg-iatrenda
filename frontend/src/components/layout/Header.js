@@ -40,11 +40,13 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
     return () => document.removeEventListener('mousedown', fn);
   }, [navOpen]);
 
-  /* ----------- comprobar notificaciones admins cada 30 s ---------- */
+  /* ----------- comprobar notificaciones admins cada 30 s ---------- */  
   useEffect(() => {
     if (userRole !== 'admin') return;
     const check = async () => {
       try {
+        const token = localStorage.getItem('token');
+        if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const { data } = await axios.get('/notificaciones');
         setPend((data.data || []).length > 0);
       } catch { }

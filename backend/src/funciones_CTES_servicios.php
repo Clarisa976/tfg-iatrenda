@@ -6,13 +6,32 @@ use PHPMailer\PHPMailer\Exception;
 
 function conectar()
 {
-    $host = getenv('DB_HOST');
-    $db   = getenv('DB_NAME');
-    $user = getenv('DB_USER');
-    $pass = getenv('DB_PASS');
-    return new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    try {
+        $host = getenv('DB_HOST');
+        $db   = getenv('DB_NAME');
+        $user = getenv('DB_USER');
+        $pass = getenv('DB_PASS');
+        
+        if (empty($host) || empty($db) || empty($user)) {
+            error_log('Error: Faltan variables de entorno para la conexión a la base de datos');
+            throw new Exception('Error de configuración en la conexión a la base de datos');
+        }
+        
+        $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]);        
+        /* Verificar conexión con una consulta simple */
+        $pdo->query('SELECT 1');
+        return $pdo;
+    } catch (\PDOException $e) {
+        error_log('Error de conexión a la base de datos: ' . $e->getMessage());
+        throw new Exception('Error al conectar con la base de datos: ' . $e->getMessage());
+    } catch (\Exception $e) {
+        error_log('Error general en la conexión: ' . $e->getMessage());
+        throw $e;
+    }
 }
 
 /**
@@ -36,16 +55,14 @@ function validateToken()
         );
     } catch (\Throwable $e) {
         return false;
-    }
-
-    // Comprobar existencia de usuario en BD
+    }    /* Comprobar existencia de usuario en BD */
     $db = conectar();
     $st = $db->prepare("SELECT * FROM persona WHERE id_persona = ?");
     $st->execute([(int)$info->sub]);
     if ($st->rowCount() === 0) return false;
     $usuario = $st->fetch(PDO::FETCH_ASSOC);
 
-    // Renovar token
+    /* Renovar token */
     $nuevoPayload = [
         'sub' => (int)$usuario['id_persona'],
         'rol' => $usuario['rol'],
@@ -129,7 +146,7 @@ function execLogged(
 
     if ($ok && preg_match('/^\s*(INSERT|UPDATE|DELETE)/i', $sql, $m)) {
         $accion = strtoupper($m[1]);
-        // Guardamos un snapshot de los parámetros; WARNING: puede contener datos sensibles
+        /* Guardamos un snapshot de los parámetros; WARNING: puede contener datos sensibles */
         logEvento(
             $actor,
             $afect ?? 0,
@@ -164,7 +181,7 @@ function loginEmailPassword(string $email, string $plainPass): array
         $st->execute(['e' => $email, 'p' => $plainPass]);
 
         if ($row = $st->fetch()) {
-            // Generar JWT
+            /* Generar JWT */
             $payload = [
                 'sub' => (int)$row['id'],
                 'rol' => $row['rol'],
@@ -174,7 +191,7 @@ function loginEmailPassword(string $email, string $plainPass): array
 
             return [
                 'ok' => true,
-                'token' => $jwt, // ← esto es imprescindible
+                'token' => $jwt, /* Esto es imprescindible */
                 'usuario' => $row
             ];
         }
@@ -196,40 +213,58 @@ function loginEmailPassword(string $email, string $plainPass): array
  */
 function reservarCita(string $nombre, string $email, ?string $tel, string $motivo, string $fecha, int $actor = 0): array
 {
-    // Validación de campos
+    error_log("============================================");
+    error_log("Iniciando reservarCita - Nombre: $nombre, Email: $email, Fecha: $fecha, Teléfono: " . ($tel === null ? 'NULL' : $tel));
+    error_log("============================================");    
+    /* No convertimos $tel a cadena vacía, lo dejamos como null si es null */
+    /* Validación de campos */
     if ($nombre === '' || $email === '' || $motivo === '' || $fecha === '') {
+        error_log("Faltan campos obligatorios en la reserva");
         return ['ok' => false, 'mensaje' => 'Faltan campos obligatorios', 'status' => 400];
     }
-
-    // Parsear fecha y comprobar horario L-V 10–18
+    
     try {
+        /* Parsear fecha y comprobar horario L-V 10–18 */
+        error_log("Validando fecha y hora: $fecha");
         $fecha = new DateTime($fecha);
     } catch (Exception $e) {
+        error_log("Error al parsear la fecha: " . $e->getMessage());
         return ['ok' => false, 'mensaje' => 'Fecha inválida', 'status' => 400];
-    }
-    $w = (int)$fecha->format('w');    // 0 domingo … 6 sábado
-    $h = (int)$fecha->format('G');    // 0–23
+    }    $w = (int)$fecha->format('w');    /* 0 domingo … 6 sábado */
+    $h = (int)$fecha->format('G');    /* 0–23 */
+    error_log("Día de la semana: $w, Hora: $h");
+    
     if ($w < 1 || $w > 5 || $h < 10 || $h >= 18) {
-        return ['ok' => false, 'mensaje' => 'Fuera de horario laboral', 'status' => 400];
+        error_log("Fecha fuera de horario laboral: día $w, hora $h");
+        return ['ok' => false, 'mensaje' => 'Fuera de horario laboral. Horario disponible: Lunes a Viernes de 10:00 a 18:00', 'status' => 400];
     }
     $ts = $fecha->format('Y-m-d H:i:s');
-
-    // Obtener o crear persona
+    error_log("Fecha validada correctamente: $ts");    /* Obtener o crear persona */
+    error_log("Buscando o creando persona con email: $email");
     $idPersona = obtenerCrearPersona($nombre, $email, $tel);
+    error_log("ID de persona obtenido/creado: $idPersona");
 
-    // Asegurar paciente
-    asegurarPaciente($idPersona);
-
-    // Conectar y buscar profesional disponible
+    /* Asegurar paciente */
+    error_log("Asegurando que exista entrada en paciente para ID: $idPersona");    asegurarPaciente($idPersona); /* Conectar y buscar profesional disponible */
     $db = conectar();
-    $sql = "
+    
+    /* Verificar si hay profesionales en la base de datos */
+    $checkProf = $db->query("SELECT COUNT(*) FROM profesional");
+    $profCount = $checkProf->fetchColumn();
+    error_log("Número de profesionales en la base de datos: $profCount");
+    
+    if ($profCount == 0) {
+        error_log("No hay profesionales en la base de datos");
+        return ['ok'=>false,'mensaje'=>'No hay profesionales registrados en el sistema','status'=>409];
+    }
+      $sql = "
       SELECT p.id_profesional
         FROM profesional p
        WHERE NOT EXISTS (
          SELECT 1 FROM bloque_agenda b
           WHERE b.id_profesional = p.id_profesional
             AND b.tipo_bloque    IN ('AUSENCIA','VACACIONES')
-            AND :ts BETWEEN b.fecha_inicio
+            AND :ts_bloque BETWEEN b.fecha_inicio
                        AND DATE_SUB(b.fecha_fin,INTERVAL 1 SECOND)
        )
          AND NOT EXISTS (
@@ -237,56 +272,64 @@ function reservarCita(string $nombre, string $email, ?string $tel, string $motiv
           WHERE c.id_profesional = p.id_profesional
             AND c.estado        IN ('PENDIENTE_VALIDACION','SOLICITADA',
                                     'CONFIRMADA','ATENDIDA')
-            AND c.fecha_hora    = :ts
+            AND c.fecha_hora    = :ts_cita
        )
        ORDER BY (
          SELECT COUNT(*) FROM cita c2
           WHERE c2.id_profesional = p.id_profesional
-            AND DATE(c2.fecha_hora) = DATE(:ts)
+            AND DATE(c2.fecha_hora) = DATE(:ts_fecha)
        ) ASC
        LIMIT 1";
+    error_log("Ejecutando consulta para buscar profesional disponible para la fecha: $ts");
     $st = $db->prepare($sql);
-    $st->execute([':ts'=>$ts]);
-
-    $idProf = $st->fetchColumn();
+    $st->execute([
+        ':ts_bloque' => $ts,
+        ':ts_cita'   => $ts,
+        ':ts_fecha'  => $ts
+    ]);$idProf = $st->fetchColumn();    error_log("Profesional encontrado para la cita: " . ($idProf ? $idProf : "Ninguno"));
+    
     if (!$idProf) {
-        return ['ok'=>false,'mensaje'=>'No hay profesionales disponibles','status'=>409];
+        return ['ok'=>false,'mensaje'=>'No hay profesionales disponibles para esta fecha y hora','status'=>409];
+    }    try {        /* Insertar cita (ya tenemos $idPersona y ya hemos asegurado paciente anteriormente) */
+        $insertOk = execLogged(
+            "INSERT INTO cita
+               (id_paciente,id_profesional,id_bloque,
+                fecha_hora,estado,
+                nombre_contacto,telefono_contacto,email_contacto,
+                motivo,origen)
+             VALUES
+               (:pac,:prof,NULL,
+                :ts,'PENDIENTE_VALIDACION',
+                :nom,:tel,:email,
+                :motivo,'WEB')",
+            [                ':pac'   => $idPersona,
+                ':prof'  => $idProf,
+                ':ts'    => $ts,
+                ':nom'   => $nombre,
+                ':tel'   => $tel, /* Mantener null si es null */
+                ':email' => $email,
+                ':motivo'=> $motivo
+            ],            $actor,                /* Quién lo hace */
+            'cita'                 /* Tabla auditada */
+            /* id_afectado lo ponemos justo después cuando lo sepamos */
+        );
+
+        if (!$insertOk) {
+            return ['ok'=>false,'mensaje'=>'Error al crear la cita','status'=>500];
+        }
+
+        /* completar id_afectado en el log recién creado */
+        $idCita = (int)$db->lastInsertId();
+
+        return ['ok'=>true,'mensaje'=>'Cita reservada correctamente'];
+    } catch (PDOException $e) {
+        error_log("Error de base de datos al crear cita: " . $e->getMessage());
+        /* Devolver un mensaje más amigable para el usuario */
+        return ['ok'=>false,'mensaje'=>'Error al procesar la solicitud. Por favor, inténtelo de nuevo más tarde.','status'=>500];
+    } catch (Exception $e) {
+        error_log("Error al crear cita: " . $e->getMessage());
+        return ['ok'=>false,'mensaje'=>'Error al procesar la solicitud: ' . $e->getMessage(),'status'=>500];
     }
-
-    // Insertar cita
-    $insertOk = execLogged(
-        "INSERT INTO cita
-           (id_paciente,id_profesional,id_bloque,
-            fecha_hora,estado,
-            nombre_contacto,telefono_contacto,email_contacto,
-            motivo,origen)
-         VALUES
-           (:pac,:prof,NULL,
-            :ts,'PENDIENTE_VALIDACION',
-            :nom,:tel,:email,
-            :motivo,'WEB')",
-        [
-            ':pac'   => $idPersona,
-            ':prof'  => $idProf,
-            ':ts'    => $ts,
-            ':nom'   => $nombre,
-            ':tel'   => $tel,
-            ':email' => $email,
-            ':motivo'=> $motivo
-        ],
-        $actor,                // ← quién lo hace
-        'cita'                 // tabla auditada
-        // id_afectado lo ponemos justo después cuando lo sepamos
-    );
-
-    if (!$insertOk) {
-        return ['ok'=>false,'mensaje'=>'Error al crear la cita','status'=>500];
-    }
-
-    /* completar id_afectado en el log recién creado */
-    $idCita = (int)$db->lastInsertId();
-
-    return ['ok'=>true,'mensaje'=>'Cita reservada correctamente'];
 }
 
 /**
@@ -294,46 +337,73 @@ function reservarCita(string $nombre, string $email, ?string $tel, string $motiv
  * Devuelve id_persona.
  */
 function obtenerCrearPersona(string $nombre, string $email, ?string $tel): int
-{
-    $db = conectar();
-    // 1) Buscar
+{      $db = conectar();
+    /* Buscar primero por email (prioridad) */
     $stmt = $db->prepare("
       SELECT id_persona
         FROM persona
        WHERE email = :email
-          OR (telefono IS NOT NULL AND telefono = :tel)
        LIMIT 1
     ");
-    $stmt->execute([':email' => $email, ':tel' => $tel]);
+    $stmt->execute([':email' => $email]);
     if ($id = $stmt->fetchColumn()) {
         return (int)$id;
+    }    
+    /* Si no hay por email y tenemos teléfono, buscar por teléfono exacto */
+    if ($tel !== null && $tel !== '') {
+        $stmt = $db->prepare("
+          SELECT id_persona
+            FROM persona
+           WHERE telefono = :tel
+           LIMIT 1
+        ");
+        $stmt->execute([':tel' => $tel]);        if ($id = $stmt->fetchColumn()) {
+            return (int)$id;
+        }
     }
-    // 2) Crear (apellido1 = nombre, password_hash de cadena vacía)
+      /* Crear nuevo usuario si no existe */
+    error_log("Creando nueva persona con email: $email, teléfono: " . ($tel === null ? 'NULL' : $tel));
+      /* Separar nombre y apellido (si es posible) */
+    $nombreCompleto = explode(' ', $nombre);
+    $nombrePila = $nombreCompleto[0]; /* Primera palabra como nombre */
+    $apellido = count($nombreCompleto) > 1 ? 
+               implode(' ', array_slice($nombreCompleto, 1)) : /* Resto como apellido */
+               ''; /* Si solo hay una palabra, apellido vacío */
+      /* Manejar teléfono vacío para evitar violación de la restricción de unicidad */
+    $telefono = $tel;
+    if ($telefono === null || $telefono === '') {
+        /* Si el teléfono está vacío, usamos un valor único para evitar colisiones */
+        $telefono = 'NO_TEL_' . uniqid();
+        error_log("Usando teléfono temporal para cumplir con restricción de unicidad: $telefono");
+    }
+    
     $ins = $db->prepare("
       INSERT INTO persona
-        (nombre, apellido1, email, telefono, rol)
+        (nombre, apellido1, email, telefono, rol, password_hash)
       VALUES
-        (:nom, :ap1, :email, :tel, 'PACIENTE')
+        (:nom, :ap1, :email, :tel, 'PACIENTE', :pass)
     ");
     $ins->execute([
-        ':nom'   => $nombre,
-        ':ap1'   => $nombre,
+        ':nom'   => $nombrePila,
+        ':ap1'   => $apellido,
         ':email' => $email,
-        ':tel'   => $tel,
+        ':tel'   => $telefono,
+        ':pass'  => password_hash('', PASSWORD_DEFAULT), /* Empty password hash as placeholder */
     ]);
-    return (int)$db->lastInsertId();
+    $newId = (int)$db->lastInsertId();
+    error_log("Nueva persona creada con ID: $newId");
+    return $newId;
 }
 
 /**
  * Asegura que exista una fila en paciente para id_persona dado.
  */
 function asegurarPaciente(int $idPersona): void
-{
-    $db = conectar();
+{    $db = conectar();
     $stmt = $db->prepare("SELECT 1 FROM paciente WHERE id_paciente = :id");
     $stmt->execute([':id' => $idPersona]);
     if ($stmt->fetch()) return;
-    // Insertamos con tipo 'ADULTO' por defecto
+    /* Insertamos con tipo 'ADULTO' por defecto */
     $ins = $db->prepare("
       INSERT INTO paciente (id_paciente, tipo_paciente)
       VALUES (:id, 'ADULTO')
@@ -395,8 +465,7 @@ function getProfesionales(string $search = ''): array
 
 /* === A G E N D A  =================================================== */
 /**
- * Devuelve bloques + citas confirmadas entre fechas.
- * Si $profId no es null filtra sólo ese profesional.
+ * Devuelve bloques + citas confirmadas entre fechas. * Si $profId no es null filtra solo ese profesional.
  */
 function getEventosAgenda(string $desde, string $hasta, ?int $profId = null): array
 {
@@ -479,23 +548,21 @@ function crearBloqueAgenda(
  * Elimina un bloque o una cita según exista.
  */
 function eliminarEvento(int $id, int $actor = 0): bool
-{
-    // Primero intentamos en bloque
+{    /* Primero intentamos en bloque */
     if (execLogged('DELETE FROM bloque_agenda WHERE id_bloque=:id', [':id'=>$id], $actor, 'bloque_agenda', $id))
         return true;
-    // Si no estaba, probamos en cita
+    /* Si no estaba, probamos en cita */
     return execLogged('DELETE FROM cita WHERE id_cita=:id', [':id'=>$id], $actor, 'cita', $id);
 }
 
 /* ─────────────────────── helper de envío SMTP ─────────────────────── */
 function enviarEmail(string $to, string $subject, string $htmlBody): bool
-{
-    // Obtener credenciales SMTP del entorno
+{    /* Obtener credenciales SMTP del entorno */
     $host = getenv('SMTP_HOST');
     $user = getenv('SMTP_USER');
     $pass = getenv('SMTP_PASS');
 
-    // Si no hay configuración, logueamos y continuamos
+    /* Si no hay configuración, logueamos y continuamos */
     if (!$host || !$user || !$pass) {
         error_log('SMTP no configurado: email NO enviado a ' . $to);
         return true;
@@ -512,7 +579,7 @@ function enviarEmail(string $to, string $subject, string $htmlBody): bool
         $mail->Port       = intval(getenv('SMTP_PORT') ?: 587);
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
 
-        // AÑADIR ESTAS LÍNEAS PARA MANEJAR TILDES Y CARACTERES ESPECIALES
+        /* AÑADIR ESTAS LÍNEAS PARA MANEJAR TILDES Y CARACTERES ESPECIALES */
         $mail->CharSet = 'UTF-8';
         $mail->Encoding = 'base64';
 
@@ -539,108 +606,194 @@ function enviarEmail(string $to, string $subject, string $htmlBody): bool
 function getNotificacionesPendientes(int $uid, string $rol): array
 {
     $db  = conectar();
+
     $sql = "
-      SELECT c.id_cita id,
-             DATE_FORMAT(c.fecha_hora,'%d/%m/%Y %H:%i') fecha,
-             c.estado tipo,
+      SELECT c.id_cita                AS id,
+             DATE_FORMAT(c.fecha_hora,'%d/%m/%Y %H:%i') AS fecha,
+             c.estado                 AS tipo,
              CONCAT(pa.nombre,' ',pa.apellido1) paciente,
              CONCAT(pr.nombre,' ',pr.apellido1) profesional
         FROM cita c
-   LEFT JOIN persona pa ON pa.id_persona = c.id_paciente
-   LEFT JOIN persona pr ON pr.id_persona = c.id_profesional
-       WHERE c.estado IN ('PENDIENTE_VALIDACION',
-                          'CAMBIO_SOLICITADO',
-                          'CANCELACION_SOLICITADA')";
-    $p = [];
-    if ($rol === 'profesional') {
+        JOIN persona pa ON pa.id_persona = c.id_paciente
+        JOIN persona pr ON pr.id_persona = c.id_profesional
+       WHERE c.estado = 'PENDIENTE_VALIDACION'";
+
+    $params = [];    if ($rol === 'admin') {
+        /* Solo peticiones hechas por pacientes (web / app) */
+        $sql .= " AND c.origen IN ('WEB','APP')";
+    } else { /* Profesional */
         $sql .= " AND c.id_profesional = :p";
-        $p[':p'] = $uid;
+        $params[':p'] = $uid;
     }
+
     $sql .= " ORDER BY c.fecha_hora";
+
     $st = $db->prepare($sql);
-    $st->execute($p);
+    $st->execute($params);
     return $st->fetchAll(PDO::FETCH_ASSOC);
 }
 
 /* procesa confirmación / rechazo */
 function procesarNotificacion(int $id, string $acc, int $uid, string $rol): bool
 {
+    error_log("Iniciando procesarNotificacion: ID=$id, Acción=$acc, Usuario=$uid, Rol=$rol");
     $nuevo = $acc === 'CONFIRMAR' ? 'CONFIRMADA' : 'CANCELADA';
-
     $db = conectar();
     $db->beginTransaction();
-    try {
-        /* 1) bloquear la cita */
+      try {
+        /* 1) Bloquear la cita */
         $stmt = $db->prepare("
             SELECT c.*, p.email pacienteEmail
               FROM cita  c
         INNER JOIN persona p ON p.id_persona = c.id_paciente
              WHERE c.id_cita = ? FOR UPDATE");
         $stmt->execute([$id]);
-        if (!$row = $stmt->fetch(PDO::FETCH_ASSOC))
+        if (!$row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            error_log("procesarNotificacion: Cita $id no encontrada");
             throw new Exception('Cita inexistente');
+        }
 
-        /* permiso profesional */
-        if ($rol === 'profesional' && (int)$row['id_profesional'] !== $uid)
+        /* Permiso profesional */
+        if ($rol === 'profesional' && (int)$row['id_profesional'] !== $uid) {
+            error_log("procesarNotificacion: Usuario $uid sin permiso para cita $id");
             throw new Exception('Prohibido');
+        }
+        
+        /* Verificar que no esté ya procesada */
+        if ($row['estado'] === 'CONFIRMADA' || $row['estado'] === 'CANCELADA') {
+            error_log("procesarNotificacion: Cita $id ya está {$row['estado']}");
+            throw new Exception('Estado inválido');
+        }
 
-        /* 2) actualizar estado */
+        /* 2) Actualizar estado */
+        error_log("Actualizando estado de cita $id a $nuevo");
         $db->prepare("UPDATE cita SET estado = ? WHERE id_cita = ?")
             ->execute([$nuevo, $id]);
 
         /* 3) Si se confirma, crear bloque en la agenda del profesional */
         if ($acc === 'CONFIRMAR') {
-            // Crear un bloque de 1 hora para la cita
-            $inicio = $row['fecha_hora'];
-            $fin = date('Y-m-d H:i:s', strtotime($inicio) + 3600); // +1 hora
+            /* Verificar que no exista ya un bloque para esta cita */
+            $stmt = $db->prepare("SELECT COUNT(*) FROM bloque_agenda WHERE id_profesional = ? AND fecha_inicio = ?");
+            $stmt->execute([(int)$row['id_profesional'], $row['fecha_hora']]);
+            $bloqueExistente = (int)$stmt->fetchColumn();
+            
+            error_log("Verificando bloques existentes: " . ($bloqueExistente ? "SI existe" : "NO existe"));
+            
+            if ($bloqueExistente === 0) {
+                /* Crear un bloque de 1 hora para la cita */
+                $inicio = $row['fecha_hora'];
+                $fin = date('Y-m-d H:i:s', strtotime($inicio . ' +1 hour'));
+                
+                error_log("Creando bloque de agenda: Prof={$row['id_profesional']}, Inicio=$inicio, Fin=$fin");
+                
+                $db->prepare("
+                    INSERT INTO bloque_agenda (
+                        id_profesional, fecha_inicio, fecha_fin, 
+                        tipo_bloque, comentario
+                    ) VALUES (
+                        :p, :i, :f, 'CITA', :c
+                    )
+                ")->execute([
+                    ':p' => $row['id_profesional'],
+                    ':i' => $inicio,
+                    ':f' => $fin,
+                    ':c' => "Cita con paciente #{$row['id_paciente']}"
+                ]);
+                error_log("Bloque de agenda creado correctamente");
+            } else {
+                error_log("No se creó bloque de agenda porque ya existe");
+            }
+        }          /* 4) Registrar notificación en BD */
+        /* Formatear fecha y hora para el mensaje */
+        $fechaFormateada = date('d/m/Y', strtotime($row['fecha_hora']));
+        $horaFormateada = date('H:i', strtotime($row['fecha_hora']));
+        
+        /* Crear un mensaje más completo y profesional */
+        $asuntoEmail = $acc === 'CONFIRMAR' ? 'Confirmación de su cita' : 'Cancelación de su cita';
+        
+        /* HTML para el cuerpo del email */
+        $mensaje = '
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 5px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="https://iatrenda-petaka.s3.eu-west-3.amazonaws.com/images/petaka.jpg" alt="Clínica Petaka Logo" style="max-width: 150px;" />
+                <h2 style="color: #3a6ea5;">Clínica Logopédica Petaka</h2>
+            </div>
+            
+            <p>Estimado/a <strong>'.htmlspecialchars($row['nombre_contacto']).'</strong>,</p>
+            
+            <p>'.($acc === 'CONFIRMAR' 
+                ? 'Nos complace confirmarle que su cita ha sido <strong>confirmada</strong>.' 
+                : 'Le informamos que su cita ha sido <strong>cancelada</strong>.').'</p>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p><strong>Fecha:</strong> '.$fechaFormateada.'</p>
+                <p><strong>Hora:</strong> '.$horaFormateada.'</p>
+                <p><strong>Motivo:</strong> '.htmlspecialchars($row['motivo']).'</p>
+            </div>
+            
+            '.($acc === 'CONFIRMAR' ? '
+            <p>Por favor, recuerde llegar 10 minutos antes de la hora de su cita. Si necesita cancelar o reprogramar, contáctenos con al menos 24 horas de antelación.</p>
+            
+            <div style="background-color: #e8f4fc; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p><strong>Ubicación:</strong></p>
+                <p>Av. Ejemplo 123</p>
+                <p>29680 Estepona</p>
+                <p>Tel: +34 123 456 789</p>
+                <p>Email: info@clinicapetaka.com</p>
+            </div>
+            ' : '
+            <p>Si desea programar una nueva cita, puede hacerlo a través de nuestra página web o contactándonos directamente.</p>
+            ').'
+            
+            <p>Gracias por confiar en nuestros servicios.</p>
+            
+            <p>Atentamente,<br>El equipo de Petaka</p>
+            
+            <hr style="border: 1px solid #eee; margin: 20px 0;" />
+            
+            <div style="font-size: 10px; color: #777; text-align: justify;">
+                <p><strong>ADVERTENCIA LEGAL:</strong> Este mensaje, junto a la documentación que en su caso se adjunta, se dirige exclusivamente a su destinatario y puede contener información privilegiada o confidencial. Si no es Vd. el destinatario indicado, queda notificado de que la utilización, divulgación y/o copia sin autorización está prohibida en virtud de la legislación vigente. Si ha recibido este mensaje por error, le rogamos que nos lo comunique inmediatamente por esta misma vía y proceda a su destrucción.</p>
+                
+                <p>Conforme a lo dispuesto en la L.O. 3/2018 de 5 de diciembre, de Protección de Datos Personales y garantía de los derechos digitales, Clínica Petaka, logopedas, le informa que los datos de carácter personal que proporcione serán recogidos en un fichero cuyo responsable es Clínica Petaka, logopedas y serán tratados con la exclusiva finalidad expresada en el mismo. Podrá acceder a sus datos, rectificarlos, cancelarlos y oponerse a su tratamiento, en los términos y en las condiciones previstas en la LOPD, dirigiéndose por escrito a info@clinicapetaka.com.</p>
+            </div>
+        </div>';
 
-            // Insertar en bloque_agenda
-            $db->prepare("
-                INSERT INTO bloque_agenda 
-                (id_profesional, fecha_inicio, fecha_fin, tipo_bloque, comentario)
-                VALUES (:prof, :inicio, :fin, 'CITA', :comentario)
-            ")->execute([
-                ':prof' => $row['id_profesional'],
-                ':inicio' => $inicio,
-                ':fin' => $fin,
-                ':comentario' => "Cita con paciente: " . $row['id_paciente']
-            ]);
-
-            // Actualizar la cita con referencia al bloque creado
-            $idBloque = $db->lastInsertId();
-            $db->prepare("UPDATE cita SET id_bloque = ? WHERE id_cita = ?")
-                ->execute([$idBloque, $id]);
-        }
-
-        /* 4) registrar notificación en BD */
-        $mensaje = $acc === 'CONFIRMAR'
-            ? 'Tu cita ha sido confirmada'
-            : 'Tu cita ha sido cancelada';
-
-        $db->prepare("
-          INSERT INTO notificacion(id_emisor,id_destino,id_cita,
-                                   tipo,asunto,cuerpo)
-          VALUES (:e,:d,:c,'EMAIL','Estado de tu cita',:b)
-        ")->execute([
+        error_log("Insertando notificación: De=$uid, Para={$row['id_paciente']}, Cita=$id");
+        
+        $stmt = $db->prepare("
+            INSERT INTO notificacion(id_emisor,id_destino,id_cita,
+                                tipo,asunto,cuerpo)
+            VALUES (:e,:d,:c,'EMAIL',:asunto,:b)
+        ");
+        $stmt->execute([
             ':e' => $uid,
             ':d' => $row['id_paciente'],
             ':c' => $id,
+            ':asunto' => $asuntoEmail,
             ':b' => $mensaje
         ]);
-
-        /* 5) enviar email inmediatamente */
-        enviarEmail(
-            $row['pacienteEmail'],
-            'Estado de tu cita',
-            "<p>Hola,<br>$mensaje.<br><br>Fecha: " .
-                date('d/m/Y H:i', strtotime($row['fecha_hora'])) . '</p>'
-        );
-
+        
+        error_log("Notificación insertada correctamente");        /* Commit the transaction first */
         $db->commit();
-        return true;
-    } catch (Throwable $ex) {
+        error_log("Transacción confirmada correctamente");        
+        
+        /* 5) Enviar email (fuera de la transacción) */
+        try {
+            error_log("Intentando enviar email a {$row['pacienteEmail']}");
+            $emailEnviado = enviarEmail(
+                $row['pacienteEmail'],
+                $asuntoEmail,
+                $mensaje
+            );
+            error_log("Resultado del envío de email: " . ($emailEnviado ? "Enviado" : "Falló"));
+        } catch (Exception $e) {            /* Solo logueamos el error del email, pero no afecta al resultado */
+            error_log("Error enviando email para cita $id: " . $e->getMessage());
+        }
+
+        return true;    } catch (Exception $e) {
+        /* Rollback en caso de error */
         $db->rollBack();
-        error_log('procesarNotificacion: ' . $ex->getMessage());
+        error_log("Error procesando notificación: " . $e->getMessage());
         return false;
     }
 }
@@ -675,45 +828,18 @@ function buscarPersona(string $email, string $tel = '', string $nif = ''): ?arra
     $st->execute($par);
     return $st->fetch(PDO::FETCH_ASSOC) ?: null;
 }
-/* codifica id_persona a URL-safe base64 */
-/* codifica id_persona a URL-safe base64 (sin =) */
-function uidEncode(int $id): string
-{
-    return rtrim(strtr(base64_encode((string)$id), '+/', '-_'), '=');
-}
 
 /* decodifica añadiendo los = que falten */
 function uidDecode(string $uid): int
-{
-    $uid = strtr($uid, '-_', '+/');
+{    $uid = strtr($uid, '-_', '+/');
 
-    /* padding */
+    /* Padding */
     $falta = strlen($uid) % 4;
     if ($falta) {
         $uid .= str_repeat('=', 4 - $falta);
     }
     return (int) base64_decode($uid);
 }
-
-/* envía correo con enlace al formulario crear-contraseña */
-function enviarFormularioPass(int $id, string $email, string $nombre): void
-{
-    $uid   = uidEncode($id);
-
-    /* 1) dominio frontend --------------------------------------------------- */
-    $base  = rtrim(getenv('FRONT_URL') ?: 'http://localhost:3000', '/');
-
-    /* 2) slug solo ASCII  --------------------------------------------------- */
-    $link  = $base . '/crear-contrasena?uid=' . $uid;
-
-    /* 3) e-mail ------------------------------------------------------------- */
-    $html  = "<p>Hola $nombre,<br>
-              Has sido dado de alta en la clínica logopédica Petaka.<br>
-              Para crear tu contraseña haz clic <a href=\"$link\">aquí</a>.</p>";
-
-    enviarEmail($email, 'Crea tu contraseña', $html);
-}
-
 
 /* ───── INSERT / UPDATE persona ───── */
 /**
@@ -726,9 +852,8 @@ function enviarFormularioPass(int $id, string $email, string $nombre): void
  */
 function upsertPersona(array $d, string $rolFinal, int $actor = 0, int $forceUpdateId = 0)
 {
-    $db = conectar();
-    
-    // Primero buscar si hay un usuario inactivo con el mismo email o NIF
+    $db = conectar();    
+    /* Primero buscar si hay un usuario inactivo con el mismo email o NIF */
     $inactivo = null;
     if (isset($d['email']) && $d['email']) {
         $st = $db->prepare("SELECT * FROM persona WHERE email = ? AND activo = 0");
@@ -742,12 +867,11 @@ function upsertPersona(array $d, string $rolFinal, int $actor = 0, int $forceUpd
         $inactivo = $st->fetch(PDO::FETCH_ASSOC);
     }
     
-    // Si encontramos un usuario inactivo, lo reactivamos
+    /* Si encontramos un usuario inactivo, lo reactivamos */
     if ($inactivo) {
         $idReactivado = (int)$inactivo['id_persona'];
-        
-        // Preparar campos a actualizar
-        $set = ['activo = 1']; // Reactivar el usuario
+          /* Preparar campos a actualizar */
+        $set = ['activo = 1']; /* Reactivar el usuario */
         $vals = [];
         
         // Lista de campos que se pueden actualizar
@@ -788,11 +912,10 @@ function upsertPersona(array $d, string $rolFinal, int $actor = 0, int $forceUpd
         
         return $idReactivado;
     }
+      /* Si llegamos aquí, continuamos con la lógica normal de upsert */
+    /* (el resto de la función queda igual) */
     
-    // Si llegamos aquí, continuamos con la lógica normal de upsert
-    // (el resto de la función queda igual)
-    
-    // Si se proporciona un ID forzado para actualización
+    /* Si se proporciona un ID forzado para actualización */
     if ($forceUpdateId > 0) {
         $st = $db->prepare("SELECT * FROM persona WHERE id_persona = ?");
         $st->execute([$forceUpdateId]);
@@ -802,7 +925,7 @@ function upsertPersona(array $d, string $rolFinal, int $actor = 0, int $forceUpd
             throw new Exception("No se encontró el usuario con ID $forceUpdateId");
         }
     } else {
-        // Búsqueda normal por email/teléfono (solo usuarios activos)
+        /* Búsqueda normal por email/teléfono (solo usuarios activos) */
         $st = $db->prepare("
             SELECT * FROM persona 
             WHERE (email = :email OR (telefono IS NOT NULL AND telefono = :tel))
@@ -812,8 +935,7 @@ function upsertPersona(array $d, string $rolFinal, int $actor = 0, int $forceUpd
         $st->execute([':email' => $d['email'] ?? '', ':tel' => $d['telefono'] ?? '']);
         $prev = $st->fetch(PDO::FETCH_ASSOC);
     }
-    
-    // Preparar campos a actualizar
+      /* Preparar campos a actualizar */
     $set = [];
     $vals = [];
     
@@ -1075,7 +1197,7 @@ function exportLogsCsv(int $year, int $month): string
 {
     $db = conectar();
 
-    // Si se pasa 0 como mes, mostrar todos los logs (sin filtro por fecha)
+    /* Si se pasa 0 como mes, mostrar todos los logs (sin filtro por fecha) */
     if ($month === 0) {
         $sql = "
           SELECT DATE_FORMAT(l.fecha,'%d/%m/%Y %H:%i')   AS fecha,
@@ -1088,12 +1210,10 @@ function exportLogsCsv(int $year, int $month): string
                  IFNULL(l.ip, '-') AS ip
             FROM log_evento_dato l
        LEFT JOIN persona actor ON actor.id_persona = l.id_actor
-           ORDER BY l.fecha DESC";
-
-        $st = $db->prepare($sql);
+           ORDER BY l.fecha DESC";        $st = $db->prepare($sql);
         $st->execute();
     } else {
-        // Usar el mes específico
+        /* Usar el mes específico */
         $ini = sprintf('%d-%02d-01 00:00:00', $year, $month);
         $fin = date('Y-m-d 23:59:59', strtotime("$ini +1 month -1 day"));
 
@@ -1111,21 +1231,17 @@ function exportLogsCsv(int $year, int $month): string
            WHERE l.fecha BETWEEN :d AND :h
            ORDER BY l.fecha DESC";
 
-        $st = $db->prepare($sql);
-        $st->execute([':d' => $ini, ':h' => $fin]);
+        $st = $db->prepare($sql);        $st->execute([':d' => $ini, ':h' => $fin]);
     }
 
-    // Crear el archivo CSV
-    $out = fopen('php://temp', 'r+');
+    /* Crear el archivo CSV */    $out = fopen('php://temp', 'r+');
 
-    // Escribir cabeceras
-    $hdr = ['Fecha', 'Actor', 'Acción', 'Tabla', 'Campo', 'Valor antiguo', 'Valor nuevo', 'IP'];
+    /* Escribir cabeceras */    $hdr = ['Fecha', 'Actor', 'Acción', 'Tabla', 'Campo', 'Valor antiguo', 'Valor nuevo', 'IP'];
     fputcsv($out, $hdr, ';');
 
-    // Contar filas obtenidas
-    $rowCount = 0;
+    /* Contar filas obtenidas */    $rowCount = 0;
 
-    // Agregar datos al CSV
+    /* Agregar datos al CSV */
     while ($row = $st->fetch(PDO::FETCH_NUM)) {
         fputcsv($out, $row, ';');
         $rowCount++;
@@ -1279,18 +1395,15 @@ function crearTratamiento(
     ?int $frecuencia = null
 ): void {
     $db = conectar();
-    $db->beginTransaction();
-
-    try {
-        // 1) Obtener o crear historial
+    $db->beginTransaction();    try {
+        /* Obtener o crear historial */
         $h = $db->prepare("
           SELECT id_historial
             FROM historial_clinico
            WHERE id_paciente = ?
            LIMIT 1
         ");
-        $h->execute([$idPac]);
-        $idHist = $h->fetchColumn();
+        $h->execute([$idPac]);        $idHist = $h->fetchColumn();
         if (!$idHist) {
             $db->prepare("
               INSERT INTO historial_clinico (id_paciente, fecha_inicio)
@@ -1299,12 +1412,11 @@ function crearTratamiento(
             $idHist = $db->lastInsertId();
         }
 
-        // 2) Verificar que los datos mínimos están presentes
-        if (empty($titulo)) {
+        /* Verificar que los datos mínimos están presentes */        if (empty($titulo)) {
             throw new Exception('El título es obligatorio');
         }
 
-        // 3) Insertar tratamiento con todos los campos
+        /* Insertar tratamiento con todos los campos */
         $sql = "
           INSERT INTO tratamiento
             (id_historial, id_profesional, fecha_inicio, fecha_fin, 
@@ -1319,15 +1431,13 @@ function crearTratamiento(
             $idProf, 
             $fechaInicio ?: date('Y-m-d'), 
             $fechaFin ?: null,
-            $frecuencia ?: null,
-            $titulo, 
+            $frecuencia ?: null,            $titulo, 
             $desc
-        ]);        // Obtener el ID del tratamiento recién creado
-        $idTratamiento = $db->lastInsertId();
+        ]);        
+        /* Obtener el ID del tratamiento recién creado */        $idTratamiento = $db->lastInsertId();
 
-        // 4) Documento opcional
-        if ($file && $file->getError() === UPLOAD_ERR_OK) {
-            // Verificar que el directorio existe y tiene permisos
+        /* Documento opcional */        if ($file && $file->getError() === UPLOAD_ERR_OK) {
+            /* Verificar que el directorio existe y tiene permisos */
             $uploadDir = __DIR__ . '/../public/uploads/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
@@ -1346,11 +1456,10 @@ function crearTratamiento(
               $idProf,
               $idTratamiento,
               'public/uploads/' . $nombre,
-              $file->getClientMediaType()
-            ]);
+              $file->getClientMediaType()            ]);
         }
 
-        // Confirmar transacción
+        /* Confirmar transacción */
         $db->commit();
         
     } catch (Exception $e) {
@@ -1361,23 +1470,108 @@ function crearTratamiento(
 }
 /*────────────────── documentos del historial ─────────*/function getDocsPaciente(int $idPac, int $idProf = null): array {
   $db  = conectar();
-  /*  ──  NO existe la columna descripcion en documento_clinico  ──
-      Devolvemos solo lo que sí hay y,                   si luego
-      quieres guardar título/desc,  añádelo vía ALTER TABLE    */
+  
   $sql = "
-    SELECT id_documento,
-           ruta,
-           tipo,
-           ''  AS titulo,        -- placeholder para el front
-           ''  AS descripcion    -- «»
-      FROM documento_clinico
-     WHERE id_historial IN(
+    SELECT d.id_documento,
+           d.ruta,
+           d.tipo,
+           d.fecha_subida,
+           h.diagnostico_preliminar,
+           h.diagnostico_final,           ''  AS titulo,        /* Placeholder para el front */
+           ''  AS descripcion    /* Placeholder para el front */
+      FROM documento_clinico d
+      JOIN historial_clinico h ON d.id_historial = h.id_historial
+     WHERE d.id_historial IN(
             SELECT id_historial
               FROM historial_clinico
-             WHERE id_paciente = ?)";
-  if ($idProf) $sql .= " AND id_profesional = " . intval($idProf);
+             WHERE id_paciente = ?)
+       AND d.id_tratamiento IS NULL";  /* Excluir documentos de tratamientos */
+  if ($idProf) $sql .= " AND d.id_profesional = " . intval($idProf);
   $st = $db->prepare($sql); $st->execute([$idPac]);
   return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/*────────────────── crear documento del historial ─────────*/
+function crearDocumentoHistorial(int $idPac,int $idProf,$file = null,string $diagnosticoPreliminar = '',string $diagnosticoFinal= '',string $tipo= 'documento'): array {
+    $db = conectar();
+    $db->beginTransaction();
+
+    try {
+        /* 1)  CREAMOS SIEMPRE UN NUEVO EPISODIO --------------------------- */
+        $db->prepare("
+            INSERT INTO historial_clinico
+                   (id_paciente, fecha_inicio,
+                    diagnostico_preliminar, diagnostico_final)
+            VALUES   (?,CURDATE(),?,?)
+        ")->execute([$idPac, $diagnosticoPreliminar, $diagnosticoFinal ?: null]);
+
+        $idHistorial = (int)$db->lastInsertId();
+
+        /* 2)  Manejo del archivo (opcional) ------------------------------- */
+        $rutaArchivo = null;
+
+        if ($file && $file->getError() === UPLOAD_ERR_OK) {
+            /* Directorio destino (‘public/uploads/historial/’) */
+            $dir = __DIR__ . '/../public/uploads/historial/';
+            if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+                throw new RuntimeException('No se pudo crear el directorio de subida');
+            }
+
+            $ext     = strtolower(pathinfo($file->getClientFilename(), PATHINFO_EXTENSION));
+            $slug    = $diagnosticoPreliminar
+                         ? preg_replace('/[^a-z0-9]+/i', '_',
+                             substr($diagnosticoPreliminar, 0, 30))
+                         : 'historial';
+            $nombre  = sprintf('%s_%d_%d.%s', $slug, $idPac, time(), $ext);
+            $destino = $dir . $nombre;
+            $rutaArchivo = 'uploads/historial/' . $nombre;
+
+            /* Mover fichero */
+            $file->moveTo($destino);
+
+            /* Deducir tipo si no se pasó */
+            if ($tipo === 'documento' || $tipo === '') {
+                $tipo = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'imagen'
+                      : ($ext === 'pdf'                                 ? 'pdf'
+                      : 'documento');
+            }
+
+            /* Registrar en documento_clinico */
+            $db->prepare("
+                INSERT INTO documento_clinico
+                       (id_historial, id_profesional,
+                        ruta, tipo, fecha_subida, id_tratamiento)
+                VALUES (:h, :p, :r, :t, NOW(), NULL)
+            ")->execute([
+                ':h' => $idHistorial,
+                ':p' => $idProf,
+                ':r' => $rutaArchivo,
+                ':t' => $tipo
+            ]);
+        }
+
+        $db->commit();
+
+        return [
+            'ok'                  => true,
+            'mensaje'             => 'Documento subido al historial correctamente',
+            'id_historial'        => $idHistorial,
+            'ruta'                => $rutaArchivo,
+            'diagnostico_final'   => $diagnosticoFinal,
+            'diagnostico_preliminar' => $diagnosticoPreliminar,
+            'tipo'                => $tipo
+        ];
+
+    } catch (Throwable $e) {
+        $db->rollBack();
+
+        /* si hubo fichero ya subido lo eliminamos para no dejar huérfanos */
+        if (isset($rutaArchivo) && $rutaArchivo !== null) {
+            $f = __DIR__ . '/../public/' . $rutaArchivo;
+            if (file_exists($f)) unlink($f);
+        }
+        throw $e;   /* Se manejará donde se llame a la función */
+    }
 }
 
 /*────────────────── citas del paciente ──────────────*/
