@@ -4,4 +4,4 @@
 .env.local
 .env.staging
 
-iatrenda.sql
+*.sql

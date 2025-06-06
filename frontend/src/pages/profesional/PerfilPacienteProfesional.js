@@ -1,12 +1,8 @@
-/* ===================================================================
-   src/pages/profesional/PerfilPacienteProfesional.jsx
-   Perfil completo de un paciente visto por su profesional
-   =================================================================== */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import {
-  CheckCircle, XCircle, EllipsisVertical, Trash2, X
+  CheckCircle, XCircle, EllipsisVertical, X
 } from 'lucide-react';
 import '../../styles.css';
 
@@ -24,37 +20,24 @@ const isImage = (path) => {
   return extensions.some(ext => path.toLowerCase().endsWith(ext));
 };
 
-// Construye la URL correcta para el archivo usando el path simplificado /uploads/
+// Construye la URL correcta para el archivo
 const getFileUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
 
-  // Eliminamos cualquier barra inicial si existe
   const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-
-  // Extraemos solo el nombre del archivo de la ruta
   const fileName = cleanPath.split('/').pop();
 
-  // Determinamos la URL base del servidor de archivos
   let baseUrl;
   if (process.env.REACT_APP_API_URL) {
-    // Si está definida la variable de entorno, la usamos
     baseUrl = process.env.REACT_APP_API_URL.replace(/\/$/, '');
   } else if (window.location.hostname === 'localhost') {
-    // En desarrollo local con XAMPP
     baseUrl = 'http://localhost:8081';
   } else {
-    // En producción, asumimos que los archivos están en el mismo dominio
     baseUrl = window.location.origin;
-  }    // Construimos la URL usando el path simplificado que maneja el servidor PHP
-  // Añadimos un timestamp para evitar problemas de caché del navegador
+  }
+
   const finalUrl = `${baseUrl}/uploads/${fileName}?t=${Date.now()}`;
-
-  /* console.log('Path original:', path);
-   console.log('Nombre del archivo:', fileName);
-   console.log('Base URL:', baseUrl);
-   console.log('URL final construida:', finalUrl);*/
-
   return finalUrl;
 };
 
@@ -67,15 +50,139 @@ const estadoColor = {
   CANCELACION_SOLICITADA: '#eb5757'
 };
 
-/* =================================================================== */
+/* ================= COMPONENTES SEPARADOS ================= */
+
+// Componente Input memoizado
+const InputField = memo(({ obj, onChange, fieldKey, label, type = 'text', full = false, edit }) => {
+  return (
+    <div className={`field${full ? ' full' : ''}`}>
+      <label>{label}</label>
+      <input 
+        type={type} 
+        readOnly={!edit} 
+        className={!edit ? 'readonly-input' : ''}
+        value={obj[fieldKey] || ''} 
+        onChange={e => onChange(fieldKey, e.target.value)} 
+      />
+    </div>
+  );
+});
+
+// Componente BloquePaciente memoizado
+const BloquePaciente = memo(({ pPac, hPac, edit }) => (
+  <>
+    <h4>Datos de paciente</h4>
+    <div className="form-grid">
+      <div className="field">
+        <label>Tipo paciente*</label>
+        <select 
+          disabled={!edit}
+          className={!edit ? 'readonly-input' : ''}
+          value={pPac.tipo_paciente || 'ADULTO'}
+          onChange={e => hPac('tipo_paciente', e.target.value)}
+        >
+          <option value="ADULTO">Adulto</option>
+          <option value="ADOLESCENTE">Adolescente</option>
+          <option value="NIÑO">Niño</option>
+          <option value="INFANTE">Infante</option>
+        </select>
+      </div>
+      <InputField 
+        obj={pPac} 
+        onChange={hPac} 
+        fieldKey="observaciones_generales" 
+        label="Observaciones" 
+        type="text" 
+        full={true} 
+        edit={edit}
+      />
+    </div>
+  </>
+));
+
+// Componente BloqueTutor memoizado
+const BloqueTutor = memo(({ pTut, hTut, edit }) => (
+  <>
+    <h4>Datos del tutor</h4>
+    <div className="form-grid">
+      <InputField obj={pTut} onChange={hTut} fieldKey="nombre" label="Nombre*" edit={edit} />
+      <InputField obj={pTut} onChange={hTut} fieldKey="apellido1" label="Primer apellido*" edit={edit} />
+      <InputField obj={pTut} onChange={hTut} fieldKey="apellido2" label="Segundo apellido" edit={edit} />
+      <InputField obj={pTut} onChange={hTut} fieldKey="fecha_nacimiento" label="F. nacimiento*" type="date" edit={edit} />
+      <InputField obj={pTut} onChange={hTut} fieldKey="nif" label="DNI" edit={edit} />
+      <InputField obj={pTut} onChange={hTut} fieldKey="email" label="Email*" type="email" edit={edit} />
+      <InputField obj={pTut} onChange={hTut} fieldKey="telefono" label="Teléfono*" edit={edit} />
+      <div className="field full">
+        <label>Método contacto*</label>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <label>
+            <input 
+              type="checkbox" 
+              disabled={!edit}
+              checked={pTut.metodo_contacto_preferido === 'TEL'}
+              onChange={e => hTut('metodo_contacto_preferido', e.target.checked ? 'TEL' : '')} 
+            /> Teléfono
+          </label>
+          <label>
+            <input 
+              type="checkbox" 
+              disabled={!edit}
+              checked={pTut.metodo_contacto_preferido === 'EMAIL'}
+              onChange={e => hTut('metodo_contacto_preferido', e.target.checked ? 'EMAIL' : '')} 
+            /> Email
+          </label>
+        </div>
+      </div>
+    </div>
+  </>
+));
+
+// Componente BloquePersona memoizado
+const BloquePersona = memo(({ pPer, hPer, edit }) => (
+  <>
+    <h4>Datos personales</h4>
+    <div className="form-grid">
+      <InputField obj={pPer} onChange={hPer} fieldKey="nombre" label="Nombre*" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="apellido1" label="Primer apellido*" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="apellido2" label="Segundo apellido" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="fecha_nacimiento" label="F. nacimiento*" type="date" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="nif" label="DNI*" edit={edit} />
+    </div>
+  </>
+));
+
+// Componente BloqueContacto memoizado
+const BloqueContacto = memo(({ pPer, hPer, edit }) => (
+  <>
+    <h4>Datos de contacto</h4>
+    <div className="form-grid">
+      <InputField obj={pPer} onChange={hPer} fieldKey="email" label="Email*" type="email" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="telefono" label="Teléfono*" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="tipo_via" label="Tipo vía" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="nombre_calle" label="Nombre calle" full={true} edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="numero" label="Número" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="escalera" label="Escalera" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="piso" label="Piso" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="puerta" label="Puerta" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="codigo_postal" label="CP" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="ciudad" label="Ciudad" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="provincia" label="Provincia" edit={edit} />
+      <InputField obj={pPer} onChange={hPer} fieldKey="pais" label="País" edit={edit} />
+    </div>
+  </>
+));
+
+/* ================= COMPONENTE PRINCIPAL ================= */
 export default function PerfilPacienteProfesional() {
   const { id } = useParams();
 
-  /* ---------------- estado ---------------- */  const [data, setData] = useState(null);      // payload completo
+  /* ---------------- estado ---------------- */  
+  const [data, setData] = useState(null);
   const [tab, setTab] = useState('perfil');
   const [edit, setEdit] = useState(false);
-  const [drop, setDrop] = useState(null);      // id_cita con dropdown
-  const [repro, setRepro] = useState({ show: false, id: null, fecha: '' }); const [selDoc, setSelDoc] = useState(null);
+  const [drop, setDrop] = useState(null);
+  const [repro, setRepro] = useState({ show: false, id: null, fecha: '' }); 
+  const [selDoc, setSelDoc] = useState(null);
   const [selT, setSelT] = useState(null);
   const [toast, setToast] = useState({ show: false, ok: true, t: '', m: '' });
 
@@ -90,7 +197,9 @@ export default function PerfilPacienteProfesional() {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
     const tk = localStorage.getItem('token');
     if (tk) axios.defaults.headers.common.Authorization = `Bearer ${tk}`;
-  }, []); const fetchData = useCallback(async () => {
+  }, []); 
+
+  const fetchData = useCallback(async () => {
     try {
       console.log('Fetching updated patient data...');
       const r = await axios.get(`/prof/pacientes/${id}`);
@@ -136,16 +245,11 @@ export default function PerfilPacienteProfesional() {
   }, [drop]);
 
   const msg = (ok, t, m) => setToast({ show: true, ok, t, m });
-  const upd = setter => (k, v) => setter(s => ({ ...s, [k]: v }));
-  const hPer = upd(setPPer); const hPac = upd(setPPac); const hTut = upd(setPTut);
-
-  const input = (obj, setter, k, l, t = 'text', full = false) => (
-    <div className={`field${full ? ' full' : ''}`}>
-      <label>{l}</label>
-      <input type={t} readOnly={!edit} className={!edit ? 'readonly-input' : ''}
-        value={obj[k] || ''} onChange={e => setter(k, e.target.value)} />
-    </div>
-  );
+  
+  // Handlers estables con useCallback
+  const hPer = useCallback((k, v) => setPPer(s => ({ ...s, [k]: v })), []);
+  const hPac = useCallback((k, v) => setPPac(s => ({ ...s, [k]: v })), []);
+  const hTut = useCallback((k, v) => setPTut(s => ({ ...s, [k]: v })), []);
 
   /* ---------- guardar perfil ---------- */
   const savePerfil = async () => {
@@ -155,113 +259,37 @@ export default function PerfilPacienteProfesional() {
         paciente: { ...pPac, tutor: pPac.tipo_paciente !== 'ADULTO' ? pTut : null },
         rgpd
       });
-      msg(true, 'OK', 'Perfil guardado');
+      msg(true, '¡Éxito!', 'Paciente actualizado correctamente');
       setEdit(false);
-    } catch (e) { msg(false, 'Error', e.response?.data?.mensaje || 'No guardado'); }
+    } catch (e) { msg(false, 'Error', e.response?.data?.mensaje || 'El paciente no se ha podido actualizar'); }
   };
+
   /* ---------- acciones citas ---------- */
   const doAccion = async (idCita, accion, fecha = null) => {
     try {
       await axios.post(`/prof/citas/${idCita}/accion`, { accion, ...(fecha ? { fecha } : {}) });
-      await fetchData(); // Recargar datos sin reload de página
+      await fetchData();
     } catch (e) { msg(false, 'Error', 'No se pudo cambiar la cita'); }
   };
 
   if (data === null) return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando…</div>;
 
-  /* ---------------- formularios ---------------- */
-  const BloquePaciente = () => (
-    <>
-      <h4>Datos de paciente</h4>
-      <div className="form-grid">
-        <div className="field">
-          <label>Tipo paciente*</label>
-          <select disabled={!edit}
-            className={!edit ? 'readonly-input' : ''}
-            value={pPac.tipo_paciente || 'ADULTO'}
-            onChange={e => hPac('tipo_paciente', e.target.value)}>
-            <option value="ADULTO">Adulto</option>
-            <option value="ADOLESCENTE">Adolescente</option>
-            <option value="NIÑO">Niño</option>
-            <option value="INFANTE">Infante</option>
-          </select>
-        </div>
-        {input(pPac, hPac, 'observaciones_generales', 'Observaciones', 'text', true)}
-      </div>
-    </>
-  );
-
-  const BloqueTutor = () => (
-    <>
-      <h4>Datos del tutor</h4>
-      <div className="form-grid">
-        {input(pTut, hTut, 'nombre', 'Nombre*')}
-        {input(pTut, hTut, 'apellido1', 'Primer apellido*')}
-        {input(pTut, hTut, 'apellido2', 'Segundo apellido')}
-        {input(pTut, hTut, 'fecha_nacimiento', 'F. nacimiento*', 'date')}
-        {input(pTut, hTut, 'nif', 'DNI')}
-        {input(pTut, hTut, 'email', 'Email*', 'email')}
-        {input(pTut, hTut, 'telefono', 'Teléfono*')}
-        <div className="field full">
-          <label>Método contacto*</label>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <label><input type="checkbox" disabled={!edit}
-              checked={pTut.metodo_contacto_preferido === 'TEL'}
-              onChange={e => hTut('metodo_contacto_preferido',
-                e.target.checked ? 'TEL' : '')} /> Teléfono</label>
-            <label><input type="checkbox" disabled={!edit}
-              checked={pTut.metodo_contacto_preferido === 'EMAIL'}
-              onChange={e => hTut('metodo_contacto_preferido',
-                e.target.checked ? 'EMAIL' : '')} /> Email</label>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-
-  const BloquePersona = () => (
-    <>
-      <h4>Datos personales</h4>
-      <div className="form-grid">
-        {input(pPer, hPer, 'nombre', 'Nombre*')}
-        {input(pPer, hPer, 'apellido1', 'Primer apellido*')}
-        {input(pPer, hPer, 'apellido2', 'Segundo apellido')}
-        {input(pPer, hPer, 'fecha_nacimiento', 'F. nacimiento*', 'date')}
-        {input(pPer, hPer, 'nif', 'DNI*')}
-      </div>
-    </>
-  );
-
-  const BloqueContacto = () => (
-    <>
-      <h4>Datos de contacto</h4>
-      <div className="form-grid">
-        {input(pPer, hPer, 'email', 'Email*', 'email')}
-        {input(pPer, hPer, 'telefono', 'Teléfono*')}
-        {input(pPer, hPer, 'tipo_via', 'Tipo vía')}
-        {input(pPer, hPer, 'nombre_calle', 'Nombre calle', 'text', true)}
-        {input(pPer, hPer, 'numero', 'Número')}
-        {input(pPer, hPer, 'escalera', 'Escalera')}
-        {input(pPer, hPer, 'piso', 'Piso')}
-        {input(pPer, hPer, 'puerta', 'Puerta')}
-        {input(pPer, hPer, 'codigo_postal', 'CP')}
-        {input(pPer, hPer, 'ciudad', 'Ciudad')}
-        {input(pPer, hPer, 'provincia', 'Provincia')}
-        {input(pPer, hPer, 'pais', 'País')}
-      </div>
-    </>
-  );
-
   /* ------------------- TABS ------------------- */
   const Perfil = (
     <>
-      <BloquePaciente />
-      {pPac.tipo_paciente !== 'ADULTO' && <BloqueTutor />}
-      <BloquePersona />
-      <BloqueContacto />
+      <BloquePaciente pPac={pPac} hPac={hPac} edit={edit} />
+      {pPac.tipo_paciente !== 'ADULTO' && <BloqueTutor pTut={pTut} hTut={hTut} edit={edit} />}
+      <BloquePersona pPer={pPer} hPer={hPer} edit={edit} />
+      <BloqueContacto pPer={pPer} hPer={hPer} edit={edit} />
       <div className="field full">
-        <label><input type="checkbox" disabled={!edit}
-          checked={rgpd} onChange={e => setRgpd(e.target.checked)} /> Acepto la política de privacidad</label>
+        <label>
+          <input 
+            type="checkbox" 
+            disabled={!edit}
+            checked={rgpd} 
+            onChange={e => setRgpd(e.target.checked)} 
+          /> Acepto la política de privacidad
+        </label>
       </div>
       <div className="modal-footer">
         {!edit
@@ -274,6 +302,7 @@ export default function PerfilPacienteProfesional() {
       </div>
     </>
   );
+
   const Trat = (
     <>
       <h4>Tareas</h4>
@@ -293,18 +322,19 @@ export default function PerfilPacienteProfesional() {
               )}
             </li>
           ))}
-        </ul>}      <SubirTratamiento onDone={fetchData} />
+        </ul>}      
+      <SubirTratamiento onDone={fetchData} />
       {selT && (
-        <>
-          <ModalTratamiento idPac={id} treat={selT}
-            onClose={() => setSelT(null)}
-            onChange={fetchData} />
-        </>
+        <ModalTratamiento idPac={id} treat={selT}
+          onClose={() => setSelT(null)}
+          onChange={fetchData} />
       )}
     </>
   );
+
   const Docs = (
-    <>      <h4>Documentos en historial</h4>
+    <>      
+      <h4>Documentos en historial</h4>
       {(data.documentos || []).length === 0
         ? <p>No hay documentos.</p>
         : <div className="documentos-grid">
@@ -435,6 +465,8 @@ export default function PerfilPacienteProfesional() {
   );
 }
 
+
+
 /* ===================================================================
    ModalTratamiento  (detalle + eliminar)
    =================================================================== */
@@ -550,7 +582,7 @@ function ModalTratamiento({ idPac, treat, onClose, onChange }) {
           </div>
           <div className="modal-footer">
             <button className="btn-delete" onClick={() => setShowDeleteModal(true)}>
-              <Trash2 size={18} /> Eliminar
+              Eliminar
             </button>
             <button className="btn-cancel" onClick={onClose}>Cerrar</button>
           </div>
@@ -856,7 +888,7 @@ function ModalDocumento({ idPac, doc, onClose, onChange }) {
         </div>
         <div className="modal-footer">
           <button className="btn-delete" onClick={() => setShowDeleteModal(true)}>
-            <Trash2 size={18} /> Eliminar
+             Eliminar
           </button>
           <button className="btn-cancel" onClick={onClose}>Cerrar</button>
         </div>

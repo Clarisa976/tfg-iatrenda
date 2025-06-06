@@ -55,7 +55,6 @@ export default function AgendaProfesional() {
       toast.error('Error al cargar la agenda');
     }
   };
-
   const map = arr => arr.map(x => {
     return {
       id: x.id,
@@ -65,7 +64,7 @@ export default function AgendaProfesional() {
       end: new Date(x.fin),
       profId: x.recurso,
       profNombre: x.nombre_profesional || 'Yo',
-      creadorNombre: x.creador || '—',
+      creadorNombre: x.creador || 'Sin especificar',
       title: `${x.tipo} – ${x.titulo || ''}`
     };
   });

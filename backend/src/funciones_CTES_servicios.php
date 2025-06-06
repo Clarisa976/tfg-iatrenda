@@ -256,14 +256,13 @@ function reservarCita(string $nombre, string $email, ?string $tel, string $motiv
     if ($profCount == 0) {
         error_log("No hay profesionales en la base de datos");
         return ['ok'=>false,'mensaje'=>'No hay profesionales registrados en el sistema','status'=>409];
-    }
-      $sql = "
+    }      $sql = "
       SELECT p.id_profesional
         FROM profesional p
        WHERE NOT EXISTS (
          SELECT 1 FROM bloque_agenda b
           WHERE b.id_profesional = p.id_profesional
-            AND b.tipo_bloque    IN ('AUSENCIA','VACACIONES')
+            AND b.tipo_bloque    IN ('AUSENCIA','VACACIONES','BAJA','EVENTO')
             AND :ts_bloque BETWEEN b.fecha_inicio
                        AND DATE_SUB(b.fecha_fin,INTERVAL 1 SECOND)
        )
@@ -480,9 +479,12 @@ function getEventosAgenda(string $desde, string $hasta, ?int $profId = null): ar
              b.fecha_fin             AS fin,
              b.tipo_bloque           AS tipo,
              b.comentario            AS titulo,
-             'bloque'                AS fuente
+             'bloque'                AS fuente,
+             b.id_creador            AS id_creador,
+             CONCAT(c.nombre, ' ', c.apellido1) AS creador
         FROM bloque_agenda b
         LEFT JOIN persona p ON p.id_persona = b.id_profesional
+        LEFT JOIN persona c ON c.id_persona = b.id_creador
        WHERE DATE(b.fecha_inicio) <= :h
          AND DATE(b.fecha_fin)   >= :d
     ";
@@ -495,29 +497,8 @@ function getEventosAgenda(string $desde, string $hasta, ?int $profId = null): ar
     $bloques = $db->prepare($bloqSQL);
     $bloques->execute($params);
 
-    /* Citas confirmadas/atendidas → 1 h de duración */
-    $citSQL = "
-      SELECT c.id_cita               AS id,
-             c.id_profesional        AS recurso,
-             CONCAT(p.nombre, ' ', p.apellido1) AS nombre_profesional,
-             c.fecha_hora            AS inicio,
-             DATE_ADD(c.fecha_hora,INTERVAL 1 HOUR) AS fin,
-             'cita'                  AS tipo,
-             c.motivo                AS titulo,
-             'cita'                  AS fuente
-        FROM cita c
-        LEFT JOIN persona p ON p.id_persona = c.id_profesional
-       WHERE c.estado IN ('CONFIRMADA','ATENDIDA')
-         AND DATE(c.fecha_hora) BETWEEN :d AND :h
-    ";
-    if ($profId !== null) $citSQL .= " AND c.id_profesional = :p";
-    $citas = $db->prepare($citSQL);
-    $citas->execute($params);
-
-    return array_merge(
-        $bloques->fetchAll(PDO::FETCH_ASSOC),
-        $citas->fetchAll(PDO::FETCH_ASSOC)
-    );
+    // We're only returning blocks, no appointments anymore
+    return $bloques->fetchAll(PDO::FETCH_ASSOC);
 }
 
 /**
@@ -532,14 +513,13 @@ function crearBloqueAgenda(
             if (!crearBloqueAgenda((int)$p['id'], $ini, $fin, $tipo, $com, $actor))
                 return false;
         }
-        return true;
-    }
+        return true;    }
 
-    $sql = 'INSERT INTO bloque_agenda (id_profesional,fecha_inicio,fecha_fin,tipo_bloque,comentario)
-            VALUES (:p,:i,:f,:t,:c)';
+    $sql = 'INSERT INTO bloque_agenda (id_profesional,fecha_inicio,fecha_fin,tipo_bloque,comentario,id_creador)
+            VALUES (:p,:i,:f,:t,:c,:cr)';
     return execLogged(
         $sql,
-        [':p' => $prof, ':i' => $ini, ':f' => $fin, ':t' => $tipo, ':c' => $com],
+        [':p' => $prof, ':i' => $ini, ':f' => $fin, ':t' => $tipo, ':c' => $com, ':cr' => $actor],
         $actor,
         'bloque_agenda'
     );
@@ -668,9 +648,7 @@ function procesarNotificacion(int $id, string $acc, int $uid, string $rol): bool
         /* 2) Actualizar estado */
         error_log("Actualizando estado de cita $id a $nuevo");
         $db->prepare("UPDATE cita SET estado = ? WHERE id_cita = ?")
-            ->execute([$nuevo, $id]);
-
-        /* 3) Si se confirma, crear bloque en la agenda del profesional */
+            ->execute([$nuevo, $id]);        /* 3) Si se confirma, crear bloque en la agenda del profesional */
         if ($acc === 'CONFIRMAR') {
             /* Verificar que no exista ya un bloque para esta cita */
             $stmt = $db->prepare("SELECT COUNT(*) FROM bloque_agenda WHERE id_profesional = ? AND fecha_inicio = ?");
@@ -684,26 +662,41 @@ function procesarNotificacion(int $id, string $acc, int $uid, string $rol): bool
                 $inicio = $row['fecha_hora'];
                 $fin = date('Y-m-d H:i:s', strtotime($inicio . ' +1 hour'));
                 
-                error_log("Creando bloque de agenda: Prof={$row['id_profesional']}, Inicio=$inicio, Fin=$fin");
+                /* Obtener el nombre completo del paciente */
+                $stmtPaciente = $db->prepare("
+                    SELECT CONCAT(nombre, ' ', apellido1, IF(apellido2 IS NOT NULL AND apellido2 != '', CONCAT(' ', apellido2), '')) as nombre_completo
+                    FROM persona
+                    WHERE id_persona = ?
+                ");
+                $stmtPaciente->execute([$row['id_paciente']]);
+                $nombrePaciente = $stmtPaciente->fetchColumn() ?: 'Paciente';
                 
-                $db->prepare("
+                error_log("Creando bloque de agenda: Prof={$row['id_profesional']}, Inicio=$inicio, Fin=$fin");
+                  $db->prepare("
                     INSERT INTO bloque_agenda (
                         id_profesional, fecha_inicio, fecha_fin, 
-                        tipo_bloque, comentario
+                        tipo_bloque, comentario, id_creador
                     ) VALUES (
-                        :p, :i, :f, 'CITA', :c
+                        :p, :i, :f, 'CITA', :c, :cr
                     )
                 ")->execute([
                     ':p' => $row['id_profesional'],
                     ':i' => $inicio,
                     ':f' => $fin,
-                    ':c' => "Cita con paciente #{$row['id_paciente']}"
+                    ':c' => "Cita con {$nombrePaciente} (#{$row['id_paciente']})",
+                    ':cr' => $uid
                 ]);
-                error_log("Bloque de agenda creado correctamente");
+                
+                /* Actualizar la cita con el ID del bloque creado */
+                $idBloque = $db->lastInsertId();
+                $db->prepare("UPDATE cita SET id_bloque = ? WHERE id_cita = ?")
+                   ->execute([$idBloque, $id]);
+                
+                error_log("Bloque de agenda creado correctamente y vinculado a la cita");
             } else {
                 error_log("No se creó bloque de agenda porque ya existe");
             }
-        }          /* 4) Registrar notificación en BD */
+        }/* 4) Registrar notificación en BD */
         /* Formatear fecha y hora para el mensaje */
         $fechaFormateada = date('d/m/Y', strtotime($row['fecha_hora']));
         $horaFormateada = date('H:i', strtotime($row['fecha_hora']));
@@ -843,160 +836,128 @@ function uidDecode(string $uid): int
 
 /* ───── INSERT / UPDATE persona ───── */
 /**
- * Inserta o actualiza la tabla persona y devuelve id_persona.
- *  $d   → array con los campos (nombre, email, etc.)
- *  $rolFinal → 'PROFESIONAL' | 'PACIENTE' | 'TUTOR' | 'ADMIN'
- *  - Si la persona ya existía (por email o teléfono) se actualiza y/o
- *    cambia el rol.
- *  - Si es nueva y trae email se envía un enlace para crear contraseña.
+ * Inserta o actualiza PERSONA y devuelve id_persona.
+ *
+ *  $d         → array de campos recibidos (nombre, email, …)
+ *  $rolFinal  → 'PACIENTE' | 'PROFESIONAL' | 'TUTOR' | 'ADMIN'
+ *  $actor     → id del usuario que hace la operación (para logs)
+ *  $forceId   → >0  ⇒ PUT: fuerza a actualizar ese registro
+ *
+ * Reglas de unicidad EN CÓDIGO (no en MySQL):
+ *   · Los roles-login (PACIENTE, PROFESIONAL, ADMIN) no pueden compartir
+ *     email, nif ni teléfono con otros roles-login **activos**.
+ *   · El rol TUTOR puede repetir o dejar vacíos esos datos.
+ *
+ * Si es un usuario nuevo con email y rol-login ⇒ email “Crear contraseña”.
+ *
+ * Lanza Exception con mensaje descriptivo si hay conflicto.
  */
-function upsertPersona(array $d, string $rolFinal, int $actor = 0, int $forceUpdateId = 0)
+function upsertPersona(array $d, string $rolFinal,
+                        int $actor = 0, int $forceId = 0): int
 {
-    $db = conectar();    
-    /* Primero buscar si hay un usuario inactivo con el mismo email o NIF */
-    $inactivo = null;
-    if (isset($d['email']) && $d['email']) {
-        $st = $db->prepare("SELECT * FROM persona WHERE email = ? AND activo = 0");
-        $st->execute([$d['email']]);
-        $inactivo = $st->fetch(PDO::FETCH_ASSOC);
+    $db          = conectar();
+    $rolesLogin  = ['PACIENTE','PROFESIONAL','ADMIN'];
+    $esRolLogin  = in_array($rolFinal, $rolesLogin, true);
+
+    /* ───── 1. localizar registro previo (forceId) ───── */
+    $prev = null;
+    if ($forceId > 0) {
+        $q = $db->prepare("SELECT * FROM persona WHERE id_persona=?");
+        $q->execute([$forceId]);
+        $prev = $q->fetch(PDO::FETCH_ASSOC);
+        if (!$prev) throw new Exception("Usuario #$forceId inexistente");
     }
-    
-    if (!$inactivo && isset($d['nif']) && $d['nif']) {
-        $st = $db->prepare("SELECT * FROM persona WHERE nif = ? AND activo = 0");
-        $st->execute([$d['nif']]);
-        $inactivo = $st->fetch(PDO::FETCH_ASSOC);
+
+    /* ───── 2. reactivar si coincidía email/nif inactivo ───── */
+    if (!$prev && (!empty($d['email']) || !empty($d['nif']))) {
+        $cond = []; $par = [];
+        if (!empty($d['email'])) { $cond[]='email=:e'; $par[':e']=$d['email']; }
+        if (!empty($d['nif']))   { $cond[]='nif=:n';   $par[':n']=$d['nif'];   }
+        $sql="SELECT * FROM persona WHERE (".implode(' OR ',$cond).") AND activo=0 LIMIT 1";
+        $r  = $db->prepare($sql); $r->execute($par);
+        if ($row = $r->fetch(PDO::FETCH_ASSOC)) {
+            $prev               = $row;
+            $prev['reactivado'] = true;
+        }
     }
-    
-    /* Si encontramos un usuario inactivo, lo reactivamos */
-    if ($inactivo) {
-        $idReactivado = (int)$inactivo['id_persona'];
-          /* Preparar campos a actualizar */
-        $set = ['activo = 1']; /* Reactivar el usuario */
-        $vals = [];
-        
-        // Lista de campos que se pueden actualizar
-        $campos = ['nombre', 'apellido1', 'apellido2', 'fecha_nacimiento', 
-                   'nif', 'email', 'telefono', 'tipo_via', 'nombre_calle', 'numero',
-                   'escalera', 'piso', 'puerta', 'codigo_postal', 'ciudad', 
-                   'provincia', 'pais'];
-        
-        // Filtrar solo los campos que vienen en $d
-        foreach ($campos as $c) {
-            if (isset($d[$c]) && $d[$c] !== '') {
-                $set[] = "$c = :$c";
-                $vals[":$c"] = $d[$c];
+
+    /* ───── 3. unicidad condicional (solo roles-login) ───── */
+    foreach (['email','telefono','nif'] as $campo) {
+        if (empty($d[$campo])) continue;              // vacíos no cuentan
+        $sql = "SELECT id_persona,rol FROM persona
+                WHERE $campo=:v AND activo=1";
+        $par = [':v'=>$d[$campo]];
+        if ($prev) { $sql .= " AND id_persona<>:yo"; $par[':yo']=$prev['id_persona']; }
+        $s   = $db->prepare($sql); $s->execute($par);
+        foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $dup) {
+            if ($esRolLogin && in_array($dup['rol'],$rolesLogin,true)) {
+                throw new Exception(ucfirst($campo)." '{$d[$campo]}' ya está registrado");
             }
         }
-        
-        // Actualizar rol si es necesario
-        if ($inactivo['rol'] !== $rolFinal) {
-            $set[] = "rol = :rol";
-            $vals[':rol'] = $rolFinal;
-        }
-        
-        // Ejecutar la actualización
-        $sql = "UPDATE persona SET " . implode(', ', $set) . " WHERE id_persona = :id";
-        $vals[':id'] = $idReactivado;
-        $db->prepare($sql)->execute($vals);
-        
-        // Registrar la reactivación
-        logEvento(
-            $actor,
-            $idReactivado,
-            'persona',
-            'activo',
-            '0',
-            '1',
-            'UPDATE'
-        );
-        
-        return $idReactivado;
     }
-      /* Si llegamos aquí, continuamos con la lógica normal de upsert */
-    /* (el resto de la función queda igual) */
-    
-    /* Si se proporciona un ID forzado para actualización */
-    if ($forceUpdateId > 0) {
-        $st = $db->prepare("SELECT * FROM persona WHERE id_persona = ?");
-        $st->execute([$forceUpdateId]);
-        $prev = $st->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$prev) {
-            throw new Exception("No se encontró el usuario con ID $forceUpdateId");
-        }
-    } else {
-        /* Búsqueda normal por email/teléfono (solo usuarios activos) */
-        $st = $db->prepare("
-            SELECT * FROM persona 
-            WHERE (email = :email OR (telefono IS NOT NULL AND telefono = :tel))
-            AND activo = 1
-            LIMIT 1
-        ");
-        $st->execute([':email' => $d['email'] ?? '', ':tel' => $d['telefono'] ?? '']);
-        $prev = $st->fetch(PDO::FETCH_ASSOC);
-    }
-      /* Preparar campos a actualizar */
-    $set = [];
-    $vals = [];
-    
-    // Lista de campos que se pueden actualizar
-    $campos = ['nombre', 'apellido1', 'apellido2', 'fecha_nacimiento', 
-               'nif', 'email', 'telefono', 'tipo_via', 'nombre_calle', 'numero',
-               'escalera', 'piso', 'puerta', 'codigo_postal', 'ciudad', 
-               'provincia', 'pais'];
-    
-    // Filtrar solo los campos que vienen en $d
-    foreach ($campos as $c) {
-        if (isset($d[$c]) && $d[$c] !== '') {
+
+    /* ───── 4. SET dinámico (ahora admite NULL/borrado) ───── */
+    $editables = [
+      'nombre','apellido1','apellido2','fecha_nacimiento',
+      'nif','email','telefono',
+      'tipo_via','nombre_calle','numero','escalera','piso','puerta',
+      'codigo_postal','ciudad','provincia','pais'
+    ];
+    $set  = []; $vals = [];
+    foreach ($editables as $c) {
+        if (array_key_exists($c,$d)) {           // existe en input, aunque sea ''
             $set[] = "$c = :$c";
-            $vals[":$c"] = $d[$c];
+            $vals[":$c"] = ($d[$c] === '') ? null : $d[$c]; // '' ⇒ NULL
         }
     }
-    
-    /* ──────────── UPDATE ──────────── */
+
+    /* ───── 5. UPDATE ───── */
     if ($prev) {
         $id = (int)$prev['id_persona'];
-        
-        // Si estamos actualizando un usuario existente, verificar si el NIF 
-        // ya existe para otro usuario diferente
-        if (isset($d['nif']) && $d['nif'] !== $prev['nif']) {
-            $st = $db->prepare("SELECT id_persona FROM persona WHERE nif = ? AND id_persona != ?");
-            $st->execute([$d['nif'], $id]);
-            if ($st->fetch()) {
-                throw new Exception("El NIF {$d['nif']} ya está registrado para otro usuario");
-            }
+
+        if ($prev['rol'] !== $rolFinal) {
+            $db->prepare("UPDATE persona SET rol=:r WHERE id_persona=:id")
+               ->execute([':r'=>$rolFinal, ':id'=>$id]);
         }
-        
-        /* actualiza rol si ha cambiado */
-        if (isset($prev['rol']) && $prev['rol'] !== $rolFinal) {
-            $db->prepare("UPDATE persona SET rol = :r WHERE id_persona = :id")
-               ->execute([':r' => $rolFinal, ':id' => $id]);
+        if (!empty($prev['reactivado'])) {
+            $db->prepare("UPDATE persona SET activo=1 WHERE id_persona=:id")
+               ->execute([':id'=>$id]);
         }
-        
-        /* actualiza columnas que vengan en $d */
         if ($set) {
-            $sql = "UPDATE persona SET " . implode(', ', $set)
-                 . " WHERE id_persona = :id";
-            $vals[':id'] = $id;
-            $db->prepare($sql)->execute($vals);
+            $vals[':id']=$id;
+            $db->prepare("UPDATE persona SET ".implode(', ',$set)." WHERE id_persona=:id")
+               ->execute($vals);
         }
-        
         return $id;
     }
-    
-    /* ──────────── INSERT ──────────── */
-    // Para inserciones, verificar si el NIF ya existe
-    if (isset($d['nif']) && $d['nif']) {
-        $st = $db->prepare("SELECT id_persona FROM persona WHERE nif = ?");
-        $st->execute([$d['nif']]);
-        if ($st->fetch()) {
-            throw new Exception("El NIF {$d['nif']} ya está registrado en el sistema");
-        }
+
+    /* ───── 6. INSERT ───── */
+    $cols = array_map(fn($p)=>substr($p,1), array_keys($vals));
+    $sql  = "INSERT INTO persona (".implode(',',$cols).",rol,fecha_alta)
+             VALUES (".implode(',',array_keys($vals)).",:rol,CURDATE())";
+    $vals[':rol']=$rolFinal;
+    $db->prepare($sql)->execute($vals);
+    $idNew = (int)$db->lastInsertId();
+
+    /* ───── 7. email “crear contraseña” para roles-login ───── */
+    if ($esRolLogin && !empty($d['email'])) {
+        $uid   = rtrim(strtr(base64_encode((string)$idNew), '+/', '-_'), '=');
+        $front = getenv('FRONTEND_URL') ?: 'http://localhost:3000';
+        $link  = "$front/crear-pass?u=$uid";
+        $html  = "
+          <p>Hola {$d['nombre']}:</p>
+          <p>Hemos creado tu usuario en <strong>Clínica Petaka</strong>.</p>
+          <p>Establece tu contraseña aquí: <a href=\"$link\">Crear contraseña</a></p>";
+        enviarEmail($d['email'],'Crea tu contraseña – Petaka',$html);
     }
-    
-    // Resto del código para inserción...
-    // (mantener el código original de inserción)
+
+    /* ───── 8. log auditoría ───── */
+    logEvento($actor,$idNew,'persona',null,null,json_encode($d),'INSERT');
+
+    return $idNew;
 }
+
+
 /* ───── INSERT / UPDATE profesional ───── */
 function upsertProfesional(int $id, array $x, int $actor = 0): bool
 {
@@ -1023,78 +984,91 @@ function upsertProfesional(int $id, array $x, int $actor = 0): bool
 -------------------------------------------------------------------*/
 
 /**
- * Crea o actualiza el tutor y devuelve su id_persona.
- * $t debe traer al menos: nombre, apellido1, email, telefono, metodo (TEL|EMAIL)
+ * Inserta / actualiza al tutor y devuelve su id_persona.
+ *
+ * $t = [
+ *   'nombre'      => ...,
+ *   'apellido1'   => ...,
+ *   'apellido2'   => ... (opcional),
+ *   'telefono'    => ... (opcional – puede repetirse o ser NULL),
+ *   'email'       => ... (opcional – puede repetirse o ser NULL),
+ *   'nif'         => ... (opcional – puede repetirse o ser NULL),
+ *   'metodo'      => 'TEL' | 'EMAIL'   // preferencia de contacto
+ * ]
  */
 function upsertTutor(array $t): int
 {
-    /* 1) upsert en persona con rol TUTOR */
+    /* 1) Persona con rol = TUTOR.  Las restricciones únicas sólo
+       se aplican a *_login, por lo que email/teléfono/NIF pueden
+       repetirse o quedar NULL sin problema. */
     $id = upsertPersona($t, 'TUTOR');
 
-    /* 2) upsert en tabla tutor */
+    /* 2) Tabla tutor (metodo_contacto_preferido) */
     $db = conectar();
     $ex = $db->prepare("SELECT 1 FROM tutor WHERE id_tutor = ?");
     $ex->execute([$id]);
 
-    if ($ex->fetch()) {
-        $db->prepare("
-            UPDATE tutor
-               SET metodo_contacto_preferido = :m
-             WHERE id_tutor = :id
-        ")->execute([
-            ':m' => $t['metodo'] ?? 'TEL',
-            ':id' => $id
-        ]);
-    } else {
-        $db->prepare("
-            INSERT INTO tutor
-                   SET id_tutor = :id,
-                       metodo_contacto_preferido = :m
-        ")->execute([
-            ':id' => $id,
-            ':m' => $t['metodo'] ?? 'TEL'
-        ]);
-    }
+    $sql = $ex->fetch()
+        ? "UPDATE tutor
+              SET metodo_contacto_preferido = :m
+            WHERE id_tutor = :id"
+        : "INSERT INTO tutor
+              SET id_tutor = :id,
+                  metodo_contacto_preferido = :m";
+
+    $db->prepare($sql)->execute([
+        ':id' => $id,
+        ':m'  => strtoupper($t['metodo'] ?? 'TEL')
+    ]);
+
     return $id;
 }
 
 /**
- * Crea o actualiza la fila de paciente.
- * Si $x incluye la clave 'tutor' y el tipo_paciente ≠ ADULTO,
- * se crea/actualiza también el tutor y se enlaza.
+ * Inserta / actualiza la fila de paciente y enlaza tutor si procede.
+ *
+ * $x = [
+ *   'tipo_paciente'          => 'INFANTE' | 'NIÑO' | 'ADOLESCENTE' | 'ADULTO',
+ *   'observaciones_generales'=> ... (opcional),
+ *   'tutor' => [ … ]         // mismo formato que en upsertTutor()
+ * ]
  */
 function upsertPaciente(int $id, array $x): bool
 {
     $db = conectar();
 
-    /* 1) tutor opcional para menores */
-    $idTutor = null;
-    $esMenor = isset($x['tipo_paciente']) && $x['tipo_paciente'] !== 'ADULTO';
-    if ($esMenor && !empty($x['tutor'])) {
-        $idTutor = upsertTutor($x['tutor']);
+    /* ----- 1. Determinar si es menor y procesar tutor (si llega) ----- */
+    $tipo      = strtoupper($x['tipo_paciente'] ?? 'ADULTO');
+    $esMenor   = $tipo !== 'ADULTO';
+    $idTutor   = null;
+
+    if ($esMenor && !empty($x['tutor']) && is_array($x['tutor'])) {
+        $idTutor = upsertTutor($x['tutor']);       // crea / actualiza tutor
     }
 
-    /* 2) upsert paciente */
-    $ex  = $db->prepare("SELECT 1 FROM paciente WHERE id_paciente = ?");
+    /* ----- 2. Upsert sobre la propia tabla paciente ------------------ */
+    $ex = $db->prepare("SELECT 1 FROM paciente WHERE id_paciente = ?");
     $ex->execute([$id]);
 
     $sql = $ex->fetch()
         ? "UPDATE paciente
-               SET tipo_paciente = :t,
-                   id_tutor      = :tu
-             WHERE id_paciente   = :id"
+               SET tipo_paciente         = :t,
+                   observaciones_generales = :obs,
+                   id_tutor               = :tu
+             WHERE id_paciente           = :id"
         : "INSERT INTO paciente
-               SET id_paciente   = :id,
-                   tipo_paciente = :t,
-                   id_tutor      = :tu";
+               SET id_paciente           = :id,
+                   tipo_paciente         = :t,
+                   observaciones_generales = :obs,
+                   id_tutor               = :tu";
 
     return $db->prepare($sql)->execute([
-        ':id' => $id,
-        ':t'  => $x['tipo_paciente'] ?? 'ADULTO',
-        ':tu' => $idTutor
+        ':id'  => $id,
+        ':t'   => $tipo,
+        ':obs' => $x['observaciones_generales'] ?? null,
+        ':tu'  => $idTutor                     // puede ser NULL
     ]);
 }
-
 
 /**
  * Devuelve los datos de persona + profesional/paciente (+ tutor si corresponde).
@@ -1264,35 +1238,29 @@ function exportLogsCsv(int $year, int $month): string
     return $csv;
 }
 
-
-
-
 /**
- * Devuelve los pacientes que tienen (o han tenido) alguna cita con el
- * profesional indicado, junto con la próxima cita si existe.
+ * Devuelve los pacientes asignados a un profesional.
+ * Incluye la fecha de la próxima cita para cada paciente.
+ * 
+ * @param int $idProf ID del profesional
+ * @return array Lista de pacientes con sus datos básicos y próxima cita
  */
 function getPacientesProfesional(int $idProf): array
 {
-    $sql="
-      SELECT p.id_persona                           AS id,
-             p.nombre,
-             p.apellido1,
-             p.apellido2,
-             p.email,
-             p.telefono,
-             MIN(CASE
-                   WHEN c.estado IN ('CONFIRMADA','PENDIENTE_VALIDACION','SOLICITADA')
-                        AND c.fecha_hora >= NOW()
-                   THEN c.fecha_hora END)           AS proxima_cita
-        FROM persona  p
-   INNER JOIN cita     c ON c.id_paciente = p.id_persona
-       WHERE c.id_profesional = :prof
-         AND p.activo = 1
-         AND p.rol    = 'PACIENTE'
-    GROUP BY p.id_persona
-    ORDER BY p.nombre, p.apellido1";
-    $st=conectar()->prepare($sql);
-    $st->execute([':prof'=>$idProf]);
+    $db = conectar();
+    $sql = "
+      SELECT DISTINCT
+        pe.id_persona   AS id,
+        pe.nombre, pe.apellido1, pe.apellido2,
+        MIN(ci.fecha_hora) proxima_cita
+      FROM persona pe
+      JOIN cita ci ON ci.id_paciente = pe.id_persona
+      WHERE ci.id_profesional = :pr
+        AND pe.activo = 1
+      GROUP BY pe.id_persona
+      ORDER BY pe.nombre, pe.apellido1";
+    $st = $db->prepare($sql);
+    $st->execute([':pr' => $idProf]);
     return $st->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -1468,109 +1436,150 @@ function crearTratamiento(
         throw $e; // Re-lanzar para manejo en capa superior
     }
 }
-/*────────────────── documentos del historial ─────────*/function getDocsPaciente(int $idPac, int $idProf = null): array {
-  $db  = conectar();
-  
-  $sql = "
-    SELECT d.id_documento,
-           d.ruta,
-           d.tipo,
-           d.fecha_subida,
-           h.diagnostico_preliminar,
-           h.diagnostico_final,           ''  AS titulo,        /* Placeholder para el front */
-           ''  AS descripcion    /* Placeholder para el front */
-      FROM documento_clinico d
-      JOIN historial_clinico h ON d.id_historial = h.id_historial
-     WHERE d.id_historial IN(
-            SELECT id_historial
-              FROM historial_clinico
-             WHERE id_paciente = ?)
-       AND d.id_tratamiento IS NULL";  /* Excluir documentos de tratamientos */
-  if ($idProf) $sql .= " AND d.id_profesional = " . intval($idProf);
-  $st = $db->prepare($sql); $st->execute([$idPac]);
-  return $st->fetchAll(PDO::FETCH_ASSOC);
+/*────────────────── documentos del historial ─────────*/
+function getDocsPaciente(int $idPac, int $idProf = null): array {
+    $db = conectar();
+    
+    $sql = "
+        SELECT d.id_documento,
+               d.ruta,
+               d.tipo,
+               d.fecha_subida,
+               d.nombre_archivo,
+               h.diagnostico_preliminar,  -- Del historial_clinico
+               h.diagnostico_final,       -- Del historial_clinico
+               h.id_historial,
+               h.fecha_inicio
+          FROM documento_clinico d
+          JOIN historial_clinico h ON d.id_historial = h.id_historial
+         WHERE h.id_paciente = ?
+           AND d.id_tratamiento IS NULL  -- Excluir documentos de tratamientos
+    ";
+    
+    $params = [$idPac];
+    
+    if ($idProf) {
+        $sql .= " AND d.id_profesional = ?";
+        $params[] = $idProf;
+    }
+    
+    $sql .= " ORDER BY h.fecha_inicio DESC, d.fecha_subida DESC";
+    
+    $st = $db->prepare($sql);
+    $st->execute($params);
+    
+    $documentos = $st->fetchAll(PDO::FETCH_ASSOC);
+    
+    error_log("Obtenidos " . count($documentos) . " documentos del historial para paciente $idPac");
+    
+    return $documentos;
 }
-
 /*────────────────── crear documento del historial ─────────*/
-function crearDocumentoHistorial(int $idPac,int $idProf,$file = null,string $diagnosticoPreliminar = '',string $diagnosticoFinal= '',string $tipo= 'documento'): array {
+function crearDocumentoHistorial(int $idPac, int $idProf, $file = null, string $diagnosticoPreliminar = '', string $diagnosticoFinal = '', string $tipo = 'documento'): array {
     $db = conectar();
     $db->beginTransaction();
 
     try {
-        /* 1)  CREAMOS SIEMPRE UN NUEVO EPISODIO --------------------------- */
+        /* 1) CREAR UNA NUEVA ENTRADA EN EL HISTORIAL --------------------------- */
+        /* Cada documento representa una consulta/entrada específica en el historial */
         $db->prepare("
             INSERT INTO historial_clinico
-                   (id_paciente, fecha_inicio,
-                    diagnostico_preliminar, diagnostico_final)
-            VALUES   (?,CURDATE(),?,?)
+                   (id_paciente, fecha_inicio, diagnostico_preliminar, diagnostico_final)
+            VALUES (?, CURDATE(), ?, ?)
         ")->execute([$idPac, $diagnosticoPreliminar, $diagnosticoFinal ?: null]);
 
         $idHistorial = (int)$db->lastInsertId();
+        error_log("Nueva entrada en historial creada con ID: $idHistorial para paciente $idPac - Diagnóstico: '$diagnosticoPreliminar'");
 
-        /* 2)  Manejo del archivo (opcional) ------------------------------- */
+        /* 2) Manejo del archivo ------------------------------- */
         $rutaArchivo = null;
+        $idDocumento = null;
 
         if ($file && $file->getError() === UPLOAD_ERR_OK) {
-            /* Directorio destino (‘public/uploads/historial/’) */
+            /* Directorio destino */
             $dir = __DIR__ . '/../public/uploads/historial/';
             if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
                 throw new RuntimeException('No se pudo crear el directorio de subida');
             }
 
-            $ext     = strtolower(pathinfo($file->getClientFilename(), PATHINFO_EXTENSION));
-            $slug    = $diagnosticoPreliminar
-                         ? preg_replace('/[^a-z0-9]+/i', '_',
-                             substr($diagnosticoPreliminar, 0, 30))
-                         : 'historial';
-            $nombre  = sprintf('%s_%d_%d.%s', $slug, $idPac, time(), $ext);
+            $ext = strtolower(pathinfo($file->getClientFilename(), PATHINFO_EXTENSION));
+            $slug = $diagnosticoPreliminar
+                     ? preg_replace('/[^a-z0-9]+/i', '_', substr($diagnosticoPreliminar, 0, 30))
+                     : 'documento';
+            
+            // Generar nombre único basado en el diagnóstico
+            $timestamp = time();
+            $random = mt_rand(1000, 9999);
+            $nombre = sprintf('%s_%d_%d_%d.%s', $slug, $idPac, $timestamp, $random, $ext);
+            
             $destino = $dir . $nombre;
             $rutaArchivo = 'uploads/historial/' . $nombre;
 
+            /* Verificar que el archivo no existe */
+            $contador = 1;
+            while (file_exists($destino)) {
+                $nombre = sprintf('%s_%d_%d_%d_%d.%s', $slug, $idPac, $timestamp, $random, $contador, $ext);
+                $destino = $dir . $nombre;
+                $rutaArchivo = 'uploads/historial/' . $nombre;
+                $contador++;
+            }
+
             /* Mover fichero */
             $file->moveTo($destino);
+            error_log("Archivo guardado en: $rutaArchivo");
 
             /* Deducir tipo si no se pasó */
             if ($tipo === 'documento' || $tipo === '') {
                 $tipo = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'imagen'
-                      : ($ext === 'pdf'                                 ? 'pdf'
-                      : 'documento');
+                      : ($ext === 'pdf' ? 'pdf' : 'documento');
             }
 
-            /* Registrar en documento_clinico */
-            $db->prepare("
+            /* Registrar documento (SIN diagnósticos - esos están en historial_clinico) */
+            $stmtDoc = $db->prepare("
                 INSERT INTO documento_clinico
-                       (id_historial, id_profesional,
-                        ruta, tipo, fecha_subida, id_tratamiento)
-                VALUES (:h, :p, :r, :t, NOW(), NULL)
-            ")->execute([
+                       (id_historial, id_profesional, ruta, nombre_archivo, tipo, fecha_subida, id_tratamiento)
+                VALUES (:h, :p, :r, :n, :t, NOW(), NULL)
+            ");
+            
+            $stmtDoc->execute([
                 ':h' => $idHistorial,
                 ':p' => $idProf,
                 ':r' => $rutaArchivo,
+                ':n' => $file->getClientFilename(),
                 ':t' => $tipo
             ]);
+            
+            $idDocumento = $db->lastInsertId();
+            error_log("Documento registrado con ID: $idDocumento vinculado a entrada de historial: $idHistorial");
         }
 
         $db->commit();
+        error_log("Nueva entrada añadida correctamente al historial del paciente");
 
         return [
-            'ok'                  => true,
-            'mensaje'             => 'Documento subido al historial correctamente',
-            'id_historial'        => $idHistorial,
-            'ruta'                => $rutaArchivo,
-            'diagnostico_final'   => $diagnosticoFinal,
+            'ok' => true,
+            'mensaje' => 'Documento subido al historial correctamente',
+            'id_historial' => $idHistorial,
+            'id_documento' => $idDocumento,
+            'ruta' => $rutaArchivo,
+            'diagnostico_final' => $diagnosticoFinal,
             'diagnostico_preliminar' => $diagnosticoPreliminar,
-            'tipo'                => $tipo
+            'tipo' => $tipo
         ];
 
     } catch (Throwable $e) {
         $db->rollBack();
+        error_log("Error en crearDocumentoHistorial: " . $e->getMessage());
 
-        /* si hubo fichero ya subido lo eliminamos para no dejar huérfanos */
+        /* Limpiar archivo huérfano */
         if (isset($rutaArchivo) && $rutaArchivo !== null) {
             $f = __DIR__ . '/../public/' . $rutaArchivo;
-            if (file_exists($f)) unlink($f);
+            if (file_exists($f)) {
+                unlink($f);
+                error_log("Archivo huérfano eliminado: $f");
+            }
         }
-        throw $e;   /* Se manejará donde se llame a la función */
+        throw $e;
     }
 }
 
@@ -1614,4 +1623,232 @@ function procesarAccionCitaProfesional(int $idCita,array $body):void{
     $db->prepare("UPDATE cita SET estado=? WHERE id_cita=?")
        ->execute([$nuevo,$idCita]);
     $db->commit();
+}
+
+/**
+ * Verifica si un paciente pertenece a un profesional (si tiene al menos una cita con él).
+ * 
+ * @param int $idPac ID del paciente
+ * @param int $idProf ID del profesional
+ * @return bool True si el paciente pertenece al profesional, false en caso contrario
+ */
+function verificarPacienteProfesional(int $idPac, int $idProf): bool
+{
+    $db = conectar();
+    $q = $db->prepare("SELECT 1 FROM cita
+                      WHERE id_paciente = :p AND id_profesional = :pr LIMIT 1");
+    $q->execute([':p' => $idPac, ':pr' => $idProf]);
+    return $q->fetch() !== false;
+}
+
+/**
+ * Obtiene datos completos de un paciente para un profesional, incluyendo tratamientos,
+ * documentos, citas y estado del consentimiento.
+ * 
+ * @param int $idPac ID del paciente
+ * @param int $idProf ID del profesional
+ * @return array Datos completos del paciente
+ */
+function getDetallesPacienteProfesional(int $idPac, int $idProf): array
+{
+    $det = getUsuarioDetalle($idPac);
+    return [
+        'persona'      => $det['persona'],
+        'paciente'     => $det['paciente'],
+        'tutor'        => $det['tutor'],
+        'tratamientos' => getTratamientosPaciente($idPac, $idProf),
+        'documentos'   => getDocsPaciente($idPac, $idProf),
+        'citas'        => getCitasPaciente($idPac, $idProf),
+        'consentimiento_activo' => tieneConsentimientoActivo($idPac)
+    ];
+}
+
+/*────────────────── ELIMINAR TRATAMIENTO ──────────────────*/
+/**
+ * Elimina un tratamiento y sus documentos asociados.
+ * 
+ * @param int $idTratamiento ID del tratamiento a eliminar
+ * @param int $idProf ID del profesional que elimina el tratamiento
+ * @param int $idPac ID del paciente al que pertenece el tratamiento
+ * @throws Exception Si hay algún error durante el proceso
+ */
+function eliminarTratamiento(int $idTratamiento, int $idProf, int $idPac): void
+{
+    $db = conectar();
+    try {
+        $db->beginTransaction();
+        
+        // 1. Obtener el historial clínico del tratamiento
+        $st = $db->prepare("
+            SELECT id_historial FROM tratamiento WHERE id_tratamiento = ?
+        ");
+        $st->execute([$idTratamiento]);
+        $idHistorial = $st->fetchColumn();
+        
+        // 2. Buscar documentos asociados al historial y al tratamiento
+        $stDocs = $db->prepare("
+            SELECT id_documento, ruta 
+            FROM documento_clinico 
+            WHERE id_historial = ? AND id_profesional = ?
+        ");
+        $stDocs->execute([$idHistorial, $idProf]);
+        $documentos = $stDocs->fetchAll(PDO::FETCH_ASSOC);
+        
+        // 3. Eliminar documentos asociados y sus archivos físicos
+        foreach ($documentos as $doc) {
+            // Eliminar el archivo físico si existe
+            if (!empty($doc['ruta']) && file_exists(__DIR__ . '/../' . $doc['ruta'])) {
+                unlink(__DIR__ . '/../' . $doc['ruta']);
+                       }
+            
+            // Eliminar el registro del documento
+            $db->prepare("
+                DELETE FROM documento_clinico
+                WHERE id_documento = ?
+            ")->execute([$doc['id_documento']]);
+        }
+        
+        // 4. Eliminar el tratamiento
+        $st = $db->prepare("
+            DELETE FROM tratamiento
+            WHERE id_tratamiento = ? AND id_profesional = ?
+        ");
+        $result = $st->execute([$idTratamiento, $idProf]);
+        
+        $db->commit();
+        
+        // Registrar en log
+        logEvento(
+            $idProf, 
+            $idPac,
+            'tratamiento',
+            'id_tratamiento',
+            $idTratamiento,
+            null,
+            'DELETE'
+        );
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e; // Re-lanzar la excepción para manejo en la capa superior
+    }
+}
+
+
+/* Elimina un documento del historial clínico y su archivo físico. */
+function eliminarDocumentoHistorial(int $idDoc, int $idPac, int $idProf): bool
+{
+    $db = conectar();
+    try {
+        $db->beginTransaction();
+        
+        // 1. Obtener información del documento y su entrada de historial
+        $stmtDoc = $db->prepare("
+            SELECT d.*, h.id_paciente, h.id_historial
+            FROM documento_clinico d
+            JOIN historial_clinico h ON d.id_historial = h.id_historial
+            WHERE d.id_documento = ? AND h.id_paciente = ?
+        ");
+        $stmtDoc->execute([$idDoc, $idPac]);
+        $documento = $stmtDoc->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$documento) {
+            throw new Exception('Documento no encontrado');
+        }
+        
+        // 2. Verificar si hay otros documentos en esta entrada del historial
+        $stmtCount = $db->prepare("
+            SELECT COUNT(*) 
+            FROM documento_clinico 
+            WHERE id_historial = ? AND id_documento != ?
+        ");
+        $stmtCount->execute([$documento['id_historial'], $idDoc]);
+        $otrosDocumentos = (int)$stmtCount->fetchColumn();
+        
+        // 3. Eliminar documento de la BD
+        $stmtDel = $db->prepare("DELETE FROM documento_clinico WHERE id_documento = ?");
+        $stmtDel->execute([$idDoc]);
+        
+        // 4. Si no hay otros documentos en esta entrada, eliminar también la entrada del historial
+        if ($otrosDocumentos === 0) {
+            $stmtDelHist = $db->prepare("DELETE FROM historial_clinico WHERE id_historial = ?");
+            $stmtDelHist->execute([$documento['id_historial']]);
+            error_log("Entrada de historial {$documento['id_historial']} eliminada (no tenía otros documentos)");
+        }
+        
+        // 5. Eliminar archivo físico si existe
+        if (!empty($documento['ruta'])) {
+            $rutaCompleta = __DIR__ . '/../public/' . $documento['ruta'];
+            if (file_exists($rutaCompleta)) {
+                unlink($rutaCompleta);
+                error_log("Archivo físico eliminado: $rutaCompleta");
+            }
+        }
+        
+        // Registrar en logs
+        logEvento(
+            $idProf, 
+            $idPac,
+            'documento_clinico',
+            (string)$idDoc,
+            null,
+            'Documento eliminado del historial',
+            'DELETE'
+        );
+        
+        $db->commit();
+        return true;
+    } catch (Throwable $e) {
+        $db->rollBack();
+        error_log("Error eliminando documento: " . $e->getMessage());
+        throw $e;
+    }
+}
+/* Actualiza el diagnóstico final de un documento del historial clínico. */
+function actualizarDiagnosticoDocumento(int $idDoc, int $idPac, int $idProf, string $diagnosticoFinal): bool
+{
+    $db = conectar();
+    try {
+        $db->beginTransaction();
+        
+        // 1. Obtener la entrada del historial vinculada al documento
+        $stmtDoc = $db->prepare("
+            SELECT d.id_documento, d.id_historial, h.id_paciente, h.diagnostico_final as actual_diagnostico
+            FROM documento_clinico d
+            JOIN historial_clinico h ON d.id_historial = h.id_historial
+            WHERE d.id_documento = ? AND h.id_paciente = ?
+        ");
+        $stmtDoc->execute([$idDoc, $idPac]);
+        $documento = $stmtDoc->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$documento) {
+            throw new Exception('Documento no encontrado');
+        }
+        
+        // 2. Actualizar el diagnóstico final en la entrada del historial
+        $stmtUpdate = $db->prepare("
+            UPDATE historial_clinico 
+            SET diagnostico_final = ? 
+            WHERE id_historial = ?
+        ");
+        $stmtUpdate->execute([$diagnosticoFinal, $documento['id_historial']]);
+        
+        // 3. Registrar en logs
+        logEvento(
+            $idProf, 
+            $idPac,
+            'historial_clinico',
+            'diagnostico_final',
+            $documento['actual_diagnostico'] ?? '',
+            $diagnosticoFinal,
+            'UPDATE'
+        );
+        
+        $db->commit();
+        error_log("Diagnóstico final actualizado en entrada de historial ID: {$documento['id_historial']}");
+        return true;
+    } catch (Throwable $e) {
+        $db->rollBack();
+        error_log("Error actualizando diagnóstico: " . $e->getMessage());
+        throw $e;
+    }
 }

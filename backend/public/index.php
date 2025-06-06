@@ -608,21 +608,10 @@ $app->get('/prof/pacientes', function ($req){
     if($val===false || strtolower($val['usuario']['rol'])!=='profesional')
         return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
 
-    $db   = conectar();
     $idPr = (int)$val['usuario']['id_persona'];
-    $sql = "
-      SELECT DISTINCT
-        pe.id_persona   AS id,
-        pe.nombre, pe.apellido1, pe.apellido2,
-        MIN(ci.fecha_hora) proxima_cita
-      FROM persona pe
-      JOIN cita ci ON ci.id_paciente = pe.id_persona
-      WHERE ci.id_profesional = :pr
-        AND pe.activo = 1
-      GROUP BY pe.id_persona
-      ORDER BY pe.nombre, pe.apellido1";
-    $st=$db->prepare($sql); $st->execute([':pr'=>$idPr]);
-    return jsonResponse(['ok'=>true,'pacientes'=>$st->fetchAll(PDO::FETCH_ASSOC),
+    $pacientes = getPacientesProfesional($idPr);
+    
+    return jsonResponse(['ok'=>true,'pacientes'=>$pacientes,
                          'token'=>$val['token']]);
 });
 
@@ -635,22 +624,11 @@ $app->get('/prof/pacientes/{id}', function ($req,$res,$args){
     $idProf=(int)$val['usuario']['id_persona'];
     $idPac =(int)$args['id'];
 
-    $db=conectar();
-    $q=$db->prepare("SELECT 1 FROM cita
-                      WHERE id_paciente=:p AND id_profesional=:pr LIMIT 1");
-    $q->execute([':p'=>$idPac,':pr'=>$idProf]);
-    if(!$q->fetch()) return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
+    // Verificar que el paciente pertenezca a este profesional
+    if(!verificarPacienteProfesional($idPac, $idProf))
+        return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
 
-    $det = getUsuarioDetalle($idPac);
-    $out = [
-      'persona'      => $det['persona'],
-      'paciente'     => $det['paciente'],
-      'tutor'        => $det['tutor'],
-      'tratamientos' => getTratamientosPaciente($idPac,$idProf),
-      'documentos'   => getDocsPaciente($idPac,$idProf),
-      'citas'        => getCitasPaciente($idPac,$idProf),
-      'consentimiento_activo'=> tieneConsentimientoActivo($idPac)
-    ];
+    $out = getDetallesPacienteProfesional($idPac, $idProf);
     return jsonResponse(['ok'=>true,'data'=>$out,'token'=>$val['token']]);
 });
 
@@ -664,11 +642,8 @@ $app->put('/prof/pacientes/{id}', function($req,$res,$args){
     $idPac =(int)$args['id'];
 
     /* control de propiedad (cita al menos una vez) */
-    $db=conectar();
-    $q=$db->prepare("SELECT 1 FROM cita
-                      WHERE id_paciente=:p AND id_profesional=:pr LIMIT 1");
-    $q->execute([':p'=>$idPac,':pr'=>$idProf]);
-    if(!$q->fetch()) return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
+    if(!verificarPacienteProfesional($idPac, $idProf))
+        return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
 
     $b   = $req->getParsedBody();
     upsertPersona ($b['persona']  ?? [],'PACIENTE',$idProf,$idPac);
@@ -705,10 +680,8 @@ $app->post('/prof/pacientes/{id}/tareas', function($req,$res,$args){
     $idProf = (int)$val['usuario']['id_persona'];
     
     // Verificar propiedad
-    $db = conectar();
-    $q  = $db->prepare("SELECT 1 FROM cita WHERE id_paciente=? AND id_profesional=? LIMIT 1");
-    $q->execute([$idPac,$idProf]);
-    if(!$q->fetch()) return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
+    if(!verificarPacienteProfesional($idPac, $idProf))
+        return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
 
     // Lectura de datos y fichero
     $d = $req->getParsedBody();
@@ -762,64 +735,13 @@ $app->delete('/prof/pacientes/{id}/tareas/{idTratamiento}', function($req, $res,
     $idProf = (int)$val['usuario']['id_persona'];
 
     // Verificar propiedad
-    $db = conectar();
-    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
-    $q->execute([$idPac, $idProf]);
-    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);    try {
-        $db->beginTransaction();
+    if(!verificarPacienteProfesional($idPac, $idProf))
+        return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
         
-        // 1. Obtener el historial clínico del tratamiento
-        $st = $db->prepare("
-            SELECT id_historial FROM tratamiento WHERE id_tratamiento = ?
-        ");
-        $st->execute([$idTratamiento]);
-        $idHistorial = $st->fetchColumn();
-        
-        // 2. Buscar documentos asociados al historial y al tratamiento
-        $stDocs = $db->prepare("
-            SELECT id_documento, ruta 
-            FROM documento_clinico 
-            WHERE id_historial = ? AND id_profesional = ?
-        ");
-        $stDocs->execute([$idHistorial, $idProf]);
-        $documentos = $stDocs->fetchAll(PDO::FETCH_ASSOC);
-        
-        // 3. Eliminar documentos asociados y sus archivos físicos
-        foreach ($documentos as $doc) {
-            // Eliminar el archivo físico si existe
-            if (!empty($doc['ruta']) && file_exists(__DIR__ . '/../' . $doc['ruta'])) {
-                unlink(__DIR__ . '/../' . $doc['ruta']);
-            }
-            
-            // Eliminar el registro del documento
-            $db->prepare("
-                DELETE FROM documento_clinico
-                WHERE id_documento = ?
-            ")->execute([$doc['id_documento']]);
-        }
-        
-        // 4. Eliminar el tratamiento
-        $st = $db->prepare("
-            DELETE FROM tratamiento
-            WHERE id_tratamiento = ? AND id_profesional = ?
-        ");
-        $result = $st->execute([$idTratamiento, $idProf]);
-        
-        $db->commit();
-        
-        // Registrar en log
-        logEvento(
-            $idProf, 
-            $idPac,
-            'tratamiento',
-            'id_tratamiento',
-            $idTratamiento,
-            null,
-            'DELETE'
-        );
-          return jsonResponse(['ok' => true, 'mensaje' => 'Tarea eliminado correctamente']);
+    try {
+        eliminarTratamiento($idTratamiento, $idProf, $idPac);
+        return jsonResponse(['ok' => true, 'mensaje' => 'Tarea eliminada correctamente']);
     } catch (Throwable $e) {
-        $db->rollBack();
         error_log('Error al eliminar tarea: ' . $e->getMessage());
         return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
     }
@@ -883,64 +805,23 @@ $app->delete('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $a
     $idProf = (int)$val['usuario']['id_persona'];
     
     // Verificar propiedad (que el profesional tiene al menos una cita con el paciente)
-    $db = conectar();
-    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
-    $q->execute([$idPac, $idProf]);
-    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
+    if(!verificarPacienteProfesional($idPac, $idProf))
+        return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
     
     try {
-        $db->beginTransaction();
-        
-        // 1. Obtener información del documento
-        $stDoc = $db->prepare("
-            SELECT d.*, h.id_paciente
-            FROM documento_clinico d
-            JOIN historial_clinico h ON d.id_historial = h.id_historial
-            WHERE d.id_documento = ? AND h.id_paciente = ?
-        ");
-        $stDoc->execute([$idDoc, $idPac]);
-        $documento = $stDoc->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$documento) {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
-        }
-        
-        // 2. Eliminar documento de la BD
-        $stDel = $db->prepare("DELETE FROM documento_clinico WHERE id_documento = ?");
-        $stDel->execute([$idDoc]);
-          // 3. Eliminar archivo físico si existe
-        if (!empty($documento['ruta'])) {
-            $rutaCompleta = __DIR__ . '/../public/' . $documento['ruta'];
-            if (file_exists($rutaCompleta)) {
-                unlink($rutaCompleta);
-            } else {
-                // Intentar con la ruta alternativa en caso de error
-                $rutaAlternativa = __DIR__ . '/' . $documento['ruta'];
-                if (file_exists($rutaAlternativa)) {
-                    unlink($rutaAlternativa);
-                }
-            }
-        }
-          // Registrar en logs
-        logEvento(
-            $idProf, 
-            $idPac,
-            'documento_historial',
-            (string)$idDoc,
-            null,
-            'Documento eliminado del historial',
-            'DELETE'
-        );
-        
-        $db->commit();
+        eliminarDocumentoHistorial($idDoc, $idPac, $idProf);
         
         return jsonResponse([
             'ok' => true,
             'mensaje' => 'Documento eliminado correctamente'
         ]);
     } catch (Throwable $e) {
-        $db->rollBack();
         error_log('Error al eliminar documento: ' . $e->getMessage());
+        
+        if ($e->getMessage() === 'Documento no encontrado') {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
+        }
+        
         return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
     }
 });
@@ -998,7 +879,6 @@ $app->post('/migrate/documentos', function (Request $request, Response $response
         
         $updateResult = $stmt->execute();
         $affectedRows = $stmt->rowCount();
-        
         $result['detalles']['documentos_actualizados'] = $affectedRows;
         
         if (!$updateResult) {
@@ -1039,11 +919,10 @@ $app->put('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $args
     $idProf = (int)$val['usuario']['id_persona'];
     
     // Verificar propiedad (que el profesional tiene al menos una cita con el paciente)
-    $db = conectar();
-    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
-    $q->execute([$idPac, $idProf]);
-    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
-      // Obtener datos del body
+    if(!verificarPacienteProfesional($idPac, $idProf))
+        return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
+    
+    // Obtener datos del body
     $body = $req->getParsedBody();
     $diagnosticoFinal = $body['diagnostico_final'] ?? '';
     
@@ -1051,50 +930,19 @@ $app->put('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $args
     error_log('PUT request to update diagnosis - ID Paciente: ' . $idPac . ', ID Documento: ' . $idDoc . ', Diagnóstico Final: ' . $diagnosticoFinal);
     
     try {
-        $db->beginTransaction();
-        
-        // 1. Obtener información del documento
-        $stDoc = $db->prepare("
-            SELECT d.*, h.id_paciente, h.id_historial
-            FROM documento_clinico d
-            JOIN historial_clinico h ON d.id_historial = h.id_historial
-            WHERE d.id_documento = ? AND h.id_paciente = ?
-        ");
-        $stDoc->execute([$idDoc, $idPac]);
-        $documento = $stDoc->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$documento) {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
-        }        // 2. Actualizar el diagnóstico final en el historial
-        $stUpdate = $db->prepare("
-            UPDATE historial_clinico 
-            SET diagnostico_final = ? 
-            WHERE id_historial = ?
-        ");
-        $stUpdate->execute([$diagnosticoFinal, $documento['id_historial']]);
-        
-        // 3. Para futura referencia, debemos considerar mover el campo diagnostico_final a la tabla documento_clinico
-        // para permitir diagnósticos individuales por documento
-        
-        // 4. Registrar en logs
-        logEvento(
-            $idProf, 
-            $idPac,
-            'historial_clinico',
-            'diagnostico_final',
-            $documento['diagnostico_final'] ?? '',
-            $diagnosticoFinal,
-            'UPDATE'
-        );
-        $db->commit();
+        actualizarDiagnosticoDocumento($idDoc, $idPac, $idProf, $diagnosticoFinal);
         
         return jsonResponse([
             'ok' => true,
             'mensaje' => 'Diagnóstico final actualizado correctamente'
         ]);
     } catch (Throwable $e) {
-        $db->rollBack();
         error_log('Error al actualizar diagnóstico: ' . $e->getMessage());
+        
+        if ($e->getMessage() === 'Documento no encontrado') {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
+        }
+        
         return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
     }
 });
