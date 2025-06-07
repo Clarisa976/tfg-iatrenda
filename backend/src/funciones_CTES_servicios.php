@@ -8,20 +8,26 @@ function conectar()
 {
     try {
         $host = getenv('DB_HOST');
-        $baseDatosNombre   = getenv('DB_NAME');
+        $baseDatosNombre = getenv('DB_NAME');
         $user = getenv('DB_USER');
         $pass = getenv('DB_PASS');
+        $port = getenv('DB_PORT') ?: 5432;
 
         if (empty($host) || empty($baseDatosNombre) || empty($user)) {
             error_log('Error: Faltan variables de entorno para la conexión a la base de datos');
             throw new Exception('Error de configuración en la conexión a la base de datos');
         }
 
-        $pdo = new PDO("mysql:host=$host;dbname=$baseDatosNombre;charset=utf8mb4", $user, $pass, [
+        $dsn = "pgsql:host=$host;port=$port;dbname=$baseDatosNombre";
+        $pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false
         ]);
+        
+        /* Configurar zona horaria para España */
+        $pdo->exec("SET timezone = 'Europe/Madrid'");
+        
         /* Verificar conexión con una consulta simple */
         $pdo->query('SELECT 1');
         return $pdo;
@@ -172,16 +178,14 @@ function execLogged(
 
 function iniciarSesionConEmail(string $email, string $contraseña): array
 {
-    try {
-        $consulta = "SELECT id_persona id,
-                       CONCAT(nombre,' ',apellido1) nombre,
+    try {        $consulta = "SELECT id_persona id,
+                       (nombre || ' ' || apellido1) nombre,
                        email,
-                       LOWER(rol) rol
-                FROM   persona
-                WHERE  email = :e
+                       LOWER(rol::text) rol
+                FROM   persona                WHERE  email = :e
                   AND  password_hash IS NOT NULL
-                  AND  password_hash = SHA2(:p,256)
-                  AND  activo = 1
+                  AND  password_hash = ENCODE(DIGEST(:p, 'sha256'), 'hex')
+                  AND  activo = true
                 LIMIT  1";
         $busqueda = conectar()->prepare($consulta);
         $busqueda->execute(['e' => $email, 'p' => $contraseña]);
@@ -266,12 +270,11 @@ function pedirCitaNueva(string $nombre, string $email, ?string $telefono, string
     $consultaSql = "
       SELECT p.id_profesional
         FROM profesional p
-       WHERE NOT EXISTS (
-         SELECT 1 FROM bloque_agenda b
+       WHERE NOT EXISTS (        SELECT 1 FROM bloque_agenda b
           WHERE b.id_profesional = p.id_profesional
             AND b.tipo_bloque    IN ('AUSENCIA','VACACIONES','BAJA','EVENTO')
             AND :ts_bloque BETWEEN b.fecha_inicio
-                       AND DATE_SUB(b.fecha_fin,INTERVAL 1 SECOND)
+                       AND (b.fecha_fin - INTERVAL '1 second')
        )
          AND NOT EXISTS (
          SELECT 1 FROM cita c
@@ -437,9 +440,8 @@ function obtenerUsuarios(): array
         nombre, 
         apellido1,
         apellido2,
-        LOWER(rol) AS rol
-      FROM persona
-      WHERE activo = 1
+        LOWER(rol::text) AS rol      FROM persona
+      WHERE activo = true
         AND rol IN ('PACIENTE','PROFESIONAL')
       ORDER BY nombre, apellido1
     ";
@@ -457,17 +459,16 @@ function obtenerUsuarios(): array
  */
 function getProfesionales(string $search = ''): array
 {
-    $baseDatos  = conectar();
-    $consultaSql = "
+    $baseDatos  = conectar();    $consultaSql = "
       SELECT id_profesional  AS id,
-             CONCAT(nombre,' ',apellido1,' ',COALESCE(apellido2,'')) AS nombre
+             (nombre || ' ' || apellido1 || ' ' || COALESCE(apellido2,'')) AS nombre
         FROM profesional p
    LEFT JOIN persona pr ON pr.id_persona = p.id_profesional
-       WHERE pr.activo = 1
+       WHERE pr.activo = true
     ";
     $parametros = [];
     if ($search !== '') {
-        $consultaSql     .= " AND CONCAT_WS(' ',nombre,apellido1,apellido2) LIKE :txt";
+        $consultaSql     .= " AND (nombre || ' ' || apellido1 || ' ' || COALESCE(apellido2,'')) ILIKE :txt";
         $parametros[':txt'] = '%' . $search . '%';
     }
     $consultaSql .= " ORDER BY nombre";
@@ -489,14 +490,14 @@ function obtenerEventosAgenda(string $desde, string $hasta, ?int $idProfesional 
     $consultaSqlBloques = "
       SELECT b.id_bloque             AS id,
              b.id_profesional        AS recurso,
-             CONCAT(p.nombre, ' ', p.apellido1) AS nombre_profesional, 
+             (p.nombre || ' ' || p.apellido1) AS nombre_profesional, 
              b.fecha_inicio          AS inicio,
              b.fecha_fin             AS fin,
              b.tipo_bloque           AS tipo,
              b.comentario            AS titulo,
              'bloque'                AS fuente,
              b.id_creador            AS id_creador,
-             CONCAT(c.nombre, ' ', c.apellido1) AS creador
+             (c.nombre || ' ' || c.apellido1) AS creador
         FROM bloque_agenda b
         LEFT JOIN persona p ON p.id_persona = b.id_profesional
         LEFT JOIN persona c ON c.id_persona = b.id_creador
@@ -646,10 +647,9 @@ function obtenerNotificacionesPendientes(int $idUsuario, string $rol): array
 
     $consulta = "
       SELECT c.id_cita                AS id,
-             DATE_FORMAT(c.fecha_hora,'%d/%m/%Y %H:%i') AS fecha,
-             c.estado                 AS tipo,
-             CONCAT(pa.nombre,' ',pa.apellido1) paciente,
-             CONCAT(pr.nombre,' ',pr.apellido1) profesional
+             TO_CHAR(c.fecha_hora,'DD/MM/YYYY HH24:MI') AS fecha,
+             c.estado                 AS tipo,             (pa.nombre || ' ' || pa.apellido1) paciente,
+             (pr.nombre || ' ' || pr.apellido1) profesional
         FROM cita c
         JOIN persona pa ON pa.id_persona = c.id_paciente
         JOIN persona pr ON pr.id_persona = c.id_profesional
@@ -723,7 +723,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
 
                 /* Obtener el nombre completo del paciente */
                 $declaracionPaciente = $baseDatos->prepare("
-                    SELECT CONCAT(nombre, ' ', apellido1, IF(apellido2 IS NOT NULL AND apellido2 != '', CONCAT(' ', apellido2), '')) as nombre_completo
+                    SELECT (nombre || ' ' || apellido1 || CASE WHEN apellido2 IS NOT NULL AND apellido2 != '' THEN (' ' || apellido2) ELSE '' END) as nombre_completo
                     FROM persona
                     WHERE id_persona = ?
                 ");
@@ -966,7 +966,7 @@ function actualizarOInsertarPersona(
             $condiciones[] = 'nif=:n';
             $parametros[':n'] = $datos['nif'];
         }
-        $consulta = "SELECT * FROM persona WHERE (" . implode(' OR ', $condiciones) . ") AND activo=0 LIMIT 1";
+        $consulta = "SELECT * FROM persona WHERE (" . implode(' OR ', $condiciones) . ") AND activo=false LIMIT 1";
         $resultado = $baseDatos->prepare($consulta);
         $resultado->execute($parametros);
         if ($fila = $resultado->fetch(PDO::FETCH_ASSOC)) {
@@ -977,7 +977,7 @@ function actualizarOInsertarPersona(
     foreach (['email', 'telefono', 'nif'] as $campo) {
         if (empty($datos[$campo])) continue;              // vacíos no cuentan
         $consulta = "SELECT id_persona,rol FROM persona
-                WHERE $campo=:v AND activo=1";
+                WHERE $campo=:v AND activo=true";
         $parametros = [':v' => $datos[$campo]];
         if ($registroPrevio) {
             $consulta .= " AND id_persona<>:yo";
@@ -1028,7 +1028,7 @@ function actualizarOInsertarPersona(
                 ->execute([':r' => $rolFinal, ':id' => $id]);
         }
         if (!empty($registroPrevio['reactivado'])) {
-            $baseDatos->prepare("UPDATE persona SET activo=1 WHERE id_persona=:id")
+            $baseDatos->prepare("UPDATE persona SET activo=true WHERE id_persona=:id")
                 ->execute([':id' => $id]);
         }
         if ($asignaciones) {
@@ -1040,7 +1040,7 @@ function actualizarOInsertarPersona(
     }    /* ─ 6. INSERT ─ */
     $columnas = array_map(fn($p) => substr($p, 1), array_keys($valores));
     $consultaSql  = "INSERT INTO persona (" . implode(',', $columnas) . ",rol,fecha_alta)
-             VALUES (" . implode(',', array_keys($valores)) . ",:rol,CURDATE())";
+             VALUES (" . implode(',', array_keys($valores)) . ",:rol,CURRENT_DATE)";
     $valores[':rol'] = $rolFinal;
     $baseDatos->prepare($consultaSql)->execute($valores);
     $idNuevo = (int)$baseDatos->lastInsertId();
@@ -1254,7 +1254,7 @@ function getInformeMes(int $año, int $mes): array
         ->fetch(PDO::FETCH_NUM);
 
     /* usuarios activos */
-    $usuariosActivos = $baseDatos->query("SELECT COUNT(*) FROM persona WHERE activo=1")
+    $usuariosActivos = $baseDatos->query("SELECT COUNT(*) FROM persona WHERE activo=true")
         ->fetchColumn();
 
     return [
@@ -1272,17 +1272,16 @@ function exportLogsCsv(int $año, int $mes): string
 {
     $baseDatos = conectar();
 
-    /* Si se pasa 0 como mes, mostrar todos los logs (sin filtro por fecha) */
-    if ($mes === 0) {
+    /* Si se pasa 0 como mes, mostrar todos los logs (sin filtro por fecha) */    if ($mes === 0) {
         $consulta = "
-          SELECT DATE_FORMAT(l.fecha,'%d/%m/%Y %H:%i')   AS fecha,
-                 IFNULL(CONCAT(actor.nombre,' ',actor.apellido1), 'Sistema') AS actor,
+          SELECT TO_CHAR(l.fecha,'DD/MM/YYYY HH24:MI')   AS fecha,
+                 COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
                  l.accion,
                  l.tabla_afectada,
-                 IFNULL(l.campo_afectado, '-') AS campo_afectado,
-                 IFNULL(l.valor_antiguo, '-') AS valor_antiguo,
-                 IFNULL(l.valor_nuevo, '-') AS valor_nuevo,
-                 IFNULL(l.ip, '-') AS ip
+                 COALESCE(l.campo_afectado, '-') AS campo_afectado,
+                 COALESCE(l.valor_antiguo, '-') AS valor_antiguo,
+                 COALESCE(l.valor_nuevo, '-') AS valor_nuevo,
+                 COALESCE(l.ip, '-') AS ip
             FROM log_evento_dato l
        LEFT JOIN persona actor ON actor.id_persona = l.id_actor           ORDER BY l.fecha DESC";
         $consultaPreparada = $baseDatos->prepare($consulta);
@@ -1290,17 +1289,15 @@ function exportLogsCsv(int $año, int $mes): string
     } else {
         /* Usar el mes específico */
         $fechaInicio = sprintf('%d-%02d-01 00:00:00', $año, $mes);
-        $fechaFin = date('Y-m-d 23:59:59', strtotime("$fechaInicio +1 month -1 day"));
-
-        $consulta = "
-          SELECT DATE_FORMAT(l.fecha,'%d/%m/%Y %H:%i')   AS fecha,
-                 IFNULL(CONCAT(actor.nombre,' ',actor.apellido1), 'Sistema') AS actor,
+        $fechaFin = date('Y-m-d 23:59:59', strtotime("$fechaInicio +1 month -1 day"));        $consulta = "
+          SELECT TO_CHAR(l.fecha,'DD/MM/YYYY HH24:MI')   AS fecha,
+                 COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
                  l.accion,
                  l.tabla_afectada,
-                 IFNULL(l.campo_afectado, '-') AS campo_afectado,
-                 IFNULL(l.valor_antiguo, '-') AS valor_antiguo,
-                 IFNULL(l.valor_nuevo, '-') AS valor_nuevo,
-                 IFNULL(l.ip, '-') AS ip
+                 COALESCE(l.campo_afectado, '-') AS campo_afectado,
+                 COALESCE(l.valor_antiguo, '-') AS valor_antiguo,
+                 COALESCE(l.valor_nuevo, '-') AS valor_nuevo,
+                 COALESCE(l.ip, '-') AS ip
             FROM log_evento_dato l
        LEFT JOIN persona actor ON actor.id_persona = l.id_actor
            WHERE l.fecha BETWEEN :d AND :h           ORDER BY l.fecha DESC";
@@ -1358,7 +1355,7 @@ function getPacientesProfesional(int $idProf): array
       FROM persona pe
       JOIN cita ci ON ci.id_paciente = pe.id_persona
       WHERE ci.id_profesional = :pr
-        AND pe.activo = 1
+        AND pe.activo = true
       GROUP BY pe.id_persona
       ORDER BY pe.nombre, pe.apellido1";
     $consulta = $baseDatos->prepare($consultaSql);
@@ -1381,11 +1378,10 @@ function registrarConsentimiento(int $id, bool $nuevo, int $actor = 0): void
     $hay = tieneConsentimientoActivo($id);
 
     if ($nuevo && !$hay) {
-        $baseDatos->prepare("INSERT INTO consentimiento(id_persona,fecha_otorgado,canal)                      VALUES(?,NOW(),'WEB')")->execute([$id]);
+        $baseDatos->prepare("INSERT INTO consentimiento(id_persona,fecha_otorgado,canal)                      VALUES(?,CURRENT_TIMESTAMP,'WEB')")->execute([$id]);
         registrarActividad($actor, $id, 'consentimiento', null, null, 'otorgado', 'INSERT');
-    } elseif (!$nuevo && $hay) {
-        $baseDatos->prepare("UPDATE consentimiento
-                         SET fecha_revocado=NOW()
+    } elseif (!$nuevo && $hay) {        $baseDatos->prepare("UPDATE consentimiento
+                         SET fecha_revocado=CURRENT_TIMESTAMP
                        WHERE id_persona=? AND fecha_revocado IS NULL")
             ->execute([$id]);
         registrarActividad($actor, $id, 'consentimiento', null, 'otorgado', 'revocado', 'UPDATE');
@@ -1481,7 +1477,7 @@ function crearTratamiento(
         if (!$idHist) {
             $baseDatos->prepare("
               INSERT INTO historial_clinico (id_paciente, fecha_inicio)
-              VALUES (?, CURDATE())
+              VALUES (?, CURRENT_DATE)
             ")->execute([$idPac]);
             $idHist = $baseDatos->lastInsertId();
         }
@@ -1595,7 +1591,7 @@ function crearDocumentoHistorial(int $idPac, int $idProf, $file = null, string $
         $baseDatos->prepare("
             INSERT INTO historial_clinico
                    (id_paciente, fecha_inicio, diagnostico_preliminar, diagnostico_final)
-            VALUES (?, CURDATE(), ?, ?)
+            VALUES (?, CURRENT_DATE, ?, ?)
         ")->execute([$idPac, $diagnosticoPreliminar, $diagnosticoFinal ?: null]);
 
         $idHistorial = (int)$baseDatos->lastInsertId();
@@ -1642,11 +1638,10 @@ function crearDocumentoHistorial(int $idPac, int $idProf, $file = null, string $
             if ($tipo === 'documento' || $tipo === '') {
                 $tipo = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? 'imagen'
                     : ($ext === 'pdf' ? 'pdf' : 'documento');
-            }            /* Registrar documento (SIN diagnósticos - esos están en historial_clinico) */
-            $consultaDocumento = $baseDatos->prepare("
+            }            /* Registrar documento (SIN diagnósticos - esos están en historial_clinico) */            $consultaDocumento = $baseDatos->prepare("
                 INSERT INTO documento_clinico
                        (id_historial, id_profesional, ruta, nombre_archivo, tipo, fecha_subida, id_tratamiento)
-                VALUES (:h, :p, :r, :n, :t, NOW(), NULL)
+                VALUES (:h, :p, :r, :n, :t, CURRENT_TIMESTAMP, NULL)
             ");
 
             $consultaDocumento->execute([
@@ -1838,10 +1833,9 @@ function validarFechaReprogramacion(string $fecha, int $idProfesional): array
     $fechaStr = $fechaObj->format('Y-m-d H:i:s');
     $consultaBloqueo = $baseDatos->prepare("
         SELECT tipo_bloque, comentario
-        FROM bloque_agenda
-        WHERE id_profesional = ?
+        FROM bloque_agenda        WHERE id_profesional = ?
           AND tipo_bloque IN ('AUSENCIA', 'VACACIONES')
-          AND ? BETWEEN fecha_inicio AND DATE_SUB(fecha_fin, INTERVAL 1 SECOND)
+          AND ? BETWEEN fecha_inicio AND (fecha_fin - INTERVAL '1 second')
         LIMIT 1
     ");
     $consultaBloqueo->execute([$idProfesional, $fechaStr]);
@@ -1944,9 +1938,11 @@ function obtenerHorasDisponibles(int $idProfesional, string $fecha): array
         return [];
     }
 
-    error_log("No hay bloqueos para esta fecha");    // Obtener citas existentes
+    error_log("No hay bloqueos para esta fecha");
+    
+    // Obtener citas existentes
     $consultaCitas = $baseDatos->prepare("
-        SELECT DATE_FORMAT(fecha_hora, '%H:%i') as hora, motivo
+        SELECT TO_CHAR(fecha_hora, 'HH24:MI') as hora, motivo
         FROM cita
         WHERE id_profesional = ?
           AND DATE(fecha_hora) = ?
@@ -2204,22 +2200,20 @@ function getTareasPaciente(int $idPaciente): array
             t.titulo,
             t.notas as descripcion,
             t.fecha_inicio,
-            t.fecha_fin,
-            t.frecuencia_sesiones,
+            t.fecha_fin,            t.frecuencia_sesiones,
             DATE(t.fecha_inicio) as fecha_asignacion,
-            CONCAT(p.nombre, ' ', p.apellido1) as profesional_nombre,
+            (p.nombre || ' ' || p.apellido1) as profesional_nombre,
             t.id_profesional,
             h.id_historial,
             h.diagnostico_preliminar,
-            h.diagnostico_final,
-            -- Documentos asociados al tratamiento
-            GROUP_CONCAT(
-                DISTINCT CONCAT(
-                    dc.id_documento, ':', 
-                    COALESCE(dc.nombre_archivo, 'Sin nombre'), ':', 
-                    dc.ruta, ':', 
+            h.diagnostico_final,            -- Documentos asociados al tratamiento
+            STRING_AGG(
+                DISTINCT (
+                    dc.id_documento || ':' || 
+                    COALESCE(dc.nombre_archivo, 'Sin nombre') || ':' || 
+                    dc.ruta || ':' || 
                     dc.tipo
-                ) SEPARATOR '|'
+                ), '|'
             ) as documentos
         FROM tratamiento t
         JOIN historial_clinico h ON t.id_historial = h.id_historial
@@ -2291,10 +2285,9 @@ function getHistorialPaciente(int $idPaciente): array
             dc.nombre_archivo,
             dc.tipo,
             dc.fecha_subida,
-            h.fecha_inicio as fecha_historial,
-            h.diagnostico_preliminar,
+            h.fecha_inicio as fecha_historial,            h.diagnostico_preliminar,
             h.diagnostico_final,
-            CONCAT(p.nombre, ' ', p.apellido1) as profesional_nombre
+            (p.nombre || ' ' || p.apellido1) as profesional_nombre
         FROM documento_clinico dc
         JOIN historial_clinico h ON dc.id_historial = h.id_historial
         JOIN persona p ON p.id_persona = dc.id_profesional
@@ -2322,10 +2315,9 @@ function getCitasPaciente(int $idPaciente): array
             c.id_profesional,  -- ¡AGREGADO! Este es el campo que faltaba
             c.fecha_hora,
             c.estado,
-            c.motivo,
-            c.origen,
+            c.motivo,            c.origen,
             c.notas_privadas,
-            CONCAT(p.nombre, ' ', p.apellido1) as profesional_nombre,
+            (p.nombre || ' ' || p.apellido1) as profesional_nombre,
             pr.especialidad as profesional_especialidad
         FROM cita c
         JOIN persona p ON p.id_persona = c.id_profesional
@@ -2418,9 +2410,9 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
                 // Actualizar la fecha en notas privadas para referencia
                 $baseDatos->prepare("
                     UPDATE cita 
-                    SET notas_privadas = CONCAT(
-                        COALESCE(notas_privadas, ''), 
-                        '\nSolicitud cambio a: ', ?
+                    SET notas_privadas = (
+                        COALESCE(notas_privadas, '') || 
+                        E'\\nSolicitud cambio a: ' || ?
                     )
                     WHERE id_cita = ?
                 ")->execute([$nuevaFecha, $idCita]);

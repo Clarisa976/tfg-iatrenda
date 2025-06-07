@@ -144,7 +144,7 @@ $app->post('/consentimiento', function (Request $req): Response {
     }
     $ok = execLogged(
         "INSERT INTO consentimiento (id_persona, fecha_otorgado, canal)
-         VALUES (:id, NOW(), :canal)",
+         VALUES (:id, CURRENT_TIMESTAMP, :canal)",
         [':id'=>$id,':canal'=>$canal],
         $id, 'consentimiento', $id
     );
@@ -162,7 +162,7 @@ $app->post('/consentimiento/revocar', function (Request $req): Response {
     $id = (int)$val['usuario']['id_persona'];
     $ok = execLogged(
         "UPDATE consentimiento
-            SET fecha_revocado = NOW()
+            SET fecha_revocado = CURRENT_TIMESTAMP
           WHERE id_persona = :id
             AND fecha_revocado IS NULL",
         [':id'=>$id],
@@ -393,9 +393,8 @@ $app->post('/crear-contrasena', function ($req) {
     /* Para usuarios sin contraseña (null), permitir crear primera contraseña */
     
     $consulta = $baseDatos->prepare("
-      UPDATE persona
-         SET password_hash = SHA2(:p,256),
-             password_hash_creado = NOW()
+      UPDATE persona         SET password_hash = ENCODE(DIGEST(:p, 'sha256'), 'hex'),
+             password_hash_creado = CURRENT_TIMESTAMP
        WHERE id_persona = :id");
     $consulta->execute([':p'=>$pass, ':id'=>$id]);
 
@@ -799,22 +798,21 @@ $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
         $consulta = $baseDatos->prepare("
             SELECT 
                 p.id_profesional as id,
-                CONCAT(pe.nombre, ' ', pe.apellido1, 
-                       CASE WHEN pe.apellido2 IS NOT NULL THEN CONCAT(' ', pe.apellido2) ELSE '' END) as nombre_completo,
+                (pe.nombre || ' ' || pe.apellido1 || 
+                       CASE WHEN pe.apellido2 IS NOT NULL THEN (' ' || pe.apellido2) ELSE '' END) as nombre_completo,
                 pr.especialidad
-            FROM profesional p
-            JOIN persona pe ON pe.id_persona = p.id_profesional
+            FROM profesional p            JOIN persona pe ON pe.id_persona = p.id_profesional
             LEFT JOIN profesional pr ON pr.id_profesional = p.id_profesional
-            WHERE pe.activo = 1
+            WHERE pe.activo = true
             AND (
-                CONCAT(pe.nombre, ' ', pe.apellido1, COALESCE(pe.apellido2, '')) LIKE :nombre
-                OR pe.nombre LIKE :nombre
-                OR pe.apellido1 LIKE :nombre
+                (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) ILIKE :nombre
+                OR pe.nombre ILIKE :nombre
+                OR pe.apellido1 ILIKE :nombre
             )
             ORDER BY 
                 CASE 
-                    WHEN CONCAT(pe.nombre, ' ', pe.apellido1, COALESCE(pe.apellido2, '')) = :nombre_exacto THEN 1
-                    WHEN CONCAT(pe.nombre, ' ', pe.apellido1, COALESCE(pe.apellido2, '')) LIKE :nombre_inicio THEN 2
+                    WHEN (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) = :nombre_exacto THEN 1
+                    WHEN (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) ILIKE :nombre_inicio THEN 2
                     ELSE 3
                 END
             LIMIT 1
@@ -886,9 +884,8 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
             // Verificar que el profesional existe
             $consultaProf = $baseDatos->prepare("
                 SELECT p.id_profesional, pe.nombre, pe.apellido1
-                FROM profesional p
-                JOIN persona pe ON pe.id_persona = p.id_profesional
-                WHERE p.id_profesional = ? AND pe.activo = 1
+                FROM profesional p                JOIN persona pe ON pe.id_persona = p.id_profesional
+                WHERE p.id_profesional = ? AND pe.activo = true
             ");
             $consultaProf->execute([$profesionalId]);
             $profesional = $consultaProf->fetch(PDO::FETCH_ASSOC);
@@ -924,7 +921,7 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
                 SELECT COUNT(*) as bloqueado FROM bloque_agenda
                 WHERE id_profesional = ?
                 AND tipo_bloque IN ('AUSENCIA', 'VACACIONES', 'BAJA', 'EVENTO')
-                AND ? BETWEEN fecha_inicio AND DATE_SUB(fecha_fin, INTERVAL 1 SECOND)
+                AND ? BETWEEN fecha_inicio AND (fecha_fin - INTERVAL '1 second')
             ");
             $consultaBloqueos->execute([$profesionalId, $fecha]);
             $bloqueo = $consultaBloqueos->fetch(PDO::FETCH_ASSOC);
