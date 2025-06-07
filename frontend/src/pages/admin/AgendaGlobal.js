@@ -122,9 +122,7 @@ export default function AgendaGlobal() {
                  onChange={e=>setBusqueda(e.target.value)}
                  placeholder="Nombre o apellidos…" />
         </div>
-      </div>
-
-      <div className="cal-wrapper">
+      </div>      <div className="cal-wrapper">
         <Calendar
           localizer={localizer}
           events={eventosFiltrados}
@@ -132,7 +130,7 @@ export default function AgendaGlobal() {
           endAccessor="end"
           tooltipAccessor="nota"
           eventPropGetter={eventStyleGetter}
-          style={{ height: '70vh' }}
+          className="calendario-agenda"
           onSelectEvent={e => { setDetalle(e); setDetalleOpen(true); }}
         />
       </div>

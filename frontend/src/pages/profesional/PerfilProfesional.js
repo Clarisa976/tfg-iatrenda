@@ -1,12 +1,10 @@
 // src/pages/profesional/PerfilProfesional.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle } from 'lucide-react';
 import '../../styles.css';
 
 export default function PerfilProfesional() {
-  const navigate = useNavigate();
   const hoy = new Date().toISOString().split('T')[0];
 
   // Modo edición / solo lectura
@@ -169,7 +167,7 @@ export default function PerfilProfesional() {
   );
 
   return (
-    <div className="usuarios-container" style={{ maxWidth:'900px' }}>
+    <div className="usuarios-container perfil-profesional-container">
       <h2 className="usuarios-title">Mi Perfil</h2>
       <div className="modal-body">
         <form onSubmit={handleSubmit}>
@@ -205,9 +203,7 @@ export default function PerfilProfesional() {
             {input('ciudad','Ciudad')}
             {input('provincia','Provincia')}
             {input('pais','País')}
-          </div>
-
-          {/* Consentimiento */}
+          </div>          {/* Consentimiento */}
           <h4>Consentimiento de datos</h4>
           <div className="field checkbox-field">
             <label>
@@ -217,7 +213,15 @@ export default function PerfilProfesional() {
                 onChange={e=>setConsent(e.target.checked)}
                 disabled={!editMode}
               />{' '}
-              Acepto el uso y tratamiento de mis datos personales
+              Acepto el uso y tratamiento de mis datos personales según la{' '}
+              <a 
+                href="/politica-privacidad" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: 'var(--blue)', textDecoration: 'underline' }}
+              >
+                Política de Privacidad
+              </a>
             </label>
           </div>
 

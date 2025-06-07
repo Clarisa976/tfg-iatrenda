@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, User, Bell } from 'lucide-react';
 import axios from 'axios';
 import '../../styles.css';
@@ -14,10 +14,12 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
   const dropdownRef = useRef(null);
   const sidebarRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const userRole = user?.rol || user?.role || null;
+  const isLoggedIn = !!userRole; // Si tiene rol, está logueado
 
-  /* ------------- cierres automáticos (click fuera) --------------- */
+  /* cierres automáticos */
   useEffect(() => {
     const fn = e => {
       if (userOpen &&
@@ -40,7 +42,7 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
     return () => document.removeEventListener('mousedown', fn);
   }, [navOpen]);
 
-  /* ----------- comprobar notificaciones admins cada 30 s ---------- */  
+  /* comprobar notificaciones admins cada 30 s*/
   useEffect(() => {
     if (userRole !== 'admin') return;
     const check = async () => {
@@ -56,41 +58,79 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
     return () => clearInterval(id);
   }, [userRole]);
 
-  /* ---- sincronizar campana si Notificaciones emite customEvent --- */
+  /* sincronizar campana si Notificaciones emite customEvent */
   useEffect(() => {
     const handler = e => setPend(e.detail > 0);
     window.addEventListener('noti-count', handler);
     return () => window.removeEventListener('noti-count', handler);
   }, []);
 
-  /* ----------------- helpers UI ---------------------------------- */
-  const handleNavLink = (e, id) => {
+  // Función mejorada para navegación interna
+  const handleNavLink = (e, sectionId) => {
     e.preventDefault();
-    (id === 'top')
-      ? window.scrollTo({ top: 0, behavior: 'smooth' })
-      : document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-    setNavOpen(false); setUserOpen(false);
+    setNavOpen(false);
+    setUserOpen(false);
+
+    // Si no estamos en la página principal, navegar primero a ella
+    if (location.pathname !== '/') {
+      navigate('/');
+      // Esperar a que se cargue la página principal y luego hacer scroll
+      setTimeout(() => {
+        if (sectionId === 'top') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          const element = document.getElementById(sectionId);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      }, 100);
+    } else {
+      // Ya estamos en la página principal, hacer scroll directo
+      if (sectionId === 'top') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    }
+  };
+
+  // Función para navegar a secciones específicas del perfil de paciente
+  const navigateToProfileSection = (section) => {
+    navigate(`/paciente/mi-perfil?section=${section}`);
+    setUserOpen(false);
   };
 
   const userMenuItems = {
-    paciente: [{ label: 'Mi perfil', to: '/perfil' }],
-    profesional: [{ label: 'Mi perfil', to: '/profesional/mi-perfil' },
-    { label: 'Pacientes', to: '/profesional/pacientes' },
-    { label: 'Agenda', to: '/profesional/agenda' }],
-    admin: [{ label: 'Usuarios', to: '/admin/usuarios' },
-    { label: 'Notificaciones', to: '/admin/notificaciones' },
-    { label: 'Agenda global', to: '/admin/agenda-global' },
-    { label: 'Informes y Logs', to: '/admin/informes' }],
+    paciente: [
+      { label: 'Mi perfil', action: () => navigateToProfileSection('perfil') },
+      { label: 'Tareas para casa', action: () => navigateToProfileSection('tareas') },
+      { label: 'Historial clínico', action: () => navigateToProfileSection('historial') },
+      { label: 'Mis citas', to: '/paciente/mis-citas' }
+    ],
+    profesional: [
+      { label: 'Mi perfil', to: '/profesional/mi-perfil' },
+      { label: 'Pacientes', to: '/profesional/pacientes' },
+      { label: 'Agenda', to: '/profesional/agenda' }
+    ],
+    admin: [
+      { label: 'Usuarios', to: '/admin/usuarios' },
+      { label: 'Notificaciones', to: '/admin/notificaciones' },
+      { label: 'Agenda global', to: '/admin/agenda-global' },
+      { label: 'Informes y Logs', to: '/admin/informes' }
+    ],
   }[userRole] || [];
 
-  /* ------------------------------ JSX ----------------------------- */
   return (
     <header className="header">
-      {/* TOP BAR ---------------------------------------------------- */}
+      {/* TOP BAR */}
       <div className="top-bar">
         <div className="logo">
           <Link to="/" onClick={e => handleNavLink(e, 'top')}>
-            <img src={logoImg} alt="Petaka" />
+            <img src={logoImg} alt="Iatrenda" />
           </Link>
         </div>
 
@@ -120,29 +160,41 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
         </div>
       </div>
 
-      {/* MENÚ PRINCIPAL -------------------------------------------- */}
+      {/* MENÚ PRINCIPAL */}
       <div className={`menu-desplegable${navOpen ? ' open' : ''}`}>
         <nav className="nav-links">
           <a href="#top" onClick={e => handleNavLink(e, 'top')}>Inicio</a>
           <a href="#quienes-somos" onClick={e => handleNavLink(e, 'quienes-somos')}>Quiénes somos</a>
           <a href="#servicios" onClick={e => handleNavLink(e, 'servicios')}>Servicios</a>
-          <a className="btn-reserva"
-            href="#"
-            onClick={e => { e.preventDefault(); onReservarCita(); }}>
-            Reserve su cita
-          </a>
+          
+          {/* Solo mostrar "Reserve su cita" si NO está logueado */}
+          {!isLoggedIn && (
+            <a className="btn-reserva"
+              href="#"
+              onClick={e => { e.preventDefault(); onReservarCita(); }}>
+              Reserve su cita
+            </a>
+          )}
         </nav>
       </div>
 
-      {/* MENÚ DE USUARIO ------------------------------------------- */}
+      {/* MENÚ DE USUARIO */}
       {userOpen && (
         <>
           {/* dropdown desktop */}
           <div ref={dropdownRef} className="user-dropdown">
             {userRole ? (
               <>
-                {userMenuItems.map(({ to, label }) => (
-                  <Link key={to} to={to} onClick={() => setUserOpen(false)}>{label}</Link>
+                {userMenuItems.map((item, index) => (
+                  item.to ? (
+                    <Link key={index} to={item.to} onClick={() => setUserOpen(false)}>
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <a key={index} href="#" onClick={e => { e.preventDefault(); item.action(); }}>
+                      {item.label}
+                    </a>
+                  )
                 ))}
                 <Link to="/" onClick={() => { onLogout(); setUserOpen(false); }}>Cerrar sesión</Link>
               </>
@@ -160,8 +212,16 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
             <div className="sidebar-links">
               {userRole ? (
                 <>
-                  {userMenuItems.map(({ to, label }) => (
-                    <Link key={to} to={to} onClick={() => setUserOpen(false)}>{label}</Link>
+                  {userMenuItems.map((item, index) => (
+                    item.to ? (
+                      <Link key={index} to={item.to} onClick={() => setUserOpen(false)}>
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <a key={index} href="#" onClick={e => { e.preventDefault(); item.action(); }}>
+                        {item.label}
+                      </a>
+                    )
                   ))}
                   <Link to="/" onClick={() => { onLogout(); setUserOpen(false); }}>Cerrar sesión</Link>
                 </>

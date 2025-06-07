@@ -5,14 +5,12 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../../styles.css';
 
-/* helpers fecha — mes actual -------------------------------------------- */
+
 const now = new Date();
 const year = now.getFullYear();
 const month = now.getMonth() + 1;                       // 1-12
-const mesES = now.toLocaleDateString('es-ES',
-  { month: 'long', year: 'numeric' }).replace(/^./, m => m.toUpperCase());
 
-// Array de meses en español para el selector
+// Array de meses en español 
 const meses = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -28,7 +26,7 @@ export default function InformesYLogs() {
   const [selectedYear, setSelectedYear] = useState(year);
   const token = localStorage.getItem('token');
 
-  /* ───────── carga estadísticas (sin async directo en useEffect) */
+  /* carga estadísticas */
   useEffect(() => {
     async function fetchStats() {
       try {
@@ -42,7 +40,7 @@ export default function InformesYLogs() {
     fetchStats();
   }, [token, selectedMonth, selectedYear]);
 
-  /* ───────── descarga CSV de logs */
+  /* descarga CSV de logs */
   const descargarLogs = async () => {
     try {
       // Construir la URL con los parámetros de año y mes
@@ -70,18 +68,17 @@ export default function InformesYLogs() {
   // Formatea la fecha seleccionada para mostrar
   const fechaSeleccionada = new Date(selectedYear, selectedMonth - 1).toLocaleDateString('es-ES', 
     { month: 'long', year: 'numeric' }).replace(/^./, m => m.toUpperCase());
-
-  /* UI ------------------------------------------------------------------ */
+    
   return (
-    <div className="usuarios-container" style={{ maxWidth: 880 }}>
-      <h2 className="usuarios-title" style={{ marginBottom: '1rem' }}>
+    <div className="usuarios-container informes-container-wide">
+      <h2 className="usuarios-title informes-title-margin">
         Informes y Logs
       </h2>
 
       {/* Selector de fecha */}
-      <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div className="informes-fecha-selector">
         <Calendar size={18} />
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="informes-fecha-selects">
           <select 
             value={selectedMonth} 
             onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
@@ -137,15 +134,13 @@ export default function InformesYLogs() {
             </div>
           </div>
         </div>
-      ) : <p>Cargando…</p>}
-
-      {/* logs */}
-      <h3 style={{ marginTop: '2.5rem' }}>Logs</h3>
+      ) : <p>Cargando…</p>}      {/* logs */}
+      <h3 className="informes-logs-title">Logs</h3>
       <p>Descarga el histórico de eventos registrados para {fechaSeleccionada}:</p>
-      <a className="btn-reserva blue" onClick={descargarLogs}>
-        <FileDown size={18} style={{ marginRight: 8 }} />
+      <button className="btn-reserva blue" onClick={descargarLogs}>
+        <FileDown size={18} className="informes-icono-margin" />
         Descargar CSV
-      </a>
+      </button>
     </div>
   );
 }

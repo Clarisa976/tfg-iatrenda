@@ -251,10 +251,9 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
         {input(tu, setTu, 'fecha_nacimiento', 'Fecha nacimiento*', 'date')}
         {input(tu, setTu, 'nif',              'DNI')}
         {input(tu, setTu, 'email',            'Email*', 'email')}
-        {input(tu, setTu, 'telefono',         'Teléfono*')}
-        <div className="field full">
+        {input(tu, setTu, 'telefono',         'Teléfono*')}        <div className="field full">
           <label>Método de contacto*</label>
-          <div style={{display:'flex',gap:'1rem',alignItems:'center'}}>
+          <div className="metodos-contacto-container">
             <label className="consent-line">
               <input
                 type="checkbox"
@@ -316,11 +315,9 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
   const handleBackdrop = () => { if (!isEdit && step === 0) toggle(); };
 
   return (
-    <div className="modal-backdrop" onClick={handleBackdrop}>
-      <div
-        className="modal add-user-modal"
+    <div className="modal-backdrop" onClick={handleBackdrop}>      <div
+        className="modal add-user-modal add-user-modal-wide"
         onClick={e => e.stopPropagation()}
-        style={{ maxWidth:'900px' }}
       >
         {/* PASO 0: elegir tipo */}
         {step === 0 && (
@@ -328,8 +325,7 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
             <div className="modal-header">
               <h5>Nuevo usuario</h5>
               <button className="modal-close" onClick={toggle}>×</button>
-            </div>
-            <div className="modal-body" style={{ textAlign:'center' }}>
+            </div>            <div className="modal-body modal-body-centered">
               <button
                 className="btn-reserva"
                 onClick={() => { setTipo('PACIENTE'); setStep(1); }}
@@ -337,8 +333,7 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
                 Paciente
               </button>
               <button
-                className="btn-reserva"
-                style={{ marginLeft:'1rem' }}
+                className="btn-reserva btn-margin-left"
                 onClick={() => { setTipo('PROFESIONAL'); setStep(1); }}
               >
                 Profesional

@@ -186,7 +186,7 @@ export default function AgendaProfesional() {
           endAccessor="end"
           tooltipAccessor="nota"
           eventPropGetter={eventStyleGetter}
-          style={{ height: '70vh' }}
+          className="calendario-agenda"
           onSelectEvent={e => { setDetalle(e); setDetalleOpen(true); }}
           onNavigate={(date) => {
             // Cuando el usuario navega a un mes diferente

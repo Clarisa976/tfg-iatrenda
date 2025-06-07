@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
-import { CheckCircle, X, XCircle, EllipsisVertical } from 'lucide-react';
+import { CheckCircle, X, XCircle, EllipsisVertical, Paperclip } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
-import { setHours, setMinutes, format } from 'date-fns';
+import { setHours, setMinutes } from 'date-fns';
 import es from 'date-fns/locale/es';
 
 import '../../styles.css';
@@ -20,18 +20,24 @@ registerLocale('es', es);
 
 /* ----------  helpers ---------- */
 const TabBtn = ({ label, sel, onClick }) => (
-  <button className="tab-btn"
-    style={{ background: sel ? 'var(--blue)' : '#d9d9d9', color: sel ? '#fff' : '#000' }}
+  <button className={`tab-btn ${sel ? 'tab-button-selected' : 'tab-button-unselected'}`}
     onClick={onClick}>{label}</button>
 );
 
-const estadoColor = {
-  CONFIRMADA: '#6fcf97', ATENDIDA: '#6fcf97',
-  PENDIENTE_VALIDACION: '#f2c94c',
-  NO_PRESENTADA: '#9b51e0',
-  CANCELADA: '#f04b4b',
-  CAMBIO_SOLICITADO: 'var(--blue)',
-  CANCELACION_SOLICITADA: '#eb5757'
+// Función para obtener la clase CSS del estado
+const getEstadoClass = (estado) => {
+  const clases = {
+    'PENDIENTE_VALIDACION': 'estado-pendiente-validacion',
+    'SOLICITADA': 'estado-solicitada',
+    'CONFIRMADA': 'estado-confirmada',
+    'ATENDIDA': 'estado-atendida',
+    'CANCELADA': 'estado-cancelada',
+    'NO_PRESENTADA': 'estado-no-presentada',
+    'CAMBIAR': 'estado-cambiar',
+    'CANCELAR': 'estado-cancelar',
+    'NO_ATENDIDA': 'estado-no-atendida'
+  };
+  return clases[estado] || '';
 };
 
 /* ================= COMPONENTES SEPARADOS ================= */
@@ -95,24 +101,40 @@ const BloqueTutor = memo(({ pTut, hTut, edit }) => (
       <InputField obj={pTut} onChange={hTut} fieldKey="fecha_nacimiento" label="F. nacimiento*" type="date" edit={edit} />
       <InputField obj={pTut} onChange={hTut} fieldKey="nif" label="DNI" edit={edit} />
       <InputField obj={pTut} onChange={hTut} fieldKey="email" label="Email*" type="email" edit={edit} />
-      <InputField obj={pTut} onChange={hTut} fieldKey="telefono" label="Teléfono*" edit={edit} />
-      <div className="field full">
+      <InputField obj={pTut} onChange={hTut} fieldKey="telefono" label="Teléfono*" edit={edit} />      <div className="field full">
         <label>Método contacto*</label>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <label>
+        <div className="datos-perfil-flex">          <label>
             <input
               type="checkbox"
               disabled={!edit}
-              checked={pTut.metodo_contacto_preferido === 'TEL'}
-              onChange={e => hTut('metodo_contacto_preferido', e.target.checked ? 'TEL' : '')}
+              checked={pTut.metodo_contacto_preferido?.includes('TEL') || false}
+              onChange={e => {
+                const currentMethods = pTut.metodo_contacto_preferido?.split(',') || [];
+                if (e.target.checked) {
+                  const newMethods = [...currentMethods, 'TEL'].filter(m => m);
+                  hTut('metodo_contacto_preferido', newMethods.join(','));
+                } else {
+                  const newMethods = currentMethods.filter(m => m !== 'TEL');
+                  hTut('metodo_contacto_preferido', newMethods.join(','));
+                }
+              }}
             /> Teléfono
           </label>
           <label>
             <input
               type="checkbox"
               disabled={!edit}
-              checked={pTut.metodo_contacto_preferido === 'EMAIL'}
-              onChange={e => hTut('metodo_contacto_preferido', e.target.checked ? 'EMAIL' : '')}
+              checked={pTut.metodo_contacto_preferido?.includes('EMAIL') || false}
+              onChange={e => {
+                const currentMethods = pTut.metodo_contacto_preferido?.split(',') || [];
+                if (e.target.checked) {
+                  const newMethods = [...currentMethods, 'EMAIL'].filter(m => m);
+                  hTut('metodo_contacto_preferido', newMethods.join(','));
+                } else {
+                  const newMethods = currentMethods.filter(m => m !== 'EMAIL');
+                  hTut('metodo_contacto_preferido', newMethods.join(','));
+                }
+              }}
             /> Email
           </label>
         </div>
@@ -248,15 +270,22 @@ export default function PerfilPacienteProfesional() {
     } catch (e) { msg(false, 'Error', e.response?.data?.mensaje || 'El paciente no se ha podido actualizar'); }
   };
 
-  /* ---------- acciones citas ---------- */
-  const doAccion = async (idCita, accion, fecha = null) => {
+  /* ---------- acciones citas ---------- */  const doAccion = async (idCita, accion, fecha = null) => {
     try {
-      await axios.post(`/prof/citas/${idCita}/accion`, { accion, ...(fecha ? { fecha } : {}) });
+      const response = await axios.post(`/prof/citas/${idCita}/accion`, { accion, ...(fecha ? { fecha } : {}) });
+      if (response.data?.token) {
+        localStorage.setItem('token', response.data.token);
+      }
       await fetchData();
-    } catch (e) { msg(false, 'Error', 'No se pudo cambiar la cita'); }
+      msg(true, 'Éxito', 'La cita se ha actualizado correctamente');
+    } catch (e) {
+      console.error('Error al realizar acción en cita:', e);
+      const errorMsg = e.response?.data?.mensaje || 'No se pudo cambiar la cita. Por favor, inténtalo de nuevo.';
+      msg(false, 'Error', errorMsg);
+    }
   };
 
-  if (data === null) return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando…</div>;
+  if (data === null) return <div className="loading-estado">Cargando…</div>;
 
   /* ------------------- TABS ------------------- */
   const Perfil = (
@@ -298,10 +327,9 @@ export default function PerfilPacienteProfesional() {
               className="tratamiento-item"
               onClick={() => setSelT(t)}>
               <h5>{t.titulo || 'Sin título'}</h5>
-              <p>{t.notas?.substring(0, 120) || 'Sin descripción'}</p>
-              {t.documentos && t.documentos.length > 0 && (
+              <p>{t.notas?.substring(0, 120) || 'Sin descripción'}</p>              {t.documentos && t.documentos.length > 0 && (
                 <span className="badge-archivo">
-                  📎 {t.documentos.length} archivo{t.documentos.length > 1 ? 's' : ''}
+                  <Paperclip size={14} style={{ marginRight: '4px' }} /> {t.documentos.length} archivo{t.documentos.length > 1 ? 's' : ''}
                 </span>
               )}
             </li>
@@ -363,9 +391,7 @@ export default function PerfilPacienteProfesional() {
     const [profesionalId, setProfesionalId] = useState(null);
 
     const HORA_INICIO = 10;
-    const HORA_FIN = 17;
-
-    // Reset del modal cuando se abre
+    const HORA_FIN = 17;    // Reset del modal cuando se abre
     useEffect(() => {
       if (repro.show) {
         setFechaNueva(null);
@@ -373,10 +399,11 @@ export default function PerfilPacienteProfesional() {
         setError('');
         obtenerProfesionalId();
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [repro.show]);
 
     // Obtener ID del profesional desde el token
-    const obtenerProfesionalId = () => {
+    const obtenerProfesionalId = useCallback(() => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -394,10 +421,10 @@ export default function PerfilPacienteProfesional() {
         console.error('Error obteniendo profesional del token:', e);
         setError('Error al obtener información del profesional');
       }
-    };
+    }, []);
     const [diasBloqueados, setDiasBloqueados] = useState([]);
     //  Cargar días bloqueados al montar el componente
-    const cargarDiasBloqueados = async () => {
+    const cargarDiasBloqueados = useCallback(async () => {
       if (!profesionalId) return;
 
       try {
@@ -412,9 +439,7 @@ export default function PerfilPacienteProfesional() {
             fecha_inicio: hoy,
             fecha_fin: tresMeses
           }
-        });
-
-        if (response.data.ok) {
+        });        if (response.data.ok) {
           const diasBloqueados = response.data.dias_bloqueados || [];
           console.log('Días bloqueados recibidos:', diasBloqueados);
           setDiasBloqueados(diasBloqueados);
@@ -422,13 +447,13 @@ export default function PerfilPacienteProfesional() {
       } catch (e) {
         console.error('Error al cargar días bloqueados:', e);
       }
-    };
+    }, [profesionalId]);
 
     useEffect(() => {
       if (profesionalId) {
         cargarDiasBloqueados();
       }
-    }, [profesionalId]);    // Cargar horas ocupadas cuando se selecciona una fecha
+    }, [profesionalId, cargarDiasBloqueados]);    // Cargar horas ocupadas cuando se selecciona una fecha
     const cargarHorasOcupadas = async (fecha) => {
       if (!fecha || !profesionalId) return;
 
@@ -626,7 +651,7 @@ export default function PerfilPacienteProfesional() {
 
     return (
       <div className="modal-backdrop" onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}>
-        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '650px' }}>
+        <div className="modal modal-tratamiento-container" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
             <h3>Reprogramar Cita</h3>
             <button className="modal-close" onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}> <X />
@@ -634,62 +659,37 @@ export default function PerfilPacienteProfesional() {
           </div>
 
           <div className="modal-body">
-            {/* Información de la cita actual */}
-            {repro.citaActual && (
-              <div style={{
-                background: '#f8f9fa',
-                border: '1px solid #e9ecef',
-                borderRadius: '6px',
-                padding: '15px',
-                marginBottom: '20px'
-              }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#495057', fontSize: '0.9em' }}>
+            {/* Información de la cita actual */}            {repro.citaActual && (
+              <div className="cita-actual-container">
+                <h4 className="cita-actual-titulo">
                   Cita actual
-                </h4>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                </h4>                <div className="cita-actual-fecha-container">
                   <span>🕒</span>
-                  <span style={{ color: '#6c757d', fontSize: '0.9em' }}>
+                  <span className="cita-actual-fecha-texto">
                     {fechaActualCita}
                   </span>
                 </div>
                 {repro.citaActual.motivo && (
-                  <p style={{ margin: '0', fontSize: '0.85em', color: '#6c757d' }}>
+                  <p className="cita-actual-motivo">
                     <strong>Motivo:</strong> {repro.citaActual.motivo}
                   </p>
                 )}
               </div>
-            )}
-
-            {/* Información importante */}
-            <div style={{
-              background: '#d1ecf1',
-              border: '1px solid #bee5eb',
-              borderRadius: '6px',
-              padding: '12px',
-              marginBottom: '20px',
-              fontSize: '0.85em',
-              color: '#0c5460'
-            }}>
+            )}            {/* Información importante */}
+            <div className="horario-atencion-info">
               <strong>Horario de atención:</strong>
-              <ul style={{ margin: '5px 0 0 0', paddingLeft: '15px' }}>
+              <ul className="horario-atencion-lista">
                 <li>Lunes a Viernes: 10:00 - 17:00</li>
                 <li>Solo se muestran horas realmente disponibles</li>
                 <li>Las horas ocupadas aparecen deshabilitadas</li>
               </ul>
-            </div>
-
-            {/* Selección de nueva fecha y hora con DatePicker */}
-            <div className="field" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+            </div>            {/* Selección de nueva fecha y hora con DatePicker */}
+            <div className="field fecha-seleccion-field">
+              <label className="fecha-seleccion-label">
                 Nueva fecha y hora *
               </label>
               {cargandoHoras && (
-                <div style={{
-                  padding: '10px',
-                  textAlign: 'center',
-                  color: '#666',
-                  fontSize: '0.9em'
-                }}>
+                <div className="cargando-horas-container">
                   🔄 Cargando disponibilidad...
                 </div>
               )}
@@ -706,45 +706,28 @@ export default function PerfilPacienteProfesional() {
                 filterDate={filterDate}
                 filterTime={filterTime}
                 placeholderText="Seleccione fecha y hora"
-                disabled={cargandoHoras || !profesionalId}
-              />
-              <small style={{ color: '#666', fontSize: '0.8em', marginTop: '5px', display: 'block' }}>
+                disabled={cargandoHoras || !profesionalId}              />
+              <small className="fecha-ayuda-texto">
                 Solo días laborables (lunes a viernes) y horas disponibles
               </small>
-            </div>
-
-            {/* Estado de carga */}
+            </div>            {/* Estado de carga */}
             {cargandoHoras && (
-              <div style={{
-                padding: '15px',
-                background: '#e3f2fd',
-                border: '1px solid #90caf9',
-                borderRadius: '4px',
-                color: '#1565c0',
-                marginBottom: '15px'
-              }}>
+              <div className="estado-carga-container">
                 🕒 Verificando disponibilidad horaria...
               </div>
             )}
 
             {/* Mensaje de error */}
             {error && (
-              <div style={{
-                background: '#fee',
-                border: '1px solid #fcc',
-                padding: '12px',
-                borderRadius: '6px',
-                marginBottom: '15px',
-                color: '#c33'
-              }}>
+              <div className="mensaje-error-container">
                 ⚠️ {error}
               </div>
             )}            {/* Debug info */}
-            <details style={{ marginBottom: '15px', fontSize: '0.8em' }}>
-              <summary style={{ cursor: 'pointer', color: '#666' }}>
+            <details className="debug-info-details">
+              <summary className="debug-info-summary">
                 🔧 Debug Info
               </summary>
-              <div style={{ background: '#f0f0f0', padding: '10px', borderRadius: '4px', marginTop: '5px' }}>
+              <div className="debug-info-contenido">
                 <div><strong>Cita ID:</strong> {repro.citaId || 'N/A'}</div>
                 <div><strong>Profesional ID:</strong> {profesionalId || 'NO DETECTADO'}</div>
                 <div><strong>Fecha seleccionada:</strong> {fechaNueva ? fechaNueva.toLocaleString('es-ES') : 'Ninguna'}</div>
@@ -763,14 +746,10 @@ export default function PerfilPacienteProfesional() {
               disabled={isLoading}
             >
               Cancelar
-            </button>
-            <button
-              className="btn-save"
+            </button>            <button
+              className={`btn-save ${(isLoading || !fechaNueva || cargandoHoras) ? 'btn-reprogramar-disabled' : ''}`}
               onClick={reprogramar}
               disabled={isLoading || !fechaNueva || cargandoHoras}
-              style={{
-                opacity: (isLoading || !fechaNueva || cargandoHoras) ? 0.6 : 1
-              }}
             >{isLoading ? 'Reprogramando...' : 'Reprogramar Cita'}
             </button>
           </div>
@@ -786,21 +765,16 @@ export default function PerfilPacienteProfesional() {
       <table className="usuarios-table">
         <thead><tr><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
-          {(data.citas || []).map(c => (
-            <tr key={c.id_cita}>
+          {(data.citas || []).map(c => (            <tr key={c.id_cita}>
               <td>{new Date(c.fecha_hora).toLocaleString('es-ES')}</td>
-              <td style={{
-                background: estadoColor[c.estado] || '#ddd',
-                color: '#000', textAlign: 'center'
-              }}>{c.estado}</td>
+              <td className={`cita-estado-celda ${getEstadoClass(c.estado)}`}>{c.estado}</td>
               <td className="acciones-col">
-                <EllipsisVertical size={20} className="dropdown-toggle"
-                  style={{ cursor: 'pointer' }}
+                <EllipsisVertical size={20} className="dropdown-toggle dropdown-icon-cita"
                   onClick={() => setDrop(drop === c.id_cita ? null : c.id_cita)} />
                 <div className={`acciones-dropdown ${drop === c.id_cita ? 'show' : ''}`}>
                   {c.estado === 'CONFIRMADA' && <>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_ATENDIDA'); }}>Atendida</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_NO_PRESENTADA'); }}>No presentada</a>
+                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_ATENDIDA'); }}>Marcar como atendida</a>
+                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_NO_ATENDIDA'); }}>Marcar como no atendida</a>
                     <a href="#!" onClick={e => {
                       e.preventDefault();
                       setRepro({
@@ -812,16 +786,16 @@ export default function PerfilPacienteProfesional() {
                     }}>Reprogramar</a>
                   </>}
                   {c.estado === 'PENDIENTE_VALIDACION' && <>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'CONFIRMAR'); }}>Confirmar</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'RECHAZAR'); }}>Rechazar</a>
+                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'CONFIRMAR_CITA'); }}>Confirmar cita</a>
+                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'RECHAZAR_CITA'); }}>Rechazar cita</a>
                   </>}
-                  {c.estado === 'CAMBIO_SOLICITADO' && <>
+                  {c.estado === 'CAMBIAR' && <>
                     <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'ACEPTAR_CAMBIO'); }}>Aceptar cambio</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'CANCELAR'); }}>Cancelar</a>
+                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MANTENER_ESTADO_PREVIO'); }}>Volver al estado previo</a>
                   </>}
-                  {c.estado === 'CANCELACION_SOLICITADA' && <>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MANTENER'); }}>Mantener</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'RECHAZAR'); }}>Rechazar</a>
+                  {c.estado === 'CANCELAR' && <>
+                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'ACEPTAR_CANCELACION'); }}>Aceptar cancelación</a>
+                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MANTENER_CITA'); }}>Mantener cita</a>
                   </>}
                 </div>
               </td>
@@ -831,10 +805,9 @@ export default function PerfilPacienteProfesional() {
       </table>
       <ReprogramarCitaModal />
     </>
-  );
-  /* ---------------- render ---------------- */
+  );  /* ---------------- render ---------------- */
   return (
-    <div className="usuarios-container" style={{ maxWidth: '950px' }}>
+    <div className="usuarios-container perfil-paciente-profesional-container">
       <h2 className="usuarios-title">{pPer.nombre} {pPer.apellido1}</h2>
       <div className="tab-bar">
         <TabBtn label="Perfil" sel={tab === 'perfil'} onClick={() => setTab('perfil')} />

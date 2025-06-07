@@ -55,7 +55,7 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
   return (
     <>
       <div className="modal-backdrop" onClick={onClose}>
-        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+        <div className="modal modal-tratamiento-wide" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
             <h3>{treat.titulo || 'Sin título'}</h3>
             <button className="modal-close" onClick={onClose}><X /></button>
@@ -69,66 +69,42 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
             {treat.frecuencia_sesiones && (
               <p><strong>Frecuencia:</strong> {treat.frecuencia_sesiones} /semana</p>)}
             <h4>Descripción</h4>
-            <p>{treat.notas || 'Sin descripción'}</p>
-
-            {/* Sección de adjuntos múltiples */}
+            <p>{treat.notas || 'Sin descripción'}</p>            {/* Sección de adjuntos múltiples */}
             {treat.documentos && treat.documentos.length > 0 && (
-              <div className="tratamiento-attachment" style={{ marginTop: '20px' }}>
+              <div className="tratamiento-attachment tratamiento-attachment-section">
                 <h4>📎 Archivos adjuntos ({treat.documentos.length})</h4>
                 {treat.documentos.map((documento, index) => {
                   const docFileUrl = getFileUrl(documento.ruta);
                   const isDocImage = isImage(documento.ruta);
 
                   return (
-                    <div key={documento.id_documento || index} style={{ marginBottom: '15px', padding: '10px', border: '1px solid #eee', borderRadius: '4px' }}>
-                      <h5 style={{ margin: '0 0 10px 0', color: '#333' }}>
+                    <div key={documento.id_documento || index} className="documento-item-container">
+                      <h5 className="documento-titulo">
                         {documento.nombre_archivo || `Documento ${index + 1}`}
                       </h5>
 
                       {isDocImage ? (
-                        <div className="image-container" style={{ textAlign: 'center' }}>
-                          <img
+                        <div className="image-container image-container-centered">                          <img
                             src={docFileUrl}
                             alt={`Adjunto ${index + 1} de la tarea`}
-                            style={{
-                              maxWidth: '100%',
-                              maxHeight: '300px',
-                              border: '1px solid #ddd',
-                              borderRadius: '4px',
-                              display: 'block',
-                              margin: '10px auto'
-                            }}
+                            className="documento-imagen"
                             onError={(e) => {
                               console.error('Error al cargar imagen:', docFileUrl);
                               e.target.style.display = 'none';
                               e.target.nextSibling.style.display = 'block';
                             }}
                           />
-                          <div style={{
-                            display: 'none',
-                            border: '1px dashed #f44336',
-                            padding: '15px',
-                            borderRadius: '4px',
-                            backgroundColor: '#ffeaa7'
-                          }}>
+                          <div className="imagen-error-container">
                             <p>No se pudo visualizar la imagen</p>
                             <p><small>Ruta: {documento.ruta}</small></p>
                           </div>
                         </div>
-                      ) : (
-                        <div className="file-link" style={{ textAlign: 'center', margin: '15px 0' }}>
+                      ) : (                        <div className="file-link file-link-container">
                           <a
                             href={docFileUrl}
                             target="_blank"
                             rel="noreferrer"
-                            style={{
-                              background: '#4a90e2',
-                              color: 'white',
-                              padding: '8px 15px',
-                              borderRadius: '4px',
-                              textDecoration: 'none',
-                              display: 'inline-block'
-                            }}
+                            className="file-link-btn"
                           >Ver archivo: {documento.nombre_archivo || 'Documento'}
                           </a>
                         </div>
@@ -149,25 +125,17 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
       </div>
 
       {/* Modal de confirmación de eliminación - renderizado por separado con z-index mayor */}
-      {showDeleteModal && (
-        <div className="modal-backdrop" onClick={() => setShowDeleteModal(false)} style={{ zIndex: 10000 }}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+      {showDeleteModal && (        <div className="modal-backdrop modal-delete-confirmation" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal modal-delete-small" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Confirmar eliminación</h3>
             </div>
             <div className="modal-body">
               <p>¿Estás seguro de que quieres eliminar esta tarea?</p>
               <p><strong>{treat.titulo || 'Sin título'}</strong></p>
-              <p style={{ color: '#666', fontSize: '0.9em' }}>Esta acción no se puede deshacer.</p>
+              <p className="delete-confirmation-text">Esta acción no se puede deshacer.</p>
               {error && (
-                <div style={{
-                  background: '#fee',
-                  border: '1px solid #fcc',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  marginTop: '10px',
-                  color: '#c33'
-                }}>
+                <div className="delete-error-message">
                   {error}
                 </div>
               )}
@@ -181,10 +149,9 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
                 Cancelar
               </button>
               <button
-                className="btn-delete"
+                className={`btn-delete ${isDeleting ? 'btn-deleting' : ''}`}
                 onClick={del}
                 disabled={isDeleting}
-                style={{ opacity: isDeleting ? 0.6 : 1 }}
               >
                 {isDeleting ? 'Eliminando...' : 'Eliminar'}
               </button>
