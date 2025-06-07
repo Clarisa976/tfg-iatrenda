@@ -1,9 +1,4 @@
-/* ========================================
-   ARCHIVO App.css - SOLO ESTILOS ESPECÍFICOS DE REACT
-   Los estilos principales están en styles.css
-======================================== */
-
-/* Estilos específicos para componentes de React que no están en styles.css */
+/* Estilos específicos para componentes de React */
 .App {
   text-align: center;
 }

@@ -1,12 +1,14 @@
 import React, { useState, useRef } from 'react';
+import { Eye, EyeOff, X,  CheckCircle, XCircle } from 'lucide-react';
 
 /* Modal para recuperar pass */
-function ModalOlvidarContrasenia({ onClose }) {
+function ModalOlvidarContrasenia({ onClose, onShowToast }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!email.trim()) {
       setError('Este campo no puede quedar vacío');
@@ -14,18 +16,45 @@ function ModalOlvidarContrasenia({ onClose }) {
       return;
     }
 
-    // TODO: llamada fetch/axios a /forgot-password
-    // await api.post('/forgot-password', { email })
-
-    setError('');
-    alert('Si el correo existe, recibirás un email con las instrucciones.');
-    onClose();                      // cerramos modal tras enviar
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      
+      const data = await res.json();
+      
+      if (data.ok) {
+        onShowToast({
+          ok: true,
+          titulo: 'Email enviado',
+          msg: 'Si el correo existe, recibirás un email con las instrucciones.'
+        });
+        onClose();
+      } else {
+        onShowToast({
+          ok: false,
+          titulo: 'Error',
+          msg: data.mensaje || 'El correo no está registrado en la base de datos.'
+        });
+      }
+    } catch (err) {
+      onShowToast({
+        ok: false,
+        titulo: 'Error',
+        msg: 'Error de conexión. Inténtalo de nuevo.'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>×</button>
+        <button className="modal-close" onClick={onClose}><X/></button>
 
         {/* Título */}
         <h2 className="modal-title">Recuperar contraseña</h2>
@@ -44,11 +73,13 @@ function ModalOlvidarContrasenia({ onClose }) {
             {error && (
               <span className="field-error">{error}</span>
             )}
-          </div>
-
-          {/* Botón */}
-          <button type="submit" className="btn-submit btn-full">
-            Recuperar
+          </div>          {/* Botón */}
+          <button 
+            type="submit" 
+            className="btn-reserva btn-full"
+            disabled={loading}
+          >
+            {loading ? 'Enviando...' : 'Recuperar'}
           </button>
         </form>
       </div>
@@ -60,9 +91,19 @@ function ModalOlvidarContrasenia({ onClose }) {
 export default function LoginModal({ onClose, onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({ email: '', pass: '', api: '' });
-  const [fpOpen, setFpOpen] = useState(false);           // ← NUEVO
+  const [fpOpen, setFpOpen] = useState(false);
+  const [toast, setToast] = useState({ show: false, ok: true, titulo: '', msg: '' });
   const emailRef = useRef(null);
+
+  // Función para mostrar toast
+  const showToast = (config) => {
+    setToast({ ...config, show: true });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -97,17 +138,29 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
       setErrors({ ...newErr, api: 'Error de conexión' });
     }
   };
-
   /* Mostrar modal de recuperar? */
   if (fpOpen) {
-    return <ModalOlvidarContrasenia onClose={() => setFpOpen(false)} />;
-  }
-
-  /* Modal de login */
+    return <ModalOlvidarContrasenia onClose={() => setFpOpen(false)} onShowToast={showToast} />;
+  }  /* Modal de login */
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>×</button>
+    <>
+      {/* Toast */}
+      {toast.show && (
+        <div className="toast-global centered-toast">
+          <div className={`toast-card ${toast.ok ? 'success' : 'error'}`}>
+            {toast.ok
+              ? <CheckCircle size={48} className="toast-icon success" />
+              : <XCircle size={48} className="toast-icon error" />
+            }
+            <h3 className="toast-title">{toast.titulo}</h3>
+            <p className="toast-text">{toast.msg}</p>
+          </div>
+        </div>
+      )}
+      
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><X/></button>
 
         {/* Título */}
         <h2 className="modal-title">Inicia sesión</h2>
@@ -127,19 +180,26 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
               className={errors.email ? 'invalid' : ''}
             />
             {errors.email && <span className="field-error">{errors.email}</span>}
-          </div>
-
-          {/* Password */}
+          </div>          {/* Password */}
           <div className="field">
             <label>Contraseña*:</label>
-            <input
-              type="password"
-              value={pass}
-              onChange={e => { setPass(e.target.value); setErrors({ ...errors, pass: '' }); }}
-              className={errors.pass ? 'invalid' : ''}
-            />
+            <div className="password-field">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={pass}
+                onChange={e => { setPass(e.target.value); setErrors({ ...errors, pass: '' }); }}
+                className={errors.pass ? 'invalid' : ''}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
             {errors.pass && <span className="field-error">{errors.pass}</span>}
-          </div>          {/* Acciones */}
+          </div>{/* Acciones */}
           <div className="actions">
             <button
               type="button"
@@ -151,10 +211,10 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
 
             <button type="submit" className="btn-submit btn-full">
               Entrar
-            </button>
-          </div>
+            </button>          </div>
         </form>
       </div>
     </div>
+    </>
   );
 }

@@ -19,10 +19,9 @@ export default function CrearContrasena() {
     if (pass.length < 8) {
       setErr('La contraseña debe tener al menos 8 caracteres');
       return;
-    }
-    try {
+    }    try {
       await axios.post(
-        `${process.env.REACT_APP_API_URL}/crear-pass`,
+        `${process.env.REACT_APP_API_URL}/crear-contrasena`,
         { uid, password: pass }
       );
       setOk(true);
@@ -74,7 +73,7 @@ export default function CrearContrasena() {
         </>
       )}      { ok === true && (
         <p className="success-message">
-          Contraseña creada. Ya puedes iniciar sesión.
+          Contraseña guardada correctamente. Ya puedes iniciar sesión.
         </p>
       )}
     </div>

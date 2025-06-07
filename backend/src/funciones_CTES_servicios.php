@@ -1049,7 +1049,7 @@ function actualizarOInsertarPersona(
     if ($esRolLogin && !empty($datos['email'])) {
         $uid   = rtrim(strtr(base64_encode((string)$idNuevo), '+/', '-_'), '=');
         $front = getenv('FRONTEND_URL') ?: 'http://localhost:3000';
-        $link  = "$front/crear-pass?u=$uid";
+        $link  = "$front/crear-contrasena?u=$uid";
         $html  = "
           <p>Hola {$datos['nombre']}:</p>
           <p>Hemos creado tu usuario en <strong>Clínica Petaka</strong>.</p>

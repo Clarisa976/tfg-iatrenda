@@ -367,8 +367,8 @@ $app->post('/admin/usuarios', function ($req) {
       : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo guardar'],500);
 });
 
-/* POST /crear-pass { uid, password } */
-$app->post('/crear-pass', function ($req) {
+/* POST /crear-contrasena { uid, password } */
+$app->post('/crear-contrasena', function ($req) {
     $b = $req->getParsedBody() ?? [];
     $uid = $b['uid'] ?? '';
     $pass= $b['password'] ?? '';
@@ -379,13 +379,20 @@ $app->post('/crear-pass', function ($req) {
     $id = decodificarUid($uid);
     $baseDatos = conectar();
 
-    /* la contraseña solo puede crearse cuando aún está vacía */
+    /* Verificar que el usuario existe */
     $consulta = $baseDatos->prepare("
       SELECT password_hash FROM persona WHERE id_persona = ? LIMIT 1");
     $consulta->execute([$id]);
     $row = $consulta->fetch(PDO::FETCH_ASSOC);
-    if (!$row || $row['password_hash'] !== null)
-        return jsonResponse(['ok'=>false,'msg'=>'Enlace caducado'],400);    $consulta = $baseDatos->prepare("
+    
+    if (!$row) {
+        return jsonResponse(['ok'=>false,'msg'=>'Usuario no encontrado'],400);
+    }
+    
+    /* Para usuarios con contraseña existente, permitir sobrescribir (reset password) */
+    /* Para usuarios sin contraseña (null), permitir crear primera contraseña */
+    
+    $consulta = $baseDatos->prepare("
       UPDATE persona
          SET password_hash = SHA2(:p,256),
              password_hash_creado = NOW()
@@ -395,666 +402,65 @@ $app->post('/crear-pass', function ($req) {
     return jsonResponse(['ok'=>true]);
 });
 
+/* POST /forgot-password { email } */
+$app->post('/forgot-password', function ($req) {
+    $b = $req->getParsedBody() ?? [];
+    $email = trim($b['email'] ?? '');
 
-$app->get('/admin/usuarios/{id}', function (Request $req, Response $res, array $args) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
+    if (!$email) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Email requerido'],400);
     }
-    $id = (int)$args['id'];
-    $data = getUsuarioDetalle($id);
-    if (!$data) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No encontrado'],404);
-    }
-    return jsonResponse(['ok'=>true,'data'=>$data]);
-});
-/** DELETE /admin/usuarios/{id} — elimina persona */
-$app->delete('/admin/usuarios/{id}', function ($req,$res,$args) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
-        return jsonResponse(['ok'=>false,'msg'=>'No autorizado'],401);
 
-    $out = eliminarUsuario((int)$args['id'], (int)$val['usuario']['id_persona']);
-    if (!$out['ok'])
-        return jsonResponse(['ok'=>false,'msg'=>$out['msg']], $out['code']);
-    return jsonResponse(['ok'=>true]);
-});
-
-
-/** POST /admin/borrar-usuario/{id} — desactiva usuario en vez de eliminarlo */
-$app->post('/admin/borrar-usuario/{id}', function ($req, $res, $args) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-
-    $id = (int)$args['id'];
-    $actor = (int)$val['usuario']['id_persona'];
-    
-    // Verificar si tiene citas confirmadas o pendientes
-    $baseDatos = conectar();
-    $consulta = $baseDatos->prepare("
-        SELECT COUNT(*) 
-        FROM cita 
-        WHERE (id_paciente = ? OR id_profesional = ?) 
-        AND estado IN ('CONFIRMADA', 'PENDIENTE_VALIDACION', 'SOLICITADA')
-    ");
-    $consulta->execute([$id, $id]);
-    $citasActivas = (int)$consulta->fetchColumn();
-    
-    if ($citasActivas > 0) {
-        return jsonResponse([
-            'ok' => false,
-            'mensaje' => 'No se puede desactivar el usuario porque tiene citas confirmadas o pendientes'
-        ], 409);
-    }
-    
     try {
-        // Desactivar el usuario en lugar de eliminarlo
-        $consulta = $baseDatos->prepare("UPDATE persona SET activo = 0 WHERE id_persona = ?");
-        $ok = $consulta->execute([$id]);
-          if ($ok) {
-            // Registrar la acción en los logs
-            registrarActividad(
-                $actor, 
-                $id, 
-                'persona', 
-                'activo', 
-                '1', 
-                '0',
-                'UPDATE'
-            );
-            return jsonResponse(['ok'=>true, 'mensaje'=>'Usuario desactivado correctamente']);
+        $baseDatos = conectar();
+        
+        // Verificar si el email existe en la base de datos
+        $consulta = $baseDatos->prepare("
+            SELECT id_persona, nombre, email, activo 
+            FROM persona 
+            WHERE email = :email 
+            AND rol IN ('PACIENTE', 'PROFESIONAL', 'ADMIN')
+            LIMIT 1
+        ");
+        $consulta->execute([':email' => $email]);
+        $usuario = $consulta->fetch(PDO::FETCH_ASSOC);
+
+        if (!$usuario) {
+            // No existe el email - devolver error
+            return jsonResponse(['ok'=>false,'mensaje'=>'El correo no está registrado en la base de datos']);
+        }
+
+        if (!$usuario['activo']) {
+            // Usuario inactivo - devolver error
+            return jsonResponse(['ok'=>false,'mensaje'=>'La cuenta está desactivada']);
+        }
+
+        // El email existe - generar token de recuperación y enviar email
+        $uid = rtrim(strtr(base64_encode((string)$usuario['id_persona']), '+/', '-_'), '=');
+        $front = getenv('FRONTEND_URL') ?: 'http://localhost:3000';
+        $link = "$front/crear-contrasena?uid=$uid";
+        
+        $html = "
+            <p>Hola {$usuario['nombre']}:</p>
+            <p>Has solicitado restablecer tu contraseña en <strong>Clínica Petaka</strong>.</p>
+            <p>Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
+            <p><a href=\"$link\">Restablecer contraseña</a></p>
+            <p>Si no solicitaste este cambio, puedes ignorar este mensaje.</p>
+        ";
+        
+        $emailEnviado = enviarEmail($usuario['email'], 'Restablecer contraseña – Petaka', $html);
+        
+        if ($emailEnviado) {
+            return jsonResponse(['ok'=>true,'mensaje'=>'Email de recuperación enviado']);
         } else {
-            return jsonResponse(['ok'=>false, 'mensaje'=>'Error al desactivar usuario'], 500);
-        }
-    } catch (Exception $e) {
-        return jsonResponse(['ok'=>false, 'mensaje'=>'Error: '.$e->getMessage()], 500);
-    }
-});
-
-
-/** PUT /admin/usuarios/{id} — actualiza datos de usuario existente */
-$app->put('/admin/usuarios/{id}', function ($req, $res, $args) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-
-    $id = (int)$args['id'];
-    $actor = (int)$val['usuario']['id_persona'];
-    $body = $req->getParsedBody() ?? [];
-    
-    $tipo = strtoupper(trim($body['tipo'] ?? ''));
-    $pdat = $body['persona'] ?? [];
-    $xdat = $body['extra'] ?? [];
-
-    if (!in_array($tipo, ['PROFESIONAL', 'PACIENTE'], true))
-        return jsonResponse(['ok'=>false,'mensaje'=>'Tipo inválido'], 400);
-
-    try {
-        // Usar el nuevo parámetro forceUpdateId para forzar la actualización del usuario con este ID
-        $idPersona = actualizarOInsertarPersona($pdat, $tipo, $actor, $id);
-
-        // Actualizar datos específicos según tipo
-        $ok = ($tipo === 'PROFESIONAL')
-            ? upsertProfesional($idPersona, $xdat, $actor)
-            : upsertPaciente($idPersona, $xdat);
-
-        return $ok
-            ? jsonResponse(['ok'=>true,'id'=>$idPersona])
-            : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo actualizar el usuario'], 500);
-    } catch (Exception $e) {
-        return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()], 400);
-    }
-});
-
-
-/* =========  INFORMES & LOGS  ========= */
-
-/* GET /admin/informes — estadísticas del mes en curso */
-$app->get('/admin/informes', function (Request $req, Response $res) {
-
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-    }
-
-    $y = (int)($req->getQueryParams()['year']  ?? date('Y'));
-    $m = (int)($req->getQueryParams()['month'] ?? date('n'));
-
-    $data = getInformeMes($y, $m);
-    return jsonResponse(['ok'=>true,'data'=>$data]);
-});
-
-/* GET /admin/logs?year=YYYY&month=MM */
-
-$app->get('/admin/logs', function (Request $req, Response $res) {
-
-    /* auth - solo admin */
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-    }
-
-    /* año y mes*/
-    $y = (int)($req->getQueryParams()['year']  ?? date('Y'));
-    $m = (int)($req->getQueryParams()['month'] ?? date('n'));
-
-    /* genera CSV */
-    $csv = exportLogsCsv($y, $m);          // ← función añadida más abajo
-
-    /* lo devolvemos como descarga */
-    $file = sprintf('logs_%d_%02d.csv', $y, $m);
-    $res  = $res
-        ->withHeader('Content-Type',        'text/csv; charset=UTF-8')
-        ->withHeader('Content-Disposition', "attachment; filename=\"$file\"");
-
-    $res->getBody()->write($csv);
-    return $res;
-});
-
-/*--------------PROFESIONAL----------------*/
-/* GET  /prof/perfil  — obtener datos del profesional logeado */
-$app->get('/prof/perfil', function ($req) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional') {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-    }
-    $id = (int)$val['usuario']['id_persona'];
-    $data = getUsuarioDetalle($id);
-    return jsonResponse(['ok'=>true,'data'=>$data]);
-});
-
-/* PUT  /prof/perfil  — actualizar únicamente su propia persona */
-$app->put('/prof/perfil', function ($req) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional') {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-    }
-    $actor = (int)$val['usuario']['id_persona'];
-    $body  = $req->getParsedBody() ?? [];
-    $in    = $body['persona'] ?? [];
-
-    // Filtrar solo campos de persona que puede editar
-    $permitidos = [
-      'nombre','apellido1','apellido2','email','telefono',
-      'fecha_nacimiento','tipo_via','nombre_calle','numero','escalera',
-      'piso','puerta','codigo_postal','ciudad','provincia','pais'
-    ];
-    $datos = array_intersect_key($in, array_flip($permitidos));
-    if (!$datos) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Nada que actualizar'],400);
-    }
-
-    // upsertPersona: actor = él mismo, forceUpdate = su propio id
-    try {
-        $id = actualizarOInsertarPersona($datos,'PROFESIONAL',$actor,$actor);
-        return jsonResponse(['ok'=>true]);
-    } catch (Exception $e) {
-        return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()],400);
-    }
-});
-
-/* GET /prof/pacientes — lista solo de mis pacientes */
-$app->get('/prof/pacientes', function ($req){
-    $val = verificarTokenUsuario();
-    if($val===false || strtolower($val['usuario']['rol'])!=='profesional')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-
-    $idPr = (int)$val['usuario']['id_persona'];
-    $pacientes = getPacientesProfesional($idPr);
-    
-    return jsonResponse(['ok'=>true,'pacientes'=>$pacientes,
-                         'token'=>$val['token']]);
-});
-
-/* GET  /prof/pacientes/{id} — datos completos de MI paciente */
-$app->get('/prof/pacientes/{id}', function ($req,$res,$args){
-    $val = verificarTokenUsuario();
-    if ($val===false || strtolower($val['usuario']['rol'])!=='profesional')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-
-    $idProf=(int)$val['usuario']['id_persona'];
-    $idPac =(int)$args['id'];
-
-    // Verificar que el paciente pertenezca a este profesional
-    if(!verificarPacienteProfesional($idPac, $idProf))
-        return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
-
-    $out = getDetallesPacienteProfesional($idPac, $idProf);
-    return jsonResponse(['ok'=>true,'data'=>$out,'token'=>$val['token']]);
-});
-
-/* PUT /prof/pacientes/{id} — actualiza persona + consentimiento */
-$app->put('/prof/pacientes/{id}', function($req,$res,$args){
-    $val = verificarTokenUsuario();
-    if ($val===false || strtolower($val['usuario']['rol'])!=='profesional')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-
-    $idProf=(int)$val['usuario']['id_persona'];
-    $idPac =(int)$args['id'];
-
-    /* control de propiedad*/
-    if(!verificarPacienteProfesional($idPac, $idProf))
-        return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
-
-    $b   = $req->getParsedBody();
-    actualizarOInsertarPersona ($b['persona']  ?? [],'PACIENTE',$idProf,$idPac);
-    upsertPaciente($idPac,$b['paciente'] ?? []);
-    if(!empty($b['paciente']['tutor'])) upsertTutor($b['paciente']['tutor']);
-
-    registrarConsentimiento($idPac, (bool)($b['rgpd']??false), $idProf);
-
-    return jsonResponse(['ok'=>true,'token'=>$val['token']]);
-});
-
-
-
-/** POST /prof/pacientes/{id}/tareas — crea tratamiento con título + descripción + opcional archivo */
-$app->post('/prof/pacientes/{id}/tareas', function($req,$res,$args){
-    $val = verificarTokenUsuario();
-    if($val===false || strtolower($val['usuario']['rol'])!=='profesional')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-
-    $idPac  = (int)$args['id'];
-    $idProf = (int)$val['usuario']['id_persona'];
-    
-    // Verificar que sea su paciente
-    if(!verificarPacienteProfesional($idPac, $idProf))
-        return jsonResponse(['ok'=>false,'mensaje'=>'Prohibido'],403);
-
-    // Lectura de datos y fichero
-    $d = $req->getParsedBody();
-    $file = $req->getUploadedFiles()['file'] ?? null;
-
-    // Validación básica
-    if (empty($d['titulo'])) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'El título es obligatorio'], 400);
-    }
-
-    try {
-        // Crear tratamiento con todos los campos
-        crearTratamiento(
-            $idPac,
-            $idProf,
-            $d['titulo'] ?? '',
-            $d['descripcion'] ?? '',
-            $file,
-            $d['fecha_inicio'] ?? null,
-            $d['fecha_fin'] ?? null,
-            isset($d['frecuencia_sesiones']) ? (int)$d['frecuencia_sesiones'] : null        );
-        
-        // Registrar en logs
-        registrarActividad(
-            $idProf, 
-            $idPac,
-            'tratamiento',
-            null,
-            null,
-            $d['titulo'],
-            'INSERT'
-        );
-        
-        return jsonResponse(['ok'=>true, 'mensaje'=>'Tratamiento creado correctamente']);
-    } catch (Throwable $e) {
-        error_log('Error al crear tratamiento: ' . $e->getMessage());
-        return jsonResponse(['ok'=>false, 'mensaje'=>'Error: ' . $e->getMessage()], 500);
-    }
-});
-
-
-/** DELETE /prof/pacientes/{id}/tareas/{idTratamiento} — elimina un tratamiento */
-$app->delete('/prof/pacientes/{id}/tareas/{idTratamiento}', function($req, $res, $args) {
-    $val = verificarTokenUsuario();
-    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
-        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-
-    $idPac = (int)$args['id'];
-    $idTratamiento = (int)$args['idTratamiento'];
-    $idProf = (int)$val['usuario']['id_persona'];
-
-    // Verificar que sea su paciente
-    if(!verificarPacienteProfesional($idPac, $idProf))
-        return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
-        
-    try {
-        eliminarTratamiento($idTratamiento, $idProf, $idPac);
-        return jsonResponse(['ok' => true, 'mensaje' => 'Tarea eliminada correctamente']);
-    } catch (Throwable $e) {
-        error_log('Error al eliminar tarea: ' . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
-    }
-});
-
-/** POST /prof/pacientes/{id}/documentos — sube documento al historial clínico */
-$app->post('/prof/pacientes/{id}/documentos', function($req, $res, $args){
-    $val = verificarTokenUsuario();
-    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
-        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-
-    $idPac = (int)$args['id'];
-    $idProf = (int)$val['usuario']['id_persona'];
-    
-    // Verificar que sea su paciente 
-    $db = conectar();
-    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
-    $q->execute([$idPac, $idProf]);
-    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);    // Obtener archivo subido
-    $file = $req->getUploadedFiles()['file'] ?? null;    // Obtener datos del formulario
-    $d = $req->getParsedBody();
-    $diagnosticoPreliminar = $d['diagnostico_preliminar'] ?? '';
-
-    
-    if (!$file) {
-        return jsonResponse(['ok' => false, 'mensaje' => 'No se proporcionó ningún archivo'], 400);
-    }
-    
-    if ($file->getError() !== UPLOAD_ERR_OK) {
-        return jsonResponse(['ok' => false, 'mensaje' => 'Error al subir el archivo'], 400);
-    }    try {
-        // Crear documento en el historial
-        $resultado = crearDocumentoHistorial($idPac, $idProf, $file, $diagnosticoPreliminar);        
-        // Registrar en logs
-        registrarActividad(
-            $idProf, 
-            $idPac,
-            'documento_historial',
-            null,
-            null,
-            'Documento subido al historial',
-            'INSERT'
-        );
-        
-        return jsonResponse($resultado);
-    } catch (Throwable $e) {
-        error_log('Error al subir documento al historial: ' . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
-    }
-});
-
-/** DELETE /prof/pacientes/{id}/documentos/{doc_id} — elimina documento del historial clínico */
-$app->delete('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $args){
-    $val = verificarTokenUsuario();
-    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
-        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-
-    $idPac = (int)$args['id'];
-    $idDoc = (int)$args['doc_id'];
-    $idProf = (int)$val['usuario']['id_persona'];
-    
-    // Verificar que sea su paciente 
-    if(!verificarPacienteProfesional($idPac, $idProf))
-        return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
-    
-    try {
-        eliminarDocumentoHistorial($idDoc, $idPac, $idProf);
-        
-        return jsonResponse([
-            'ok' => true,
-            'mensaje' => 'Documento eliminado correctamente'
-        ]);
-    } catch (Throwable $e) {
-        error_log('Error al eliminar documento: ' . $e->getMessage());
-        
-        if ($e->getMessage() === 'Documento no encontrado') {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
+            return jsonResponse(['ok'=>false,'mensaje'=>'Error al enviar el email']);
         }
         
-        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
-    }
-});
-
-/* PUT /prof/pacientes/{id}/documentos/{doc_id} — actualiza diagnóstico final de un documento */
-$app->put('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $args){
-    $val = verificarTokenUsuario();
-    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
-        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-
-    $idPac = (int)$args['id'];
-    $idDoc = (int)$args['doc_id'];
-    $idProf = (int)$val['usuario']['id_persona'];
-    
-    // Verificar que sea su paciente 
-    $db = conectar();
-    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
-    $q->execute([$idPac, $idProf]);
-    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
-      // Obtener datos
-    $body = $req->getParsedBody();
-    $diagnosticoFinal = $body['diagnostico_final'] ?? '';
-    
-    // Debug log
-    /*error_log('PUT request to update diagnosis - ID Paciente: ' . $idPac . ', ID Documento: ' . $idDoc . ', Diagnóstico Final: ' . $diagnosticoFinal);*/
-    
-    try {
-        $db->beginTransaction();
-        
-        // Obtener información del documento
-        $stDoc = $db->prepare("
-            SELECT d.*, h.id_paciente, h.id_historial
-            FROM documento_clinico d
-            JOIN historial_clinico h ON d.id_historial = h.id_historial
-            WHERE d.id_documento = ? AND h.id_paciente = ?
-        ");
-        $stDoc->execute([$idDoc, $idPac]);
-        $documento = $stDoc->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$documento) {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
-        }        
-        // Actualizar el diagnóstico final en el historial
-        $stUpdate = $db->prepare("
-            UPDATE historial_clinico 
-            SET diagnostico_final = ? 
-            WHERE id_historial = ?
-        ");
-        $stUpdate->execute([$diagnosticoFinal, $documento['id_historial']]);
-        
-        //  Registrar en logs
-        registrarActividad(
-            $idProf, 
-            $idPac,
-            'historial_clinico',
-            'diagnostico_final',
-            $documento['diagnostico_final'] ?? '',
-            $diagnosticoFinal,
-            'UPDATE'
-        );
-        $db->commit();
-        
-        return jsonResponse([
-            'ok' => true,
-            'mensaje' => 'Diagnóstico final actualizado correctamente'
-        ]);
-    } catch (Throwable $e) {
-        $db->rollBack();
-        error_log('Error al actualizar diagnóstico: ' . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
-    }
-});
-
-/* GET para obtener horas disponibles */
-$app->get('/prof/horas-disponibles', function($req, $res, $args) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
-        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-
-    $profesionalId = (int)($req->getQueryParams()['profesional_id'] ?? 0);
-    $fecha = $req->getQueryParams()['fecha'] ?? '';
-
-    if (!$profesionalId || !$fecha) {
-        return jsonResponse(['ok' => false, 'mensaje' => 'Faltan parámetros requeridos'], 400);
-    }
-
-    try {
-        $horas = obtenerHorasDisponibles($profesionalId, $fecha);
-        
-        return jsonResponse([
-            'ok' => true, 
-            'horas' => $horas,
-            'token' => $val['token']
-        ]);
-
     } catch (Exception $e) {
-        error_log("Error en horas-disponibles: " . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => 'Error interno del servidor'], 500);
+        error_log("Error en forgot-password: " . $e->getMessage());
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error interno del servidor'], 500);
     }
 });
-
-/* POST para reprogramar citas*/
-$app->post('/prof/citas/{id}/accion', function($req, $res, $args) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
-        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-
-    $idProf = (int)$val['usuario']['id_persona'];
-    $citaId = (int)$args['id'];
-    $body = $req->getParsedBody();
-    $accion = $body['accion'] ?? '';
-
-    if (!$accion) {
-        return jsonResponse(['ok' => false, 'mensaje' => 'Acción requerida'], 400);
-    }
-
-    try {
-        // Verificar que la cita pertenece al profesional
-        $db = conectar();
-        $stmtVerificar = $db->prepare("
-            SELECT * FROM cita 
-            WHERE id_cita = ? AND id_profesional = ?
-        ");
-        $stmtVerificar->execute([$citaId, $idProf]);
-        $cita = $stmtVerificar->fetch(PDO::FETCH_ASSOC);
-
-        if (!$cita) {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Cita no encontrada'], 404);
-        }
-
-        // Procesar la acción usando la función existente
-        procesarAccionCitaProfesional($citaId, $body);
-
-        return jsonResponse([
-            'ok' => true, 
-            'mensaje' => 'Acción procesada exitosamente',
-            'token' => $val['token']
-        ]);
-
-    } catch (Exception $e) {
-        error_log("Error en accion cita: " . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
-    }
-});
-
-/* GET para obtener días bloqueados */
-$app->get('/prof/dias-bloqueados', function($req, $res, $args) {
-   $val = verificarTokenUsuario();
-   if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
-       return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-
-   $profesionalId = (int)($req->getQueryParams()['profesional_id'] ?? 0);
-   $fechaInicio = $req->getQueryParams()['fecha_inicio'] ?? '';
-   $fechaFin = $req->getQueryParams()['fecha_fin'] ?? '';
-
-   if (!$profesionalId || !$fechaInicio || !$fechaFin) {
-       return jsonResponse(['ok' => false, 'mensaje' => 'Faltan parámetros requeridos'], 400);
-   }
-
-   try {
-       $diasBloqueados = obtenerDiasBloqueados($profesionalId, $fechaInicio, $fechaFin);
-       
-       return jsonResponse([
-           'ok' => true, 
-           'dias_bloqueados' => $diasBloqueados,
-           'token' => $val['token']
-       ]);
-
-   } catch (Exception $e) {
-       error_log("Error en dias-bloqueados: " . $e->getMessage());
-       return jsonResponse(['ok' => false, 'mensaje' => 'Error interno del servidor'], 500);
-   }
-});
-
-
-
-// POST para migrar documentos existentes (solo para desarrollo/mantenimiento)
-$app->post('/migrate/documentos', function (Request $request, Response $response) {
-    try {
-        $db = conectar();
-        
-        $result = [
-            'ok' => true,
-            'mensaje' => 'Migración de documentos completada',
-            'detalles' => []
-        ];
-        
-        // Mostrar documentos sin tratamiento
-        $stmt = $db->query("
-            SELECT 
-                d.id_documento,
-                d.id_historial,
-                d.id_profesional,
-                d.ruta,
-                d.fecha_subida
-            FROM documento_clinico d 
-            WHERE d.id_tratamiento IS NULL
-        ");
-        $documentosSinTratamiento = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        $result['detalles']['documentos_sin_tratamiento'] = count($documentosSinTratamiento);
-        
-        if (empty($documentosSinTratamiento)) {
-            $result['mensaje'] = 'No hay documentos sin tratamiento asociado';
-            return jsonResponse($result);
-        }
-        
-        // Ejecutar la actualización
-        $stmt = $db->prepare("
-            UPDATE documento_clinico d
-            SET d.id_tratamiento = (
-                SELECT t.id_tratamiento
-                FROM tratamiento t
-                WHERE t.id_historial = d.id_historial 
-                  AND t.id_profesional = d.id_profesional
-                ORDER BY t.fecha_inicio DESC
-                LIMIT 1
-            )
-            WHERE d.id_tratamiento IS NULL
-              AND EXISTS (
-                SELECT 1 
-                FROM tratamiento t
-                WHERE t.id_historial = d.id_historial 
-                  AND t.id_profesional = d.id_profesional
-              )
-        ");
-        
-        $updateResult = $stmt->execute();
-        $affectedRows = $stmt->rowCount();
-        
-        $result['detalles']['documentos_actualizados'] = $affectedRows;
-        
-        if (!$updateResult) {
-            throw new Exception('Error al ejecutar la actualización');
-        }
-        
-        // Verificar resultado
-        $stmt = $db->query("
-            SELECT COUNT(*) as total_sin_tratamiento
-            FROM documento_clinico 
-            WHERE id_tratamiento IS NULL
-        ");
-        $remainingCount = $stmt->fetchColumn();
-        
-        $result['detalles']['documentos_restantes_sin_tratamiento'] = $remainingCount;
-        
-        return jsonResponse($result);
-        
-    } catch (Exception $e) {
-        return jsonResponse([
-            'ok' => false,
-            'mensaje' => 'Error en la migración: ' . $e->getMessage()
-        ], 500);
-    }
-});
-
 
 /* ---------- RUTAS PACIENTE ---------- */
 
@@ -1243,7 +649,7 @@ $app->get('/pac/citas', function(Request $req): Response {
             return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
         }
         
-        // Obtener ID del paciente logeado
+        // Obtener ID del paciente logueado
         $idPaciente = (int)$val['usuario']['id_persona'];
         if ($idPaciente <= 0) {
             error_log("ID de paciente inválido: " . $idPaciente);
