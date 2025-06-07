@@ -1,0 +1,275 @@
+import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import '../../styles.css';
+
+export default function SubirTratamiento({ onDone }) {
+  const { id } = useParams();
+  const tk = localStorage.getItem('token');
+
+  const [show, setShow] = useState(false);
+  const [tit, setTit] = useState('');
+  const [desc, setDesc] = useState('');
+  const [file, setFile] = useState(null);
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+  const [frecuencia, setFrecuencia] = useState('');
+
+  // Errores específicos para cada campo
+  const [tituloError, setTituloError] = useState('');
+  const [descripcionError, setDescripcionError] = useState('');
+  const [fileError, setFileError] = useState('');
+  const [fechaError, setFechaError] = useState('');
+  const [generalError, setGeneralError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const subir = async () => {
+    // Limpiar todos los errores al inicio
+    setTituloError('');
+    setDescripcionError('');
+    setFileError('');
+    setFechaError('');
+    setGeneralError('');
+
+    // Validaciones
+    let hasErrors = false;
+
+    if (!tit.trim()) {
+      setTituloError('El título es obligatorio');
+      hasErrors = true;
+    }
+
+    if (!desc.trim()) {
+      setDescripcionError('La descripción es obligatoria');
+      hasErrors = true;
+    }
+
+    // Validar fechas
+    if (fechaInicio && fechaFin && new Date(fechaInicio) > new Date(fechaFin)) {
+      setFechaError('La fecha de fin debe ser posterior a la fecha de inicio');
+      hasErrors = true;
+    }
+
+    // Validar archivo si existe
+    if (file && file.size > 10 * 1024 * 1024) {
+      setFileError('El archivo no puede superar los 10MB');
+      hasErrors = true;
+    }
+
+    if (hasErrors) return;
+
+    setIsLoading(true);
+
+    try {
+      const fd = new FormData();
+      fd.append('titulo', tit);
+      fd.append('descripcion', desc);
+      if (fechaInicio) fd.append('fecha_inicio', fechaInicio);
+      if (fechaFin) fd.append('fecha_fin', fechaFin);
+      if (frecuencia) fd.append('frecuencia', frecuencia);
+      if (file) fd.append('file', file);
+
+      await axios.post(`/prof/pacientes/${id}/tareas`, fd, {
+        headers: { Authorization: `Bearer ${tk}`, 'Content-Type': 'multipart/form-data' }
+      });
+
+      // Limpiar formulario y cerrar modal
+      setTit('');
+      setDesc('');
+      setFechaInicio('');
+      setFechaFin('');
+      setFrecuencia('');
+      setFile(null);
+      setTituloError('');
+      setDescripcionError('');
+      setFileError('');
+      setFechaError('');
+      setGeneralError('');
+      setShow(false);
+
+      // Actualizar datos
+      onDone();
+    } catch (e) {
+      setGeneralError('Error al guardar tratamiento: ' + (e.response?.data?.mensaje || e.message));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!show) return <button className="btn-save" onClick={() => setShow(true)}>Añadir tarea</button>;
+
+  return (
+    <div className="modal-backdrop" onClick={() => setShow(false)}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+        <div className="modal-header">
+          <h3>Nueva tarea</h3>
+        </div>
+        <div className="modal-body">
+          {generalError && (
+            <div style={{
+              background: '#fee',
+              border: '1px solid #fcc',
+              padding: '10px',
+              borderRadius: '4px',
+              marginBottom: '15px',
+              color: '#c33'
+            }}>
+              {generalError}
+            </div>
+          )}
+          
+          <div className="field full">
+            <label>Título*</label>
+            <input
+              value={tit}
+              onChange={e => {
+                setTit(e.target.value);
+                if (e.target.value.trim() && tituloError) {
+                  setTituloError('');
+                }
+              }}
+              style={{
+                border: tituloError ? '1px solid #f44336' : '1px solid #ddd'
+              }}
+            />
+            {tituloError && (
+              <span style={{
+                color: '#f44336',
+                fontSize: '0.8em',
+                display: 'block',
+                marginTop: '5px'
+              }}>
+                {tituloError}
+              </span>
+            )}
+          </div>
+
+          <div className="field full">
+            <label>Descripción*</label>
+            <textarea
+              rows={4}
+              value={desc}
+              onChange={e => {
+                setDesc(e.target.value);
+                if (e.target.value.trim() && descripcionError) {
+                  setDescripcionError('');
+                }
+              }}
+              style={{
+                border: descripcionError ? '1px solid #f44336' : '1px solid #ddd'
+              }}
+            />
+            {descripcionError && (
+              <span style={{
+                color: '#f44336',
+                fontSize: '0.8em',
+                display: 'block',
+                marginTop: '5px'
+              }}>
+                {descripcionError}
+              </span>
+            )}
+          </div>
+
+          <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div className="field">
+              <label>Fecha inicio</label>
+              <input
+                type="date"
+                value={fechaInicio}
+                onChange={e => {
+                  setFechaInicio(e.target.value);
+                  if (fechaError) setFechaError('');
+                }}
+                style={{
+                  border: fechaError ? '1px solid #f44336' : '1px solid #ddd'
+                }}
+              />
+            </div>
+            <div className="field">
+              <label>Fecha fin</label>
+              <input
+                type="date"
+                value={fechaFin}
+                onChange={e => {
+                  setFechaFin(e.target.value);
+                  if (fechaError) setFechaError('');
+                }}
+                style={{
+                  border: fechaError ? '1px solid #f44336' : '1px solid #ddd'
+                }}
+              />
+            </div>
+          </div>
+
+          {fechaError && (
+            <span style={{
+              color: '#f44336',
+              fontSize: '0.8em',
+              display: 'block',
+              marginTop: '5px',
+              marginBottom: '10px'
+            }}>
+              {fechaError}
+            </span>
+          )}
+
+          <div className="field full">
+            <label>Frecuencia sesiones/semana</label>
+            <input
+              type="number"
+              min="1"
+              max="7"
+              value={frecuencia}
+              onChange={e => setFrecuencia(e.target.value)}
+              placeholder="Ej: 2"
+            />
+          </div>
+
+          <div className="field full">
+            <label>Documento (opcional)</label>
+            <input
+              type="file"
+              onChange={e => {
+                setFile(e.target.files[0]);
+                if (e.target.files[0] && fileError) {
+                  setFileError('');
+                }
+              }}
+              style={{
+                border: fileError ? '1px solid #f44336' : 'none',
+                padding: fileError ? '5px' : '0'
+              }}
+            />
+            {fileError && (
+              <span style={{
+                color: '#f44336',
+                fontSize: '0.8em',
+                display: 'block',
+                marginTop: '5px'
+              }}>
+                {fileError}
+              </span>
+            )}
+            <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
+              Tamaño máximo: 10MB
+            </small>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn-cancel" onClick={() => setShow(false)} disabled={isLoading}>
+            Cancelar
+          </button>
+          <button
+            className="btn-save"
+            onClick={subir}
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.6 : 1 }}
+          >
+            {isLoading ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -2,9 +2,6 @@ import React, { useState, useRef } from 'react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { setHours, setMinutes, format } from 'date-fns';
 import es from 'date-fns/locale/es';
-
-
-
 registerLocale('es', es);
 
 const HORA_INICIO = 9;

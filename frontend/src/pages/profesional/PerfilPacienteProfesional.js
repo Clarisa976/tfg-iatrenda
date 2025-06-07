@@ -1,10 +1,22 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
-import {
-  CheckCircle, XCircle, EllipsisVertical, X
-} from 'lucide-react';
+import { CheckCircle, X, XCircle, EllipsisVertical } from 'lucide-react';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { setHours, setMinutes, format } from 'date-fns';
+import es from 'date-fns/locale/es';
+
 import '../../styles.css';
+
+// Importar componentes modales separados
+import ModalDocumento from '../../components/modals/ModalDocumento';
+import SubirTratamiento from '../../components/modals/SubirTratamiento';
+import SubirDocumento from '../../components/modals/SubirDocumento';
+import ModalTratamiento from '../../components/modals/ModalTratamiento';
+
+
+registerLocale('es', es);
+
 
 /* ----------  helpers ---------- */
 const TabBtn = ({ label, sel, onClick }) => (
@@ -12,34 +24,6 @@ const TabBtn = ({ label, sel, onClick }) => (
     style={{ background: sel ? 'var(--blue)' : '#d9d9d9', color: sel ? '#fff' : '#000' }}
     onClick={onClick}>{label}</button>
 );
-
-// Detecta si la ruta es una imagen
-const isImage = (path) => {
-  if (!path) return false;
-  const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
-  return extensions.some(ext => path.toLowerCase().endsWith(ext));
-};
-
-// Construye la URL correcta para el archivo
-const getFileUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-
-  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  const fileName = cleanPath.split('/').pop();
-
-  let baseUrl;
-  if (process.env.REACT_APP_API_URL) {
-    baseUrl = process.env.REACT_APP_API_URL.replace(/\/$/, '');
-  } else if (window.location.hostname === 'localhost') {
-    baseUrl = 'http://localhost:8081';
-  } else {
-    baseUrl = window.location.origin;
-  }
-
-  const finalUrl = `${baseUrl}/uploads/${fileName}?t=${Date.now()}`;
-  return finalUrl;
-};
 
 const estadoColor = {
   CONFIRMADA: '#6fcf97', ATENDIDA: '#6fcf97',
@@ -57,12 +41,12 @@ const InputField = memo(({ obj, onChange, fieldKey, label, type = 'text', full =
   return (
     <div className={`field${full ? ' full' : ''}`}>
       <label>{label}</label>
-      <input 
-        type={type} 
-        readOnly={!edit} 
+      <input
+        type={type}
+        readOnly={!edit}
         className={!edit ? 'readonly-input' : ''}
-        value={obj[fieldKey] || ''} 
-        onChange={e => onChange(fieldKey, e.target.value)} 
+        value={obj[fieldKey] || ''}
+        onChange={e => onChange(fieldKey, e.target.value)}
       />
     </div>
   );
@@ -75,7 +59,7 @@ const BloquePaciente = memo(({ pPac, hPac, edit }) => (
     <div className="form-grid">
       <div className="field">
         <label>Tipo paciente*</label>
-        <select 
+        <select
           disabled={!edit}
           className={!edit ? 'readonly-input' : ''}
           value={pPac.tipo_paciente || 'ADULTO'}
@@ -87,13 +71,13 @@ const BloquePaciente = memo(({ pPac, hPac, edit }) => (
           <option value="INFANTE">Infante</option>
         </select>
       </div>
-      <InputField 
-        obj={pPac} 
-        onChange={hPac} 
-        fieldKey="observaciones_generales" 
-        label="Observaciones" 
-        type="text" 
-        full={true} 
+      <InputField
+        obj={pPac}
+        onChange={hPac}
+        fieldKey="observaciones_generales"
+        label="Observaciones"
+        type="text"
+        full={true}
         edit={edit}
       />
     </div>
@@ -116,19 +100,19 @@ const BloqueTutor = memo(({ pTut, hTut, edit }) => (
         <label>Método contacto*</label>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <label>
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               disabled={!edit}
               checked={pTut.metodo_contacto_preferido === 'TEL'}
-              onChange={e => hTut('metodo_contacto_preferido', e.target.checked ? 'TEL' : '')} 
+              onChange={e => hTut('metodo_contacto_preferido', e.target.checked ? 'TEL' : '')}
             /> Teléfono
           </label>
           <label>
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               disabled={!edit}
               checked={pTut.metodo_contacto_preferido === 'EMAIL'}
-              onChange={e => hTut('metodo_contacto_preferido', e.target.checked ? 'EMAIL' : '')} 
+              onChange={e => hTut('metodo_contacto_preferido', e.target.checked ? 'EMAIL' : '')}
             /> Email
           </label>
         </div>
@@ -176,12 +160,12 @@ const BloqueContacto = memo(({ pPer, hPer, edit }) => (
 export default function PerfilPacienteProfesional() {
   const { id } = useParams();
 
-  /* ---------------- estado ---------------- */  
+  /* ---------------- estado ---------------- */
   const [data, setData] = useState(null);
   const [tab, setTab] = useState('perfil');
   const [edit, setEdit] = useState(false);
   const [drop, setDrop] = useState(null);
-  const [repro, setRepro] = useState({ show: false, id: null, fecha: '' }); 
+  const [repro, setRepro] = useState({ show: false, citaId: null, citaActual: null });
   const [selDoc, setSelDoc] = useState(null);
   const [selT, setSelT] = useState(null);
   const [toast, setToast] = useState({ show: false, ok: true, t: '', m: '' });
@@ -197,7 +181,7 @@ export default function PerfilPacienteProfesional() {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
     const tk = localStorage.getItem('token');
     if (tk) axios.defaults.headers.common.Authorization = `Bearer ${tk}`;
-  }, []); 
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -245,7 +229,7 @@ export default function PerfilPacienteProfesional() {
   }, [drop]);
 
   const msg = (ok, t, m) => setToast({ show: true, ok, t, m });
-  
+
   // Handlers estables con useCallback
   const hPer = useCallback((k, v) => setPPer(s => ({ ...s, [k]: v })), []);
   const hPac = useCallback((k, v) => setPPac(s => ({ ...s, [k]: v })), []);
@@ -283,11 +267,11 @@ export default function PerfilPacienteProfesional() {
       <BloqueContacto pPer={pPer} hPer={hPer} edit={edit} />
       <div className="field full">
         <label>
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             disabled={!edit}
-            checked={rgpd} 
-            onChange={e => setRgpd(e.target.checked)} 
+            checked={rgpd}
+            onChange={e => setRgpd(e.target.checked)}
           /> Acepto la política de privacidad
         </label>
       </div>
@@ -322,7 +306,7 @@ export default function PerfilPacienteProfesional() {
               )}
             </li>
           ))}
-        </ul>}      
+        </ul>}
       <SubirTratamiento onDone={fetchData} />
       {selT && (
         <ModalTratamiento idPac={id} treat={selT}
@@ -333,7 +317,7 @@ export default function PerfilPacienteProfesional() {
   );
 
   const Docs = (
-    <>      
+    <>
       <h4>Documentos en historial</h4>
       {(data.documentos || []).length === 0
         ? <p>No hay documentos.</p>
@@ -369,6 +353,433 @@ export default function PerfilPacienteProfesional() {
     </>
   );
 
+
+  const ReprogramarCitaModal = () => {
+    const [fechaNueva, setFechaNueva] = useState(null);
+    const [horasOcupadas, setHorasOcupadas] = useState([]);
+    const [cargandoHoras, setCargandoHoras] = useState(false);
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [profesionalId, setProfesionalId] = useState(null);
+
+    const HORA_INICIO = 10;
+    const HORA_FIN = 17;
+
+    // Reset del modal cuando se abre
+    useEffect(() => {
+      if (repro.show) {
+        setFechaNueva(null);
+        setHorasOcupadas([]);
+        setError('');
+        obtenerProfesionalId();
+      }
+    }, [repro.show]);
+
+    // Obtener ID del profesional desde el token
+    const obtenerProfesionalId = () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('No hay token de autenticación');
+          return;
+        }
+
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const profId = payload.sub;
+
+        console.log('Profesional ID obtenido del token:', profId);
+        setProfesionalId(profId);
+
+      } catch (e) {
+        console.error('Error obteniendo profesional del token:', e);
+        setError('Error al obtener información del profesional');
+      }
+    };
+    const [diasBloqueados, setDiasBloqueados] = useState([]);
+    //  Cargar días bloqueados al montar el componente
+    const cargarDiasBloqueados = async () => {
+      if (!profesionalId) return;
+
+      try {
+        const hoy = new Date().toISOString().split('T')[0];
+        const tresMeses = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        console.log('Cargando días bloqueados del profesional', profesionalId);
+
+        const response = await axios.get('/prof/dias-bloqueados', {
+          params: {
+            profesional_id: profesionalId,
+            fecha_inicio: hoy,
+            fecha_fin: tresMeses
+          }
+        });
+
+        if (response.data.ok) {
+          const diasBloqueados = response.data.dias_bloqueados || [];
+          console.log('Días bloqueados recibidos:', diasBloqueados);
+          setDiasBloqueados(diasBloqueados);
+        }
+      } catch (e) {
+        console.error('Error al cargar días bloqueados:', e);
+      }
+    };
+
+    useEffect(() => {
+      if (profesionalId) {
+        cargarDiasBloqueados();
+      }
+    }, [profesionalId]);    // Cargar horas ocupadas cuando se selecciona una fecha
+    const cargarHorasOcupadas = async (fecha) => {
+      if (!fecha || !profesionalId) return;
+
+      setCargandoHoras(true);
+      setError('');
+
+      try {
+        const fechaStr = fecha.toISOString().split('T')[0]; // format to YYYY-MM-DD
+        console.log('Cargando horas ocupadas para:', fechaStr);
+
+        const response = await axios.get('/prof/horas-disponibles', {
+          params: {
+            profesional_id: profesionalId,
+            fecha: fechaStr
+          }
+        });
+
+        console.log('Respuesta horas disponibles:', response.data);
+
+        if (response.data.ok) {
+          const horasDisponibles = response.data.horas || [];
+
+          // Si no hay horas disponibles, el profesional está bloqueado
+          if (horasDisponibles.length === 0) {
+            console.log('PROFESIONAL BLOQUEADO - No hay horas disponibles');
+            setError('El profesional no está disponible este día (ausencia/vacaciones). Seleccione otra fecha.');
+            // Bloquear todas las horas
+            setHorasOcupadas(['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']);
+            return;
+          }
+
+          // Generar todas las horas del día (10:00 a 17:00)
+          const todasLasHoras = [];
+          for (let h = HORA_INICIO; h <= HORA_FIN; h++) {
+            todasLasHoras.push(`${h.toString().padStart(2, '0')}:00`);
+          }
+
+          // Las horas ocupadas son las que NO están disponibles
+          const ocupadas = todasLasHoras.filter(hora => !horasDisponibles.includes(hora));
+          
+          // Si la fecha seleccionada es la misma que la cita actual, no bloquear la hora de la cita actual
+          // ya que esa misma hora debe estar disponible para reprogramación
+          if (repro.citaActual?.fecha_hora) {
+            const fechaCitaActual = new Date(repro.citaActual.fecha_hora);
+            const fechaCitaActualStr = fechaCitaActual.toISOString().split('T')[0];
+            
+            if (fechaStr === fechaCitaActualStr) {
+              // Obtener la hora de la cita actual
+              const horaCitaActual = fechaCitaActual.getHours().toString().padStart(2, '0') + ':00';
+              console.log('Hora de cita actual que no se bloqueará:', horaCitaActual);
+              
+              // Filtrar la hora de la cita actual de las horas ocupadas
+              const ocupadasSinLaActual = ocupadas.filter(hora => hora !== horaCitaActual);
+              setHorasOcupadas(ocupadasSinLaActual);
+            } else {
+              setHorasOcupadas(ocupadas);
+            }
+          } else {
+            setHorasOcupadas(ocupadas);
+          }
+
+          console.log('Horas ocupadas por citas:', ocupadas);
+          console.log('Horas libres:', horasDisponibles);
+
+          if (ocupadas.length === todasLasHoras.length) {
+            setError('Todas las horas están ocupadas este día. Seleccione otra fecha.');
+          }
+        } else {
+          console.log('Error en respuesta:', response.data.mensaje);
+          setError(response.data.mensaje || 'Error al verificar disponibilidad');
+          setHorasOcupadas(['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']);
+        }
+      } catch (e) {
+        console.error('ERROR en petición:', e);
+        const errorMsg = e.response?.data?.mensaje || 'Error al verificar disponibilidad';
+        setError(errorMsg);
+        setHorasOcupadas(['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']);
+      } finally {
+        setCargandoHoras(false);
+      }
+    };    // Función para filtrar horas disponibles en el DatePicker
+    const filterTime = (time) => {
+      const hour = time.getHours();
+      const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+
+      // Solo permitir horas dentro del rango y que no estén ocupadas
+      const dentroDelRango = hour >= HORA_INICIO && hour <= HORA_FIN;
+      const noOcupada = !horasOcupadas.includes(timeStr);
+
+      // Para depuración
+      if (dentroDelRango && !noOcupada) {
+        console.log(`Hora ${timeStr} bloqueada porque está ocupada`);
+      }
+
+      return dentroDelRango && noOcupada;
+    };// Función para filtrar fechas válidas
+    const filterDate = (date) => {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const diaSemana = date.getDay();
+      const fechaStr = date.toISOString().split('T')[0];
+
+      // Solo lunes a viernes y fechas futuras
+      const esLaborable = diaSemana >= 1 && diaSemana <= 5;
+      const esFutura = date >= hoy;
+
+      // No está en días bloqueados
+      const noEstaBloqueado = !diasBloqueados.includes(fechaStr);
+
+      // A diferencia de la versión anterior, NO excluimos la fecha de la cita actual
+      // porque sí queremos permitir reprogramar para el mismo día, quizás a otra hora
+
+      console.log('Validando fecha:', fechaStr, {
+        esLaborable,
+        esFutura,
+        noEstaBloqueado,
+        diasBloqueados
+      });
+
+      return esLaborable && esFutura && noEstaBloqueado;
+    };
+
+    // Manejar cambio de fecha
+    const handleDateChange = (date) => {
+      console.log('Fecha seleccionada:', date);
+      setFechaNueva(date);
+      setError('');
+
+      if (date && profesionalId) {
+        // Cargar horas ocupadas para esta fecha
+        cargarHorasOcupadas(date);
+      }
+    };
+
+    // Ejecutar reprogramación
+    const reprogramar = async () => {
+      if (!fechaNueva) {
+        setError('Debe seleccionar una fecha y hora');
+        return;
+      }
+
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const fechaHoraCompleta = fechaNueva.toISOString().slice(0, 19).replace('T', ' '); // format to YYYY-MM-DD HH:mm:ss
+
+        console.log('Reprogramando cita:', {
+          citaId: repro.citaId,
+          fechaHora: fechaHoraCompleta
+        });
+
+        const response = await axios.post(
+          `/prof/citas/${repro.citaId}/accion`,
+          {
+            accion: 'REPROGRAMAR',
+            fecha: fechaHoraCompleta
+          }
+        );
+
+        console.log('Respuesta reprogramación:', response.data);
+
+        if (response.data.ok) {
+          if (response.data.token) {
+            localStorage.setItem('token', response.data.token);
+          }
+
+          msg(true, 'Éxito', 'Cita reprogramada exitosamente');
+          setRepro({ show: false, citaId: null, citaActual: null });
+          fetchData();
+        } else {
+          const errorMsg = response.data.mensaje || 'Error al reprogramar la cita';
+          setError(errorMsg);
+        }
+      } catch (e) {
+        console.error('Error reprogramando:', e);
+        const errorMsg = e.response?.data?.mensaje || 'Error al reprogramar la cita. Inténtalo de nuevo.';
+        setError(errorMsg);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!repro.show) return null;
+
+    const fechaActualCita = repro.citaActual?.fecha_hora ?
+      new Date(repro.citaActual.fecha_hora).toLocaleString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        weekday: 'long'
+      }) : '';
+
+    return (
+      <div className="modal-backdrop" onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}>
+        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '650px' }}>
+          <div className="modal-header">
+            <h3>Reprogramar Cita</h3>
+            <button className="modal-close" onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}> <X />
+            </button>
+          </div>
+
+          <div className="modal-body">
+            {/* Información de la cita actual */}
+            {repro.citaActual && (
+              <div style={{
+                background: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                borderRadius: '6px',
+                padding: '15px',
+                marginBottom: '20px'
+              }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#495057', fontSize: '0.9em' }}>
+                  Cita actual
+                </h4>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span>🕒</span>
+                  <span style={{ color: '#6c757d', fontSize: '0.9em' }}>
+                    {fechaActualCita}
+                  </span>
+                </div>
+                {repro.citaActual.motivo && (
+                  <p style={{ margin: '0', fontSize: '0.85em', color: '#6c757d' }}>
+                    <strong>Motivo:</strong> {repro.citaActual.motivo}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Información importante */}
+            <div style={{
+              background: '#d1ecf1',
+              border: '1px solid #bee5eb',
+              borderRadius: '6px',
+              padding: '12px',
+              marginBottom: '20px',
+              fontSize: '0.85em',
+              color: '#0c5460'
+            }}>
+              <strong>Horario de atención:</strong>
+              <ul style={{ margin: '5px 0 0 0', paddingLeft: '15px' }}>
+                <li>Lunes a Viernes: 10:00 - 17:00</li>
+                <li>Solo se muestran horas realmente disponibles</li>
+                <li>Las horas ocupadas aparecen deshabilitadas</li>
+              </ul>
+            </div>
+
+            {/* Selección de nueva fecha y hora con DatePicker */}
+            <div className="field" style={{ marginBottom: '20px' }}>
+              <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                Nueva fecha y hora *
+              </label>
+              {cargandoHoras && (
+                <div style={{
+                  padding: '10px',
+                  textAlign: 'center',
+                  color: '#666',
+                  fontSize: '0.9em'
+                }}>
+                  🔄 Cargando disponibilidad...
+                </div>
+              )}
+              <DatePicker
+                selected={fechaNueva}
+                onChange={handleDateChange}
+                inline
+                locale="es"
+                showTimeSelect
+                timeIntervals={60}
+                dateFormat="dd/MM/yyyy HH:mm"
+                minTime={setMinutes(setHours(new Date(), HORA_INICIO), 0)}
+                maxTime={setMinutes(setHours(new Date(), HORA_FIN), 0)}
+                filterDate={filterDate}
+                filterTime={filterTime}
+                placeholderText="Seleccione fecha y hora"
+                disabled={cargandoHoras || !profesionalId}
+              />
+              <small style={{ color: '#666', fontSize: '0.8em', marginTop: '5px', display: 'block' }}>
+                Solo días laborables (lunes a viernes) y horas disponibles
+              </small>
+            </div>
+
+            {/* Estado de carga */}
+            {cargandoHoras && (
+              <div style={{
+                padding: '15px',
+                background: '#e3f2fd',
+                border: '1px solid #90caf9',
+                borderRadius: '4px',
+                color: '#1565c0',
+                marginBottom: '15px'
+              }}>
+                🕒 Verificando disponibilidad horaria...
+              </div>
+            )}
+
+            {/* Mensaje de error */}
+            {error && (
+              <div style={{
+                background: '#fee',
+                border: '1px solid #fcc',
+                padding: '12px',
+                borderRadius: '6px',
+                marginBottom: '15px',
+                color: '#c33'
+              }}>
+                ⚠️ {error}
+              </div>
+            )}            {/* Debug info */}
+            <details style={{ marginBottom: '15px', fontSize: '0.8em' }}>
+              <summary style={{ cursor: 'pointer', color: '#666' }}>
+                🔧 Debug Info
+              </summary>
+              <div style={{ background: '#f0f0f0', padding: '10px', borderRadius: '4px', marginTop: '5px' }}>
+                <div><strong>Cita ID:</strong> {repro.citaId || 'N/A'}</div>
+                <div><strong>Profesional ID:</strong> {profesionalId || 'NO DETECTADO'}</div>
+                <div><strong>Fecha seleccionada:</strong> {fechaNueva ? fechaNueva.toLocaleString('es-ES') : 'Ninguna'}</div>
+                <div><strong>Horas ocupadas:</strong> [{horasOcupadas.join(', ') || 'Ninguna'}]</div>
+                <div><strong>Cargando:</strong> {cargandoHoras ? 'Sí' : 'No'}</div>
+                <div><strong>Fecha cita actual:</strong> {repro.citaActual?.fecha_hora ? new Date(repro.citaActual.fecha_hora).toISOString().split('T')[0] : 'N/A'}</div>
+                <div><strong>Hora cita actual:</strong> {repro.citaActual?.fecha_hora ? new Date(repro.citaActual.fecha_hora).getHours().toString().padStart(2, '0') + ':00' : 'N/A'}</div>
+              </div>
+            </details>
+          </div>
+
+          <div className="modal-footer">
+            <button
+              className="btn-cancel"
+              onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}
+              disabled={isLoading}
+            >
+              Cancelar
+            </button>
+            <button
+              className="btn-save"
+              onClick={reprogramar}
+              disabled={isLoading || !fechaNueva || cargandoHoras}
+              style={{
+                opacity: (isLoading || !fechaNueva || cargandoHoras) ? 0.6 : 1
+              }}
+            >{isLoading ? 'Reprogramando...' : 'Reprogramar Cita'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
   const Citas = (
     <>
       <h4>Citas del paciente</h4>
@@ -390,7 +801,15 @@ export default function PerfilPacienteProfesional() {
                   {c.estado === 'CONFIRMADA' && <>
                     <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_ATENDIDA'); }}>Atendida</a>
                     <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_NO_PRESENTADA'); }}>No presentada</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); setRepro({ show: true, id: c.id_cita, fecha: '' }); setDrop(null); }}>Reprogramar</a>
+                    <a href="#!" onClick={e => {
+                      e.preventDefault();
+                      setRepro({
+                        show: true,
+                        citaId: c.id_cita,
+                        citaActual: c
+                      });
+                      setDrop(null);
+                    }}>Reprogramar</a>
                   </>}
                   {c.estado === 'PENDIENTE_VALIDACION' && <>
                     <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'CONFIRMAR'); }}>Confirmar</a>
@@ -410,30 +829,9 @@ export default function PerfilPacienteProfesional() {
           ))}
         </tbody>
       </table>
-
-      {repro.show && (
-        <div className="modal-backdrop" onClick={() => setRepro({ show: false, id: null, fecha: '' })}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '460px' }}>
-            <div className="modal-header"><h3>Reprogramar cita</h3></div>
-            <div className="modal-body">
-              <div className="field full">
-                <label>Nueva fecha y hora</label>
-                <input type="datetime-local" value={repro.fecha}
-                  onChange={e => setRepro(r => ({ ...r, fecha: e.target.value }))} />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={() => setRepro({ show: false, id: null, fecha: '' })}>Cancelar</button>
-              <button className="btn-save" disabled={!repro.fecha}
-                onClick={() => { doAccion(repro.id, 'REPROGRAMAR', repro.fecha); setRepro({ show: false, id: null, fecha: '' }); }}>
-                Guardar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ReprogramarCitaModal />
     </>
   );
-
   /* ---------------- render ---------------- */
   return (
     <div className="usuarios-container" style={{ maxWidth: '950px' }}>
@@ -461,924 +859,11 @@ export default function PerfilPacienteProfesional() {
           </div>
         </div>
       )}
-    </div>
-  );
+    </div>);
 }
 
 
 
-/* ===================================================================
-   ModalTratamiento  (detalle + eliminar)
-   =================================================================== */
-function ModalTratamiento({ idPac, treat, onClose, onChange }) {
-  const tk = localStorage.getItem('token');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
 
-  const del = async () => {
-    setIsDeleting(true);
-    setError('');
-    try {
-      await axios.delete(`/prof/pacientes/${idPac}/tareas/${treat.id_tratamiento}`, {
-        headers: { Authorization: `Bearer ${tk}` }
-      });
-      onChange();
-      onClose();
-    } catch (e) {
-      console.error('Error al eliminar:', e);
-      setError('Error al eliminar la tarea. Inténtalo de nuevo.');
-      setIsDeleting(false);
-    }
-  };
 
-  return (
-    <>
-      <div className="modal-backdrop" onClick={onClose}>
-        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-          <div className="modal-header">
-            <h3>{treat.titulo || 'Sin título'}</h3>
-            <button className="modal-close" onClick={onClose}><X /></button>
-          </div>
-          <div className="modal-body">
-            <p><strong>Inicio:</strong>{' '}
-              {new Date(treat.fecha_inicio || Date.now()).toLocaleDateString()}</p>
-            {treat.fecha_fin && (
-              <p><strong>Fin:</strong>{' '}
-                {new Date(treat.fecha_fin).toLocaleDateString()}</p>)}
-            {treat.frecuencia_sesiones && (
-              <p><strong>Frecuencia:</strong> {treat.frecuencia_sesiones} /semana</p>)}
-            <h4>Descripción</h4>
-            <p>{treat.notas || 'Sin descripción'}</p>
 
-            {/* Sección de adjuntos múltiples */}
-            {treat.documentos && treat.documentos.length > 0 && (
-              <div className="tratamiento-attachment" style={{ marginTop: '20px' }}>
-                <h4>📎 Archivos adjuntos ({treat.documentos.length})</h4>
-                {treat.documentos.map((documento, index) => {
-                  const docFileUrl = getFileUrl(documento.ruta);
-                  const isDocImage = isImage(documento.ruta);
-
-                  return (
-                    <div key={documento.id_documento || index} style={{ marginBottom: '15px', padding: '10px', border: '1px solid #eee', borderRadius: '4px' }}>
-                      <h5 style={{ margin: '0 0 10px 0', color: '#333' }}>
-                        {documento.nombre_archivo || `Documento ${index + 1}`}
-                      </h5>
-
-                      {isDocImage ? (
-                        <div className="image-container" style={{ textAlign: 'center' }}>
-                          <img
-                            src={docFileUrl}
-                            alt={`Adjunto ${index + 1} de la tarea`}
-                            style={{
-                              maxWidth: '100%',
-                              maxHeight: '300px',
-                              border: '1px solid #ddd',
-                              borderRadius: '4px',
-                              display: 'block',
-                              margin: '10px auto'
-                            }}
-                            onError={(e) => {
-                              console.error('Error al cargar imagen:', docFileUrl);
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'block';
-                            }}
-                          />
-                          <div style={{
-                            display: 'none',
-                            border: '1px dashed #f44336',
-                            padding: '15px',
-                            borderRadius: '4px',
-                            backgroundColor: '#ffeaa7'
-                          }}>
-                            <p>⚠️ No se pudo visualizar la imagen</p>
-                            <p><small>Ruta: {documento.ruta}</small></p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="file-link" style={{ textAlign: 'center', margin: '15px 0' }}>
-                          <a
-                            href={docFileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              background: '#4a90e2',
-                              color: 'white',
-                              padding: '8px 15px',
-                              borderRadius: '4px',
-                              textDecoration: 'none',
-                              display: 'inline-block'
-                            }}
-                          >
-                            📄 Ver archivo: {documento.nombre_archivo || 'Documento'}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          <div className="modal-footer">
-            <button className="btn-delete" onClick={() => setShowDeleteModal(true)}>
-              Eliminar
-            </button>
-            <button className="btn-cancel" onClick={onClose}>Cerrar</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal de confirmación de eliminación - renderizado por separado con z-index mayor */}
-      {showDeleteModal && (
-        <div className="modal-backdrop" onClick={() => setShowDeleteModal(false)} style={{ zIndex: 10000 }}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <div className="modal-header">
-              <h3>Confirmar eliminación</h3>
-            </div>
-            <div className="modal-body">
-              <p>¿Estás seguro de que quieres eliminar esta tarea?</p>
-              <p><strong>{treat.titulo || 'Sin título'}</strong></p>
-              <p style={{ color: '#666', fontSize: '0.9em' }}>Esta acción no se puede deshacer.</p>
-              {error && (
-                <div style={{
-                  background: '#fee',
-                  border: '1px solid #fcc',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  marginTop: '10px',
-                  color: '#c33'
-                }}>
-                  {error}
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn-cancel"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn-delete"
-                onClick={del}
-                disabled={isDeleting}
-                style={{ opacity: isDeleting ? 0.6 : 1 }}
-              >
-                {isDeleting ? 'Eliminando...' : 'Eliminar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-/* ===================================================================
-   ModalDocumento  (detalle + eliminar)
-   =================================================================== */
-function ModalDocumento({ idPac, doc, onClose, onChange }) {
-  const tk = localStorage.getItem('token'); const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
-  const [editMode, setEditMode] = useState(false);
-  const [diagnosticoFinal, setDiagnosticoFinal] = useState(doc.diagnostico_final || '');
-  const [diagnosticoFinalError, setDiagnosticoFinalError] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const del = async () => {
-    setIsDeleting(true);
-    setError('');
-    try {
-      await axios.delete(`/prof/pacientes/${idPac}/documentos/${doc.id_documento}`, {
-        headers: { Authorization: `Bearer ${tk}` }
-      });
-      onChange();
-      onClose();
-    } catch (e) {
-      console.error('Error al eliminar:', e);
-      setError('Error al eliminar el documento. Inténtalo de nuevo.');
-      setIsDeleting(false);
-    }
-  }; const updateDiagnostico = async () => {
-    // Realizar validación sin cambiar el estado global de error
-    if (!diagnosticoFinal.trim()) {
-      // En lugar de usar setError, ahora usaremos un estado específico para este campo
-      setDiagnosticoFinalError('El diagnóstico final no puede estar vacío');
-      return;
-    }
-
-    setIsUpdating(true);
-    setDiagnosticoFinalError(''); // Limpiar error específico
-    setError(''); // Limpiar error general por si acaso
-
-    try {
-      console.log('Sending update request for document:', doc.id_documento);
-      const response = await axios.put(`/prof/pacientes/${idPac}/documentos/${doc.id_documento}`,
-        { diagnostico_final: diagnosticoFinal },
-        { headers: { Authorization: `Bearer ${tk}` } }
-      );
-
-      console.log('Update response:', response.data);
-
-      if (response.data && response.data.ok) {
-        // Update the document in the current state with the new diagnosis
-        doc.diagnostico_final = diagnosticoFinal;
-        setEditMode(false);
-
-        // Refresh the data to show updated information
-        console.log('Refreshing data after successful update');
-        onChange();
-
-        // Show success message
-        setError('');
-        setDiagnosticoFinalError('');
-      } else {
-        throw new Error(response.data?.mensaje || 'Error al actualizar');
-      }
-    } catch (e) {
-      console.error('Error al actualizar:', e);
-      console.error('Error details:', e.response?.data);
-      // Usar error específico para el campo, no el error general
-      setDiagnosticoFinalError('Error al actualizar el diagnóstico. Inténtalo de nuevo.');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Determinar si es una imagen para mostrarla directamente
-  const docFileUrl = `${process.env.REACT_APP_API_URL}/${doc.ruta}`;
-  const isDocImage = isImage(doc.ruta);
-
-  return (
-    <>      <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-        <div className="modal-header">
-          <h3>{doc.diagnostico_preliminar || 'Documento sin diagnóstico'}</h3>
-          <button className="modal-close" onClick={onClose}><X /></button>
-        </div>          <div className="modal-body">
-          {/* Error general eliminado - ahora usamos mensajes de error específicos por campo */}
-
-          <p><strong>Fecha de subida:</strong>{' '}
-            {new Date(doc.fecha_subida || Date.now()).toLocaleDateString()}</p>
-
-          {doc.diagnostico_preliminar && (
-            <div style={{ marginBottom: '15px' }}>
-              <h4>Diagnóstico preliminar</h4>
-              <p style={{ padding: '10px', background: '#f5f9ff', border: '1px solid #e6edf7', borderRadius: '4px' }}>
-                {doc.diagnostico_preliminar}
-              </p>
-            </div>
-          )}
-
-          <div style={{ marginBottom: '15px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4>Diagnóstico final</h4>
-              {!editMode && (
-                <button
-                  onClick={() => setEditMode(true)}
-                  className="btn-small"
-                  style={{
-                    background: 'var(--blue)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '5px 10px',
-                    cursor: 'pointer',
-                    fontSize: '0.8em'
-                  }}
-                >
-                  {doc.diagnostico_final ? 'Editar' : 'Añadir'}
-                </button>
-              )}
-            </div>
-            {editMode ? (
-              <div>
-                <textarea
-                  value={diagnosticoFinal}
-                  onChange={e => {
-                    setDiagnosticoFinal(e.target.value);
-                    // Limpiar el error cuando el usuario empieza a escribir
-                    if (e.target.value.trim() && diagnosticoFinalError) {
-                      setDiagnosticoFinalError('');
-                    }
-                  }}
-                  placeholder="Introduce el diagnóstico final..."
-                  rows="4"
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    border: diagnosticoFinalError ? '1px solid #f44336' : '1px solid #ddd',
-                    marginBottom: diagnosticoFinalError ? '5px' : '10px'
-                  }}
-                />
-                {diagnosticoFinalError && (
-                  <span style={{
-                    color: '#f44336',
-                    fontSize: '0.8em',
-                    display: 'block',
-                    marginBottom: '10px'
-                  }}>
-                    {diagnosticoFinalError}
-                  </span>
-                )}
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => setEditMode(false)}
-                    className="btn-small"
-                    disabled={isUpdating}
-                    style={{
-                      background: '#f0f0f0',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '5px 10px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={updateDiagnostico}
-                    className="btn-small"
-                    disabled={isUpdating}
-                    style={{
-                      background: 'var(--blue)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '5px 10px',
-                      cursor: 'pointer',
-                      opacity: isUpdating ? 0.7 : 1
-                    }}
-                  >
-                    {isUpdating ? 'Guardando...' : 'Guardar'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              doc.diagnostico_final ? (
-                <p style={{ padding: '10px', background: '#f0f9f0', border: '1px solid #e0eee0', borderRadius: '4px' }}>
-                  {doc.diagnostico_final}
-                </p>
-              ) : (
-                <p style={{ padding: '10px', background: '#f9f9f9', border: '1px dashed #ddd', borderRadius: '4px', color: '#666' }}>
-                  No hay diagnóstico final. Haz clic en "Añadir" para agregarlo.
-                </p>
-              )
-            )}
-          </div>
-
-          <div className="documento-preview" style={{ marginTop: '20px' }}>
-            <h4>Vista previa</h4>
-
-            {isDocImage ? (
-              <div className="image-container" style={{ textAlign: 'center' }}>
-                <img
-                  src={docFileUrl}
-                  alt={`Documento ${doc.id_documento}`}
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '300px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    display: 'block',
-                    margin: '10px auto'
-                  }}
-                  onError={(e) => {
-                    console.error('Error al cargar imagen:', docFileUrl);
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'block';
-                  }}
-                />
-                <div style={{
-                  display: 'none',
-                  border: '1px dashed #f44336',
-                  padding: '15px',
-                  borderRadius: '4px',
-                  backgroundColor: '#ffeaa7'
-                }}>
-                  <p>⚠️ No se pudo visualizar la imagen</p>
-                  <p><small>Ruta: {doc.ruta}</small></p>
-                </div>
-              </div>
-            ) : (
-              <div className="file-link" style={{ textAlign: 'center', margin: '15px 0' }}>
-                <a
-                  href={docFileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    background: '#4a90e2',
-                    color: 'white',
-                    padding: '8px 15px',
-                    borderRadius: '4px',
-                    textDecoration: 'none',
-                    display: 'inline-block'
-                  }}
-                >
-                  📄 Ver archivo
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="btn-delete" onClick={() => setShowDeleteModal(true)}>
-             Eliminar
-          </button>
-          <button className="btn-cancel" onClick={onClose}>Cerrar</button>
-        </div>
-      </div>
-    </div>
-
-      {/* Modal de confirmación de eliminación - renderizado por separado con z-index mayor */}
-      {showDeleteModal && (
-        <div className="modal-backdrop" onClick={() => setShowDeleteModal(false)} style={{ zIndex: 10000 }}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <div className="modal-header">
-              <h3>Confirmar eliminación</h3>
-            </div>            <div className="modal-body">
-              <p>¿Estás seguro de que quieres eliminar este documento?</p>
-              <p><strong>{doc.diagnostico_preliminar || 'Documento sin diagnóstico'}</strong></p>
-              <p style={{ color: '#666', fontSize: '0.9em' }}>Esta acción no se puede deshacer.</p>
-              {error && (
-                <div style={{
-                  background: '#fee',
-                  border: '1px solid #fcc',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  marginTop: '10px',
-                  color: '#c33'
-                }}>
-                  {error}
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn-cancel"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn-delete"
-                onClick={del}
-                disabled={isDeleting}
-                style={{ opacity: isDeleting ? 0.6 : 1 }}
-              >
-                {isDeleting ? 'Eliminando...' : 'Eliminar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-/* ===================================================================
-   SubirTratamiento  (creación)
-   =================================================================== */
-function SubirTratamiento({ onDone }) {
-  const { id } = useParams();
-  const tk = localStorage.getItem('token');
-
-  const [show, setShow] = useState(false);
-  const [tit, setTit] = useState('');
-  const [desc, setDesc] = useState('');
-  const [file, setFile] = useState(null);
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [fechaFin, setFechaFin] = useState('');
-  const [frecuencia, setFrecuencia] = useState('');
-
-  // Errores específicos para cada campo
-  const [tituloError, setTituloError] = useState('');
-  const [descripcionError, setDescripcionError] = useState('');
-  const [fileError, setFileError] = useState('');
-  const [fechaError, setFechaError] = useState('');
-  const [generalError, setGeneralError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const subir = async () => {
-    // Limpiar todos los errores al inicio
-    setTituloError('');
-    setDescripcionError('');
-    setFileError('');
-    setFechaError('');
-    setGeneralError('');
-
-    // Validaciones
-    let hasErrors = false;
-
-    if (!tit.trim()) {
-      setTituloError('El título es obligatorio');
-      hasErrors = true;
-    }
-
-    if (!desc.trim()) {
-      setDescripcionError('La descripción es obligatoria');
-      hasErrors = true;
-    }
-
-    // Validar fechas
-    if (fechaInicio && fechaFin && new Date(fechaInicio) > new Date(fechaFin)) {
-      setFechaError('La fecha de fin debe ser posterior a la fecha de inicio');
-      hasErrors = true;
-    }
-
-    // Validar archivo si existe
-    if (file && file.size > 10 * 1024 * 1024) {
-      setFileError('El archivo no puede superar los 10MB');
-      hasErrors = true;
-    }
-
-    if (hasErrors) return;
-
-    setIsLoading(true);
-
-    try {
-      const fd = new FormData();
-      fd.append('titulo', tit);
-      fd.append('descripcion', desc);
-      if (fechaInicio) fd.append('fecha_inicio', fechaInicio);
-      if (fechaFin) fd.append('fecha_fin', fechaFin);
-      if (frecuencia) fd.append('frecuencia', frecuencia);
-      if (file) fd.append('file', file);
-
-      await axios.post(`/prof/pacientes/${id}/tareas`, fd, {
-        headers: { Authorization: `Bearer ${tk}`, 'Content-Type': 'multipart/form-data' }
-      });
-
-      // Limpiar formulario y cerrar modal
-      setTit('');
-      setDesc('');
-      setFechaInicio('');
-      setFechaFin('');
-      setFrecuencia('');
-      setFile(null);
-      setTituloError('');
-      setDescripcionError('');
-      setFileError('');
-      setFechaError('');
-      setGeneralError('');
-      setShow(false);
-
-      // Actualizar datos
-      onDone();
-    } catch (e) {
-      setGeneralError('Error al guardar tratamiento: ' + (e.response?.data?.mensaje || e.message));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  if (!show) return <button className="btn-save" onClick={() => setShow(true)}>Añadir tarea</button>;
-
-  return (
-    <div className="modal-backdrop" onClick={() => setShow(false)}>      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-      <div className="modal-header"><h3>Nueva tarea</h3></div>
-      <div className="modal-body">
-        {generalError && (
-          <div style={{
-            background: '#fee',
-            border: '1px solid #fcc',
-            padding: '10px',
-            borderRadius: '4px',
-            marginBottom: '15px',
-            color: '#c33'
-          }}>
-            {generalError}
-          </div>
-        )}
-        <div className="field full">
-          <label>Título*</label>
-          <input
-            value={tit}
-            onChange={e => {
-              setTit(e.target.value);
-              if (e.target.value.trim() && tituloError) {
-                setTituloError('');
-              }
-            }}
-            style={{
-              border: tituloError ? '1px solid #f44336' : '1px solid #ddd'
-            }}
-          />
-          {tituloError && (
-            <span style={{
-              color: '#f44336',
-              fontSize: '0.8em',
-              display: 'block',
-              marginTop: '5px'
-            }}>
-              {tituloError}
-            </span>
-          )}
-        </div>
-
-        <div className="field full">
-          <label>Descripción*</label>
-          <textarea
-            rows={4}
-            value={desc}
-            onChange={e => {
-              setDesc(e.target.value);
-              if (e.target.value.trim() && descripcionError) {
-                setDescripcionError('');
-              }
-            }}
-            style={{
-              border: descripcionError ? '1px solid #f44336' : '1px solid #ddd'
-            }}
-          />
-          {descripcionError && (
-            <span style={{
-              color: '#f44336',
-              fontSize: '0.8em',
-              display: 'block',
-              marginTop: '5px'
-            }}>
-              {descripcionError}
-            </span>
-          )}
-        </div>
-
-        <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          <div className="field">
-            <label>Fecha inicio</label>
-            <input
-              type="date"
-              value={fechaInicio}
-              onChange={e => {
-                setFechaInicio(e.target.value);
-                if (fechaError) setFechaError('');
-              }}
-              style={{
-                border: fechaError ? '1px solid #f44336' : '1px solid #ddd'
-              }}
-            />
-          </div>
-          <div className="field">
-            <label>Fecha fin</label>
-            <input
-              type="date"
-              value={fechaFin}
-              onChange={e => {
-                setFechaFin(e.target.value);
-                if (fechaError) setFechaError('');
-              }}
-              style={{
-                border: fechaError ? '1px solid #f44336' : '1px solid #ddd'
-              }}
-            />
-          </div>
-        </div>
-
-        {fechaError && (
-          <span style={{
-            color: '#f44336',
-            fontSize: '0.8em',
-            display: 'block',
-            marginTop: '5px',
-            marginBottom: '10px'
-          }}>
-            {fechaError}
-          </span>
-        )}
-
-        <div className="field full">
-          <label>Frecuencia sesiones/semana</label>
-          <input
-            type="number"
-            min="1"
-            max="7"
-            value={frecuencia}
-            onChange={e => setFrecuencia(e.target.value)}
-            placeholder="Ej: 2"
-          />
-        </div>
-
-        <div className="field full">
-          <label>Documento (opcional)</label>
-          <input
-            type="file"
-            onChange={e => {
-              setFile(e.target.files[0]);
-              if (e.target.files[0] && fileError) {
-                setFileError('');
-              }
-            }}
-            style={{
-              border: fileError ? '1px solid #f44336' : 'none',
-              padding: fileError ? '5px' : '0'
-            }}
-          />
-          {fileError && (
-            <span style={{
-              color: '#f44336',
-              fontSize: '0.8em',
-              display: 'block',
-              marginTop: '5px'
-            }}>
-              {fileError}
-            </span>
-          )}
-          <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
-            Tamaño máximo: 10MB
-          </small>
-        </div>
-      </div>
-      <div className="modal-footer">
-        <button className="btn-cancel" onClick={() => setShow(false)} disabled={isLoading}>
-          Cancelar
-        </button>
-        <button
-          className="btn-save"
-          onClick={subir}
-          disabled={isLoading}
-          style={{ opacity: isLoading ? 0.6 : 1 }}
-        >
-          {isLoading ? 'Guardando...' : 'Guardar'}
-        </button>
-      </div>
-    </div>
-    </div>
-  );
-}
-
-/* ===================================================================
-   SubirDocumento  (historial)
-   =================================================================== */
-function SubirDocumento({ onDone }) {
-  const { id } = useParams();
-  const tk = localStorage.getItem('token'); const [show, setShow] = useState(false);
-  const [file, setFile] = useState(null);
-  const [diagnosticoPreliminar, setDiagnosticoPreliminar] = useState('');
-  // Errores específicos para cada campo
-  const [fileError, setFileError] = useState('');
-  const [diagnosticoPreliminarError, setDiagnosticoPreliminarError] = useState('');
-  const [generalError, setGeneralError] = useState('');
-  const [isLoading, setIsLoading] = useState(false); const subir = async () => {
-    // Limpiar todos los errores al inicio
-    setFileError('');
-    setDiagnosticoPreliminarError('');
-    setGeneralError('');
-
-    // Validaciones
-    if (!file) {
-      setFileError('Debes seleccionar un archivo');
-      return;
-    }
-
-    if (!diagnosticoPreliminar.trim()) {
-      setDiagnosticoPreliminarError('El diagnóstico preliminar es obligatorio');
-      return;
-    }
-
-    // Validar tamaño del archivo (máximo 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setFileError('El archivo no puede superar los 10MB');
-      return;
-    }
-
-    // Validar tipos de archivo permitidos
-    const allowedTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
-      'application/pdf', 'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain'
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      setFileError('Tipo de archivo no permitido. Formatos permitidos: JPG, PNG, GIF, PDF, DOC, DOCX, TXT');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('diagnostico_preliminar', diagnosticoPreliminar);
-
-      await axios.post(`/prof/pacientes/${id}/documentos`, fd, {
-        headers: { Authorization: `Bearer ${tk}`, 'Content-Type': 'multipart/form-data' }
-      });
-
-      // Limpiar formulario y cerrar modal
-      setFile(null);
-      setDiagnosticoPreliminar('');
-      setFileError('');
-      setDiagnosticoPreliminarError('');
-      setGeneralError('');
-      setShow(false);
-
-      // Actualizar datos
-      onDone();
-    } catch (e) {
-      setGeneralError('Error al subir documento: ' + (e.response?.data?.mensaje || e.message));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (!show) return <button className="btn-save" onClick={() => setShow(true)}>Añadir documento</button>;
-  return (<div className="modal-backdrop" onClick={() => setShow(false)}>
-    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px' }}>
-      <div className="modal-header"><h3>Subir documento al historial</h3></div>        <div className="modal-body">
-        {generalError && (
-          <div style={{
-            background: '#fee',
-            border: '1px solid #fcc',
-            padding: '10px',
-            borderRadius: '4px',
-            marginBottom: '15px',
-            color: '#c33'
-          }}>
-            {generalError}
-          </div>
-        )}            <div className="form-grid">
-          <div className="field full">
-            <label>Diagnóstico preliminar*</label>
-            <textarea
-              value={diagnosticoPreliminar}
-              onChange={e => {
-                setDiagnosticoPreliminar(e.target.value);
-                // Limpiar el error cuando el usuario empieza a escribir
-                if (e.target.value.trim() && diagnosticoPreliminarError) {
-                  setDiagnosticoPreliminarError('');
-                }
-              }}
-              placeholder="Describa el diagnóstico preliminar del paciente..."
-              rows="3"
-              required
-              style={{
-                border: diagnosticoPreliminarError ? '1px solid #f44336' : '1px solid #ddd'
-              }}
-            />
-            {diagnosticoPreliminarError && (
-              <span style={{
-                color: '#f44336',
-                fontSize: '0.8em',
-                display: 'block',
-                marginTop: '5px'
-              }}>
-                {diagnosticoPreliminarError}
-              </span>
-            )}              <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
-              Este campo es obligatorio y se mostrará como identificador del documento
-            </small>
-          </div>
-        </div>            <div className="field full">
-          <label>Archivo*</label>
-          <input
-            type="file"
-            onChange={e => {
-              setFile(e.target.files[0]);
-              // Limpiar el error cuando el usuario selecciona un archivo
-              if (e.target.files[0] && fileError) {
-                setFileError('');
-              }
-            }}
-            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-            style={{
-              border: fileError ? '1px solid #f44336' : 'none',
-              padding: fileError ? '5px' : '0'
-            }}
-          />
-          {fileError && (
-            <span style={{
-              color: '#f44336',
-              fontSize: '0.8em',
-              display: 'block',
-              marginTop: '5px'
-            }}>
-              {fileError}
-            </span>
-          )}
-          <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
-            Formatos permitidos: PDF, DOC, DOCX, TXT, JPG, PNG, GIF (máximo 10MB)
-          </small>
-        </div>
-      </div>
-      <div className="modal-footer">
-        <button className="btn-cancel" onClick={() => setShow(false)} disabled={isLoading}>
-          Cancelar
-        </button>
-        <button
-          className="btn-save"
-          onClick={subir}
-          disabled={isLoading}
-          style={{ opacity: isLoading ? 0.6 : 1 }}
-        >
-          {isLoading ? 'Subiendo...' : 'Subir'}
-        </button>
-      </div>
-    </div>
-  </div>
-  );
-}

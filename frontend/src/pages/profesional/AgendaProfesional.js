@@ -18,10 +18,35 @@ export default function AgendaProfesional() {
   const [perfilProf, setPerfilProf] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [detalle, setDetalle] = useState(null);
-  const [detalleOpen, setDetalleOpen] = useState(false);
+  const [detalleOpen, setDetalleOpen] = useState(false);  /* cargar datos */
+  useEffect(() => { 
+    cargar(); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  /* cargar datos */
-  useEffect(() => { cargar(); }, []);
+  // Función para cargar eventos de un mes específico
+  const cargarEventosMes = async (year, month, idProf) => {
+    try {
+      console.log(`Cargando eventos para ${year}-${month} (Profesional ID: ${idProf})`);
+      const token = localStorage.getItem('token');
+      if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      const eRes = await axios.get(`/agenda/global?profId=${idProf}&year=${year}&month=${month}`);
+      
+      if (eRes.data.ok) {
+        console.log('Eventos recibidos del servidor:', eRes.data.data);
+        const eventosFormateados = map(eRes.data.data || []);
+        console.log('Eventos formateados para el calendario:', eventosFormateados);
+        return eventosFormateados;
+      } else {
+        console.error('Error en respuesta de eventos:', eRes.data);
+        return [];
+      }
+    } catch (e) {
+      console.error(`Error al cargar eventos para ${year}-${month}:`, e);
+      return [];
+    }
+  };
 
   const cargar = async () => {
     try {
@@ -39,16 +64,13 @@ export default function AgendaProfesional() {
         const idProf = perfil.persona.id_persona;
         console.log(`Obteniendo eventos para el profesional ID: ${idProf}`);
         
-        const eRes = await axios.get(`/agenda/global?profId=${idProf}`);
+        // Obtener mes actual
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
         
-        if (eRes.data.ok) {
-          console.log('Eventos recibidos del servidor:', eRes.data.data);
-          const eventosFormateados = map(eRes.data.data || []);
-          console.log('Eventos formateados para el calendario:', eventosFormateados);
-          setEventos(eventosFormateados);
-        } else {
-          console.error('Error en respuesta de eventos:', eRes.data);
-        }
+        const eventosActuales = await cargarEventosMes(currentYear, currentMonth, idProf);
+        setEventos(eventosActuales);
       }
     } catch (e) { 
       console.error('Error al cargar la agenda:', e);
@@ -68,7 +90,6 @@ export default function AgendaProfesional() {
       title: `${x.tipo} – ${x.titulo || ''}`
     };
   });
-
   /* guardar */
   const guardarEvento = async datos => {
     try {
@@ -94,8 +115,19 @@ export default function AgendaProfesional() {
       
       if (response.data.ok) {
         toast.success('Evento guardado correctamente');
-        // Pequeño retraso para dar tiempo a la base de datos
-        setTimeout(() => cargar(), 500);
+        
+        // Obtener el mes y año del evento creado para cargar los eventos correctos
+        const fechaEvento = new Date(datos.inicio);
+        const yearEvento = fechaEvento.getFullYear();
+        const monthEvento = fechaEvento.getMonth() + 1; // +1 porque en JS los meses van de 0-11
+        
+        // Cargar eventos para el mes del evento creado
+        if (perfilProf) {
+          const idProf = perfilProf.persona.id_persona;
+          const nuevosEventos = await cargarEventosMes(yearEvento, monthEvento, idProf);
+          setEventos(nuevosEventos);
+        }
+        
         setOpenModal(false);
       } else {
         throw new Error(response.data.mensaje || 'Error desconocido');
@@ -146,9 +178,7 @@ export default function AgendaProfesional() {
            onClick={e => { e.preventDefault(); setOpenModal(true); }}>
           Añadir evento
         </a>
-      </div>
-
-      <div className="cal-wrapper">
+      </div>      <div className="cal-wrapper">
         <Calendar
           localizer={localizer}
           events={eventos}
@@ -158,6 +188,19 @@ export default function AgendaProfesional() {
           eventPropGetter={eventStyleGetter}
           style={{ height: '70vh' }}
           onSelectEvent={e => { setDetalle(e); setDetalleOpen(true); }}
+          onNavigate={(date) => {
+            // Cuando el usuario navega a un mes diferente
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1; // +1 porque en JS los meses van de 0-11
+            
+            if (perfilProf) {
+              // Cargar eventos para el nuevo mes
+              const idProf = perfilProf.persona.id_persona;
+              cargarEventosMes(year, month, idProf).then(nuevosEventos => {
+                setEventos(nuevosEventos);
+              });
+            }
+          }}
           messages={{
             next: "Siguiente",
             previous: "Anterior",

@@ -211,7 +211,7 @@ $app->get('/profesionales', function(Request $req) {
     return jsonResponse(['ok'=>true,'data'=>$items]);
 });
 
-/**  GET /agenda/global[?profId=n]   */
+/**  GET /agenda/global[?profId=n&month=m&year=y]   */
 $app->get('/agenda/global', function(Request $req) {
     $val = validateToken();                       // protegido
     if ($val === false)
@@ -219,10 +219,16 @@ $app->get('/agenda/global', function(Request $req) {
 
     $params = $req->getQueryParams();
     $profId = isset($params['profId']) ? (int)$params['profId'] : null;
-
-    $hoy       = date('Y-m-d');
-    $inicioMes = date('Y-m-01');
-    $finMes    = date('Y-m-t');
+    
+    // Permitir seleccionar mes y año específicos
+    $year = isset($params['year']) ? (int)$params['year'] : (int)date('Y');
+    $month = isset($params['month']) ? (int)$params['month'] : (int)date('m');
+    
+    // Crear fechas de inicio y fin para el mes solicitado
+    $inicioMes = sprintf('%04d-%02d-01', $year, $month);
+    $finMes = date('Y-m-t', strtotime($inicioMes));
+    
+    error_log("Obteniendo eventos desde $inicioMes hasta $finMes para profesional ID: " . ($profId ?: 'todos'));
 
     $eventos = getEventosAgenda($inicioMes, $finMes, $profId); // ← nuevo arg
     return jsonResponse(['ok'=>true,'data'=>$eventos]);
@@ -240,11 +246,12 @@ $app->post('/agenda/global', function(Request $req) {
     $ini  = trim($data['inicio'] ?? '');
     $fin  = trim($data['fin']    ?? '');
     $nota = trim($data['nota']   ?? '');
+    $actor = (int)$val['usuario']['id_persona']; // Get the logged-in user ID
 
     if (!$tipo || !$ini || !$fin)
         return jsonResponse(['ok'=>false,'mensaje'=>'Faltan datos requeridos'],400);
 
-    if (!crearBloqueAgenda($prof,$ini,$fin,$tipo,$nota))
+    if (!crearBloqueAgenda($prof,$ini,$fin,$tipo,$nota,$actor)) // Pass the actor ID
         return jsonResponse(['ok'=>false,'mensaje'=>'Error al crear evento'],500);
 
     return jsonResponse(['ok'=>true,'mensaje'=>'Evento creado']);
@@ -257,7 +264,9 @@ $app->delete('/agenda/global/{id}', function(Request $req, Response $res, array 
         return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
 
     $id = (int)$args['id'];
-    if (!eliminarEvento($id))                // ← nueva función
+    $actor = (int)$val['usuario']['id_persona']; // Get the logged-in user ID
+    
+    if (!eliminarEvento($id, $actor))         // Pass the actor ID
         return jsonResponse(['ok'=>false,'mensaje'=>'No se pudo eliminar'],500);
 
     return jsonResponse(['ok'=>true]);
@@ -334,9 +343,7 @@ $app->get('/admin/usuarios/buscar', function ($req) {
     return jsonResponse(['ok'=>true,'data'=>$r]);
 });
 
-/*
-   POST /admin/usuarios
-*/
+/* POST /admin/usuarios*/
 $app->post('/admin/usuarios', function ($req) {
     $val = validateToken();
     if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
@@ -554,9 +561,7 @@ $app->get('/admin/logs', function (Request $req, Response $res) {
 });
 
 /*--------------PROFESIONAL----------------*/
-/**
- * GET  /prof/perfil  — obtener datos del profesional logeado
- */
+/* GET  /prof/perfil  — obtener datos del profesional logeado */
 $app->get('/prof/perfil', function ($req) {
     $val = validateToken();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional') {
@@ -567,10 +572,7 @@ $app->get('/prof/perfil', function ($req) {
     return jsonResponse(['ok'=>true,'data'=>$data]);
 });
 
-/**
- * PUT  /prof/perfil  — actualizar únicamente su propia persona
- * Body: { persona: { nombre, apellido1, … } }
- */
+/* PUT  /prof/perfil  — actualizar únicamente su propia persona */
 $app->put('/prof/perfil', function ($req) {
     $val = validateToken();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional') {
@@ -600,8 +602,6 @@ $app->put('/prof/perfil', function ($req) {
     }
 });
 
-
-/*-------------------- Profesional------------------------*/
 /* GET /prof/pacientes — lista solo de mis pacientes */
 $app->get('/prof/pacientes', function ($req){
     $val = validateToken();
@@ -655,20 +655,7 @@ $app->put('/prof/pacientes/{id}', function($req,$res,$args){
     return jsonResponse(['ok'=>true,'token'=>$val['token']]);
 });
 
-/* POST /prof/citas/{id}/accion — todas las acciones de la tabla */
-$app->post('/prof/citas/{id}/accion', function($req,$res,$args){
-    $val = validateToken();
-    if($val===false || strtolower($val['usuario']['rol'])!=='profesional')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
 
-    try{
-        procesarAccionCitaProfesional((int)$args['id'],
-                                      $req->getParsedBody()??[]);
-        return jsonResponse(['ok'=>true]);
-    }catch(Throwable $e){
-        return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()],400);
-    }
-});
 
 /** POST /prof/pacientes/{id}/tareas — crea tratamiento con título + descripción + opcional archivo */
 $app->post('/prof/pacientes/{id}/tareas', function($req,$res,$args){
@@ -826,6 +813,180 @@ $app->delete('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $a
     }
 });
 
+/* PUT /prof/pacientes/{id}/documentos/{doc_id} — actualiza diagnóstico final de un documento */
+$app->put('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $args){
+    $val = validateToken();
+    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+
+    $idPac = (int)$args['id'];
+    $idDoc = (int)$args['doc_id'];
+    $idProf = (int)$val['usuario']['id_persona'];
+    
+    // Verificar propiedad (que el profesional tiene al menos una cita con el paciente)
+    $db = conectar();
+    $q = $db->prepare("SELECT 1 FROM cita WHERE id_paciente = ? AND id_profesional = ? LIMIT 1");
+    $q->execute([$idPac, $idProf]);
+    if(!$q->fetch()) return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
+      // Obtener datos del body
+    $body = $req->getParsedBody();
+    $diagnosticoFinal = $body['diagnostico_final'] ?? '';
+    
+    // Debug log
+    error_log('PUT request to update diagnosis - ID Paciente: ' . $idPac . ', ID Documento: ' . $idDoc . ', Diagnóstico Final: ' . $diagnosticoFinal);
+    
+    try {
+        $db->beginTransaction();
+        
+        // 1. Obtener información del documento
+        $stDoc = $db->prepare("
+            SELECT d.*, h.id_paciente, h.id_historial
+            FROM documento_clinico d
+            JOIN historial_clinico h ON d.id_historial = h.id_historial
+            WHERE d.id_documento = ? AND h.id_paciente = ?
+        ");
+        $stDoc->execute([$idDoc, $idPac]);
+        $documento = $stDoc->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$documento) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
+        }        // 2. Actualizar el diagnóstico final en el historial
+        $stUpdate = $db->prepare("
+            UPDATE historial_clinico 
+            SET diagnostico_final = ? 
+            WHERE id_historial = ?
+        ");
+        $stUpdate->execute([$diagnosticoFinal, $documento['id_historial']]);
+        
+        // 3. Para futura referencia, debemos considerar mover el campo diagnostico_final a la tabla documento_clinico
+        // para permitir diagnósticos individuales por documento
+        
+        // 4. Registrar en logs
+        logEvento(
+            $idProf, 
+            $idPac,
+            'historial_clinico',
+            'diagnostico_final',
+            $documento['diagnostico_final'] ?? '',
+            $diagnosticoFinal,
+            'UPDATE'
+        );
+        $db->commit();
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Diagnóstico final actualizado correctamente'
+        ]);
+    } catch (Throwable $e) {
+        $db->rollBack();
+        error_log('Error al actualizar diagnóstico: ' . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
+    }
+});
+
+/* GET para obtener horas disponibles */
+$app->get('/prof/horas-disponibles', function($req, $res, $args) {
+    $val = validateToken();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+
+    $profesionalId = (int)($req->getQueryParams()['profesional_id'] ?? 0);
+    $fecha = $req->getQueryParams()['fecha'] ?? '';
+
+    if (!$profesionalId || !$fecha) {
+        return jsonResponse(['ok' => false, 'mensaje' => 'Faltan parámetros requeridos'], 400);
+    }
+
+    try {
+        $horas = obtenerHorasDisponibles($profesionalId, $fecha);
+        
+        return jsonResponse([
+            'ok' => true, 
+            'horas' => $horas,
+            'token' => $val['token']
+        ]);
+
+    } catch (Exception $e) {
+        error_log("Error en horas-disponibles: " . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error interno del servidor'], 500);
+    }
+});
+
+/* POST para reprogramar citas*/
+$app->post('/prof/citas/{id}/accion', function($req, $res, $args) {
+    $val = validateToken();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+
+    $idProf = (int)$val['usuario']['id_persona'];
+    $citaId = (int)$args['id'];
+    $body = $req->getParsedBody();
+    $accion = $body['accion'] ?? '';
+
+    if (!$accion) {
+        return jsonResponse(['ok' => false, 'mensaje' => 'Acción requerida'], 400);
+    }
+
+    try {
+        // Verificar que la cita pertenece al profesional
+        $db = conectar();
+        $stmtVerificar = $db->prepare("
+            SELECT * FROM cita 
+            WHERE id_cita = ? AND id_profesional = ?
+        ");
+        $stmtVerificar->execute([$citaId, $idProf]);
+        $cita = $stmtVerificar->fetch(PDO::FETCH_ASSOC);
+
+        if (!$cita) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Cita no encontrada'], 404);
+        }
+
+        // Procesar la acción usando la función existente
+        procesarAccionCitaProfesional($citaId, $body);
+
+        return jsonResponse([
+            'ok' => true, 
+            'mensaje' => 'Acción procesada exitosamente',
+            'token' => $val['token']
+        ]);
+
+    } catch (Exception $e) {
+        error_log("Error en accion cita: " . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
+    }
+});
+
+/* GET para obtener días bloqueados */
+$app->get('/prof/dias-bloqueados', function($req, $res, $args) {
+   $val = validateToken();
+   if ($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
+       return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+
+   $profesionalId = (int)($req->getQueryParams()['profesional_id'] ?? 0);
+   $fechaInicio = $req->getQueryParams()['fecha_inicio'] ?? '';
+   $fechaFin = $req->getQueryParams()['fecha_fin'] ?? '';
+
+   if (!$profesionalId || !$fechaInicio || !$fechaFin) {
+       return jsonResponse(['ok' => false, 'mensaje' => 'Faltan parámetros requeridos'], 400);
+   }
+
+   try {
+       $diasBloqueados = obtenerDiasBloqueados($profesionalId, $fechaInicio, $fechaFin);
+       
+       return jsonResponse([
+           'ok' => true, 
+           'dias_bloqueados' => $diasBloqueados,
+           'token' => $val['token']
+       ]);
+
+   } catch (Exception $e) {
+       error_log("Error en dias-bloqueados: " . $e->getMessage());
+       return jsonResponse(['ok' => false, 'mensaje' => 'Error interno del servidor'], 500);
+   }
+});
+
+
+
 // Endpoint para migrar documentos existentes (solo para desarrollo/mantenimiento)
 $app->post('/migrate/documentos', function (Request $request, Response $response) {
     try {
@@ -879,6 +1040,7 @@ $app->post('/migrate/documentos', function (Request $request, Response $response
         
         $updateResult = $stmt->execute();
         $affectedRows = $stmt->rowCount();
+        
         $result['detalles']['documentos_actualizados'] = $affectedRows;
         
         if (!$updateResult) {
@@ -905,48 +1067,7 @@ $app->post('/migrate/documentos', function (Request $request, Response $response
     }
 });
 
-
 /* corre la aplicación */
-
-/* PUT /prof/pacientes/{id}/documentos/{doc_id} — actualiza diagnóstico final de un documento */
-$app->put('/prof/pacientes/{id}/documentos/{doc_id}', function($req, $res, $args){
-    $val = validateToken();
-    if($val === false || strtolower($val['usuario']['rol']) !== 'profesional')
-        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-
-    $idPac = (int)$args['id'];
-    $idDoc = (int)$args['doc_id'];
-    $idProf = (int)$val['usuario']['id_persona'];
-    
-    // Verificar propiedad (que el profesional tiene al menos una cita con el paciente)
-    if(!verificarPacienteProfesional($idPac, $idProf))
-        return jsonResponse(['ok' => false, 'mensaje' => 'Prohibido'], 403);
-    
-    // Obtener datos del body
-    $body = $req->getParsedBody();
-    $diagnosticoFinal = $body['diagnostico_final'] ?? '';
-    
-    // Debug log
-    error_log('PUT request to update diagnosis - ID Paciente: ' . $idPac . ', ID Documento: ' . $idDoc . ', Diagnóstico Final: ' . $diagnosticoFinal);
-    
-    try {
-        actualizarDiagnosticoDocumento($idDoc, $idPac, $idProf, $diagnosticoFinal);
-        
-        return jsonResponse([
-            'ok' => true,
-            'mensaje' => 'Diagnóstico final actualizado correctamente'
-        ]);
-    } catch (Throwable $e) {
-        error_log('Error al actualizar diagnóstico: ' . $e->getMessage());
-        
-        if ($e->getMessage() === 'Documento no encontrado') {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Documento no encontrado'], 404);
-        }
-        
-        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
-    }
-});
-
 $app->run();
 /* ------------------------------------------------------------ */
 
