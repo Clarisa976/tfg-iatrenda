@@ -20,7 +20,9 @@ header('Access-Control-Allow-Credentials: true');
 
 /* Si es una solicitud OPTIONS, terminar aquí */
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('Content-Type: application/json');
     http_response_code(200);
+    echo json_encode(['ok' => true]);
     exit;
 }
 /* .env */
@@ -32,11 +34,36 @@ if (file_exists(__DIR__ . '/../.env')) {
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 
+// Middleware CORS para todas las respuestas
+$app->add(function (Request $request, $handler) {
+    $response = $handler->handle($request);
+    
+    $origin = $request->getHeaderLine('Origin');
+    $allowedOrigins = ['https://clinica-petaka.netlify.app'];
+    $useOrigin = in_array($origin, $allowedOrigins) ? $origin : 'https://clinica-petaka.netlify.app';
+    
+    return $response
+        ->withHeader('Access-Control-Allow-Origin', $useOrigin)
+        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+        ->withHeader('Access-Control-Allow-Credentials', 'true');
+});
+
 
 
 // Middleware para manejar las solicitudes OPTIONS de CORS
 $app->options('/{routes:.+}', function (Request $request, Response $response) {
-    return $response->withStatus(200);
+    $origin = $request->getHeaderLine('Origin');
+    $allowedOrigins = ['https://clinica-petaka.netlify.app'];
+    $useOrigin = in_array($origin, $allowedOrigins) ? $origin : 'https://clinica-petaka.netlify.app';
+    
+    return $response
+        ->withHeader('Access-Control-Allow-Origin', $useOrigin)
+        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+        ->withHeader('Access-Control-Allow-Credentials', 'true')
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(200);
 });
 
 
@@ -46,13 +73,13 @@ function jsonResponse(array $payload, int $code=200): Response {
         $r = new \Slim\Psr7\Response($code);
         $r->getBody()->write($jsonString);
         return $r
-            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Content-Type', 'application/json; charset=utf-8')
             ->withHeader('Cache-Control', 'no-store');
     } catch (\Exception $e) {
         error_log('Error al generar respuesta JSON: ' . $e->getMessage());
         $r = new \Slim\Psr7\Response(500);
         $r->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'Error interno del servidor']));
-        return $r->withHeader('Content-Type', 'application/json');
+        return $r->withHeader('Content-Type', 'application/json; charset=utf-8');
     }
 }
 /* ---------- RUTAS ---------- */
