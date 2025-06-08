@@ -872,9 +872,16 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 4px;
 }
 
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
 .field input.invalid,
-.field select.invalid,
-.field textarea.invalid {
+.field select.invalid {
   border-color: var(--red);
 }
 
@@ -961,8 +968,7 @@ input[type="checkbox"]:checked::after {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--gray);
+  cursor: pointer;
 }
 
 .consent-line a {
@@ -3220,4 +3226,100 @@ input[type="checkbox"]:checked::after {
 .estado-no-atendida { 
     background: #9b51e0 !important;
     color: #000000 !important;
+}
+
+/* Estilos específicos para el modal de login */
+.modal .password-field {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.modal .password-field input {
+  width: 100%;
+  padding: 0.5rem;
+  padding-right: 2.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.modal .password-field input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.modal .password-field input.invalid {
+  border-color: var(--red);
+}
+
+.modal .password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: color 0.2s ease;
+}
+
+.modal .password-toggle:hover {
+  color: var(--blue);
+}
+
+/* Password field in modals */
+.modal .password-field {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.modal .password-field input {
+  width: 100%;
+  padding: 0.5rem;
+  padding-right: 2.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.modal .password-field input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.modal .password-field input.invalid {
+  border-color: var(--red);
+}
+
+.modal .password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: color 0.2s ease;
+}
+
+.modal .password-toggle:hover {
+  color: var(--blue);
 }

@@ -107,6 +107,28 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
     try {
         $baseDatos = conectar();
 
+        // Verificar que el actor existe antes de intentar insertar
+        $checkActor = $baseDatos->prepare("SELECT COUNT(*) FROM persona WHERE id_persona = ?");
+        $checkActor->execute([$quienLoHace]);
+        $actorExiste = (int)$checkActor->fetchColumn();
+        
+        if ($actorExiste === 0) {
+            error_log("❌ ERROR LOG: Actor ID $quienLoHace no existe en tabla persona - salteando log");
+            return false; // Retornar false pero sin lanzar excepción
+        }
+
+        // Verificar que el afectado existe (si se proporciona)
+        if ($aQuienAfecta !== null) {
+            $checkAfectado = $baseDatos->prepare("SELECT COUNT(*) FROM persona WHERE id_persona = ?");
+            $checkAfectado->execute([$aQuienAfecta]);
+            $afectadoExiste = (int)$checkAfectado->fetchColumn();
+            
+            if ($afectadoExiste === 0) {
+                error_log("❌ ERROR LOG: Afectado ID $aQuienAfecta no existe en tabla persona - salteando log");
+                return false; // Retornar false pero sin lanzar excepción
+            }
+        }
+
         // Map action types to valid enum values
         $validActions = ['INSERT', 'UPDATE', 'DELETE', 'SELECT'];
         $accionMapeada = strtoupper($queAccion);
@@ -125,17 +147,20 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
                 'TEST' => 'SELECT' // For testing purposes
             ];
             $accionMapeada = $accionMap[$accionMapeada] ?? 'SELECT';
-        }        // Handle IP address for PostgreSQL inet type
+        }
+
+
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
         if (empty($ipAddress) || $ipAddress === '') {
-            $ipAddress = null; // PostgreSQL inet type requires NULL for empty values
+            $ipAddress = null; 
         }
 
         $consulta = "INSERT INTO log_evento_dato
                 (id_actor,id_afectado,tabla_afectada,campo_afectado,
                  valor_antiguo,valor_nuevo,accion,ip)
                 VALUES (:a,:af,:t,:c,:v1,:v2,:ac,:ip)";
-        return $baseDatos->prepare($consulta)->execute([
+        
+        $resultado = $baseDatos->prepare($consulta)->execute([
             ':a'  => $quienLoHace,
             ':af' => $aQuienAfecta ?: null,
             ':t'  => $queTabla,
@@ -145,12 +170,21 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
             ':ac' => $accionMapeada,
             ':ip' => $ipAddress
         ]);
+
+        if ($resultado) {
+            error_log("Log registrado: Actor=$quienLoHace, Afectado=$aQuienAfecta, Tabla=$queTabla, Acción=$accionMapeada");
+        } else {
+            error_log("No se pudo insertar el log de actividad");
+        }
+
+        return $resultado;
+        
     } catch (Throwable $error) {
         error_log('Fallo al registrar actividad: ' . $error->getMessage());
+        error_log("Parámetros: Actor=$quienLoHace, Afectado=$aQuienAfecta, Tabla=$queTabla, Acción=$queAccion");
         return false;
     }
 }
-
 /* Función para registrar la consulta que se hace y así guardarla para futuras audiotrías */
 function execLogged(string $consultaSql, array $parametros, int $actor = 0, ?string $tabla = null, ?int $afect = null): bool
 {
@@ -826,40 +860,39 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
 
         /* Enviar email*/
         try {
-    // Usar 'pacienteemail' en lugar de 'pacienteEmail'
-    $emailPaciente = $fila['pacienteemail'] ?? '';
-    
-    error_log("=== DEBUG EMAIL ===");
-    error_log("Email del paciente: '$emailPaciente'");
-    error_log("Tipo de email: " . gettype($emailPaciente));
-    
-    // Verificar que el paciente tenga email
-    if (!empty($emailPaciente) && filter_var($emailPaciente, FILTER_VALIDATE_EMAIL)) {
-        error_log("✓ Email válido encontrado: $emailPaciente");
-        error_log("Asunto: $asuntoEmail");
-        
-        $emailEnviado = enviarEmail(
-            $emailPaciente,
-            $asuntoEmail,
-            $mensaje
-        );
-        error_log("Resultado del envío de email: " . ($emailEnviado ? "✓ ENVIADO" : "✗ FALLÓ"));
-        
-        if (!$emailEnviado) {
-            error_log("⚠️ La función enviarEmail() devolvió FALSE");
+            // Usar 'pacienteemail' en lugar de 'pacienteEmail'
+            $emailPaciente = $fila['pacienteemail'] ?? '';
+
+            error_log("=== DEBUG EMAIL ===");
+            error_log("Email del paciente: '$emailPaciente'");
+            error_log("Tipo de email: " . gettype($emailPaciente));
+
+            // Verificar que el paciente tenga email
+            if (!empty($emailPaciente) && filter_var($emailPaciente, FILTER_VALIDATE_EMAIL)) {
+                error_log("✓ Email válido encontrado: $emailPaciente");
+                error_log("Asunto: $asuntoEmail");
+
+                $emailEnviado = enviarEmail(
+                    $emailPaciente,
+                    $asuntoEmail,
+                    $mensaje
+                );
+                error_log("Resultado del envío de email: " . ($emailEnviado ? "ENVIADO" : "FALLÓ"));
+
+                if (!$emailEnviado) {
+                    error_log("La función enviarEmail() devolvió FALSE");
+                }
+            } else {
+                if (empty($emailPaciente)) {
+                    error_log("Email está vacío o es NULL");
+                } else {
+                    error_log("Email no es válido: '$emailPaciente'");
+                }
+                error_log("No se puede enviar email al paciente ID: {$fila['id_paciente']}");
+            }
+        } catch (Exception $e) {
+            error_log("EXCEPCIÓN enviando email para cita $idCita: " . $e->getMessage());
         }
-    } else {
-        if (empty($emailPaciente)) {
-            error_log("✗ Email está vacío o es NULL");
-        } else {
-            error_log("✗ Email no es válido: '$emailPaciente'");
-        }
-        error_log("No se puede enviar email al paciente ID: {$fila['id_paciente']}");
-    }
-    error_log("=== FIN DEBUG EMAIL ===");
-} catch (Exception $e) {           
-    error_log("❌ EXCEPCIÓN enviando email para cita $idCita: " . $e->getMessage());
-}
         return true;
     } catch (Exception $e) {
         /* Rollback en caso de error */
