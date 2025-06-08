@@ -2244,6 +2244,33 @@ input[type="checkbox"]:checked::after {
 }
 
 /* Media Queries */
+@media(max-width: 480px) {
+  .add-user-modal {
+    width: 95% !important;
+    max-width: 95vw !important;
+    margin: 0.5rem !important;
+  }
+
+  .add-user-modal .modal-body {
+    padding: 0.8rem !important;
+    max-height: calc(90vh - 120px) !important;
+  }
+
+  .add-user-modal .modal-header,
+  .add-user-modal .modal-footer {
+    padding: 0.8rem;
+  }
+
+  .form-grid {
+    gap: 0.8rem;
+  }
+
+  .metodos-contacto-container {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
 @media(min-width: 600px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -2439,14 +2466,23 @@ input[type="checkbox"]:checked::after {
 
   .cookie-banner__actions {
     flex: 0;
-  }
-  .add-user-modal {
+  }  .add-user-modal {
     width: 90% !important;
-    max-width: 600px !important;
+    max-width: 700px !important;
   }
 
   .form-section {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Grid de formulario en tablet - 2 columnas */
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Campos completos ocupan toda la fila */
+  .form-grid .field.full {
+    grid-column: span 2;
   }
 
   .acciones-mobile {
@@ -2485,6 +2521,21 @@ input[type="checkbox"]:checked::after {
   .form-section {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  /* Grid de formulario en desktop - 3 columnas */
+  .form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Campos completos ocupan toda la fila */
+  .form-grid .field.full {
+    grid-column: span 3;
+  }
+
+  /* Modal más ancha en desktop */
+  .add-user-modal-wide {
+    max-width: 900px !important;
+  }
 }
 
 /* Password Field with Toggle */
@@ -2518,4 +2569,109 @@ input[type="checkbox"]:checked::after {
   color: var(--blue);
 }
 
-/* Existing Form Field */
+/* Modal de usuario ampliada - responsive */
+.add-user-modal {
+  width: 95% !important;
+  max-width: 500px !important;
+  max-height: 90vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.add-user-modal-wide {
+  max-width: 700px !important;
+}
+
+.add-user-modal .modal-body {
+  overflow-y: auto !important;
+  flex: 1 !important;
+  padding: 1rem !important;
+  max-height: calc(90vh - 140px) !important;
+}
+
+.add-user-modal .modal-header {
+  flex-shrink: 0;
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.add-user-modal .modal-footer {
+  flex-shrink: 0;
+  padding: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+/* Grid de formulario responsive */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+/* Centrado del contenido en el step 0 */
+.modal-body-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem !important;
+}
+
+.btn-margin-left {
+  margin-left: 0 !important;
+}
+
+/* Contenedor de métodos de contacto */
+.metodos-contacto-container {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+/* Títulos de secciones en la modal */
+.add-user-modal h4 {
+  margin: 1.5rem 0 1rem 0;
+  color: var(--blue);
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.5rem;
+}
+
+.add-user-modal h4:first-of-type {
+  margin-top: 0;
+}
+
+/* Mejoras visuales para campos de formulario */
+.add-user-modal .field input,
+.add-user-modal .field select,
+.add-user-modal .field textarea {
+  font-size: 0.9rem;
+  padding: 0.6rem;
+}
+
+.add-user-modal .error-msg {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* Scrollbar personalizada para la modal */
+.add-user-modal .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.add-user-modal .modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.add-user-modal .modal-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.add-user-modal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

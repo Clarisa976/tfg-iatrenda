@@ -199,6 +199,33 @@ $app->get('/admin/usuarios', function(Request $req) {
     ], 200);
 });
 
+/* obtener usuario individual por ID */
+$app->get('/admin/usuarios/{id}', function(Request $req, Response $res, array $args) {
+    // validar token y extraer usuario + nuevo token
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    $rol = strtolower($val['usuario']['rol']);
+    // solo admin o profesional
+    if (!in_array($rol, ['admin','profesional'], true)) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+      $id = (int)$args['id'];
+    $usuario = getUsuarioDetalle($id);
+    
+    if (!$usuario) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Usuario no encontrado'], 404);
+    }
+    
+    // devolver datos del usuario + token renovado
+    return jsonResponse([
+        'ok'    => true,
+        'data'  => $usuario,
+        'token' => $val['token']
+    ], 200);
+});
+
 
 /* lista profesionales */
 $app->get('/profesionales', function(Request $req) {

@@ -1,5 +1,4 @@
 <?php
-
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -2168,7 +2167,7 @@ function getCitasPaciente(int $idPaciente): array
 }
 
 /* Procesa una solicitud de cambio o cancelación de cita por parte del paciente. */
-function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPaciente, ?string $nuevaFecha = null): array
+function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPaciente, ?string $nuevaFecha = null)
 {
     $baseDatos = conectar();
 
