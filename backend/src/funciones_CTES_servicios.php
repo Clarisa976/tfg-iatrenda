@@ -111,7 +111,7 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
         $checkActor = $baseDatos->prepare("SELECT COUNT(*) FROM persona WHERE id_persona = ?");
         $checkActor->execute([$quienLoHace]);
         $actorExiste = (int)$checkActor->fetchColumn();
-        
+
         if ($actorExiste === 0) {
             error_log("❌ ERROR LOG: Actor ID $quienLoHace no existe en tabla persona - salteando log");
             return false; // Retornar false pero sin lanzar excepción
@@ -122,7 +122,7 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
             $checkAfectado = $baseDatos->prepare("SELECT COUNT(*) FROM persona WHERE id_persona = ?");
             $checkAfectado->execute([$aQuienAfecta]);
             $afectadoExiste = (int)$checkAfectado->fetchColumn();
-            
+
             if ($afectadoExiste === 0) {
                 error_log("❌ ERROR LOG: Afectado ID $aQuienAfecta no existe en tabla persona - salteando log");
                 return false; // Retornar false pero sin lanzar excepción
@@ -152,14 +152,14 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
 
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
         if (empty($ipAddress) || $ipAddress === '') {
-            $ipAddress = null; 
+            $ipAddress = null;
         }
 
         $consulta = "INSERT INTO log_evento_dato
                 (id_actor,id_afectado,tabla_afectada,campo_afectado,
                  valor_antiguo,valor_nuevo,accion,ip)
                 VALUES (:a,:af,:t,:c,:v1,:v2,:ac,:ip)";
-        
+
         $resultado = $baseDatos->prepare($consulta)->execute([
             ':a'  => $quienLoHace,
             ':af' => $aQuienAfecta ?: null,
@@ -178,7 +178,6 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
         }
 
         return $resultado;
-        
     } catch (Throwable $error) {
         error_log('Fallo al registrar actividad: ' . $error->getMessage());
         error_log("Parámetros: Actor=$quienLoHace, Afectado=$aQuienAfecta, Tabla=$queTabla, Acción=$queAccion");
@@ -693,27 +692,29 @@ function obtenerNotificacionesPendientes(int $idUsuario, string $rol): array
 
 function procesarNotificacion(int $idCita, string $accion, int $idUsuario, string $rol): bool
 {
-    error_log("Iniciando procesarNotificacion: ID=$idCita, Acción=$accion, Usuario=$idUsuario, Rol=$rol");
-
-    // Normalizar la acción (RECHAZAR o CANCELAR → CANCELADA)
+    error_log("Iniciando procesarNotificacion: ID=$idCita, Accion=$accion, Usuario=$idUsuario, Rol=$rol");
+    
+    // Normalizar la accion
     if ($accion === 'RECHAZAR' || $accion === 'CANCELAR') {
         $nuevoEstado = 'CANCELADA';
     } else if ($accion === 'CONFIRMAR') {
         $nuevoEstado = 'CONFIRMADA';
     } else {
-        error_log("Acción desconocida: $accion");
+        error_log("Accion desconocida: $accion");
         return false;
     }
-
+    
     error_log("Nuevo estado para cita $idCita: $nuevoEstado");
     $baseDatos = conectar();
     $baseDatos->beginTransaction();
-    try {        /* Bloquear la cita */
+
+    try {
+        // Bloquear la cita para evitar condiciones de carrera
         $consulta = $baseDatos->prepare("
             SELECT c.*, 
-                   p.email pacienteEmail,
+                   p.email AS pacienteemail,
                    (p.nombre || ' ' || p.apellido1 || CASE WHEN p.apellido2 IS NOT NULL AND p.apellido2 != '' THEN (' ' || p.apellido2) ELSE '' END) as nombre_contacto
-              FROM cita  c
+              FROM cita c
         INNER JOIN persona p ON p.id_persona = c.id_paciente
              WHERE c.id_cita = ? FOR UPDATE");
         $consulta->execute([$idCita]);
@@ -721,90 +722,132 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             error_log("procesarNotificacion: Cita $idCita no encontrada");
             throw new Exception('Cita inexistente');
         }
-
+        
         error_log("Datos de la cita: " . json_encode($fila));
 
-        /* Verificar permisos del profesional */
+        // Verificar permisos del profesional
         if ($rol === 'profesional' && (int)$fila['id_profesional'] !== $idUsuario) {
             error_log("procesarNotificacion: Usuario $idUsuario sin permiso para cita $idCita");
             throw new Exception('Prohibido');
         }
 
-        /* Verificar que no esté ya procesada */
+        // Verificar que no este ya procesada
         if ($fila['estado'] === 'CONFIRMADA' || $fila['estado'] === 'CANCELADA') {
-            error_log("procesarNotificacion: Cita $idCita ya está {$fila['estado']}");
-            throw new Exception('Estado inválido');
+            error_log("procesarNotificacion: Cita $idCita ya esta {$fila['estado']}");
+            throw new Exception('Estado invalido');
         }
 
-        /* Actualizar estado de la cita */
+        // Actualizar estado de la cita
         error_log("Actualizando estado de cita $idCita a $nuevoEstado");
         $baseDatos->prepare("UPDATE cita SET estado = ? WHERE id_cita = ?")
-            ->execute([$nuevoEstado, $idCita]);        /* Si se confirma crear bloque en la agenda del profesional */
+            ->execute([$nuevoEstado, $idCita]);
+
+        // Si se confirma crear bloque en la agenda del profesional
         if ($accion === 'CONFIRMAR') {
-            /* Verificar que no exista ya un bloque para esta cita */
-            $consulta = $baseDatos->prepare("SELECT COUNT(*) FROM bloque_agenda WHERE id_profesional = ? AND fecha_inicio = ?");
+            // Verificar que no exista ya un bloque para esta cita exacta
+            $consulta = $baseDatos->prepare("
+                SELECT COUNT(*) 
+                FROM bloque_agenda 
+                WHERE id_profesional = ? 
+                AND fecha_inicio = ? 
+                AND tipo_bloque = 'CITA'
+            ");
             $consulta->execute([(int)$fila['id_profesional'], $fila['fecha_hora']]);
             $bloqueExistente = (int)$consulta->fetchColumn();
 
-            error_log("Verificando bloques existentes: " . ($bloqueExistente ? "SI existe" : "NO existe"));
+            error_log("Verificando bloques existentes para {$fila['fecha_hora']}: " . ($bloqueExistente ? "SI existe" : "NO existe"));
 
             if ($bloqueExistente === 0) {
-                /* Crear un bloque de 1 hora para la cita */
+                // Crear fechas correctamente
                 $fechaInicio = $fila['fecha_hora'];
-                $fechaFin = date('Y-m-d H:i:s', strtotime($fechaInicio . ' +1 hour'));
+                
+                try {
+                    $dt = new DateTime($fechaInicio);
+                    $dt->add(new DateInterval('PT1H'));
+                    $fechaFin = $dt->format('Y-m-d H:i:s');
+                    
+                    // Mantener zona horaria si existe
+                    if (strpos($fechaInicio, '+') !== false) {
+                        $fechaFin .= '+00';
+                    }
+                } catch (Exception $e) {
+                    error_log("Error procesando fecha: " . $e->getMessage());
+                    // Metodo alternativo sin zona horaria
+                    $fechaInicioLimpia = preg_replace('/\+\d{2}$/', '', $fechaInicio);
+                    $fechaFin = date('Y-m-d H:i:s', strtotime($fechaInicioLimpia . ' +1 hour'));
+                }
 
-                /* Obtener el nombre completo del paciente */
+                // Obtener el nombre completo del paciente
                 $declaracionPaciente = $baseDatos->prepare("
-                    SELECT (nombre || ' ' || apellido1 || CASE WHEN apellido2 IS NOT NULL AND apellido2 != '' THEN (' ' || apellido2) ELSE '' END) as nombre_completo
-                    FROM persona
-                    WHERE id_persona = ?
+                    SELECT (nombre || ' ' || p.apellido1 || CASE WHEN p.apellido2 IS NOT NULL AND p.apellido2 != '' THEN (' ' || p.apellido2) ELSE '' END) as nombre_completo
+                    FROM persona p
+                    WHERE p.id_persona = ?
                 ");
                 $declaracionPaciente->execute([$fila['id_paciente']]);
                 $nombrePaciente = $declaracionPaciente->fetchColumn() ?: 'Paciente';
+
                 error_log("Creando bloque de agenda: Prof={$fila['id_profesional']}, Inicio=$fechaInicio, Fin=$fechaFin");
+                
                 $stmt = $baseDatos->prepare("
                     INSERT INTO bloque_agenda (
                         id_profesional, fecha_inicio, fecha_fin, 
-                        tipo_bloque, comentario, id_creador
+                        tipo_bloque, comentario
                     ) VALUES (
-                        :p, :i, :f, 'CITA', :c, :cr
+                        :p, :i, :f, 'CITA', :c
                     ) RETURNING id_bloque
                 ");
-                $stmt->execute([
+                
+                $resultado = $stmt->execute([
                     ':p' => $fila['id_profesional'],
                     ':i' => $fechaInicio,
                     ':f' => $fechaFin,
-                    ':c' => "Cita con {$nombrePaciente} (#{$fila['id_paciente']})",
-                    ':cr' => $idUsuario
+                    ':c' => "Cita con {$nombrePaciente} (#{$fila['id_paciente']})"
                 ]);
 
-                /* Actualizar la cita con el ID del bloque creado */
-                $idBloque = (int)$stmt->fetchColumn();
-                $baseDatos->prepare("UPDATE cita SET id_bloque = ? WHERE id_cita = ?")
-                    ->execute([$idBloque, $idCita]);
+                if ($resultado) {
+                    // Actualizar la cita con el ID del bloque creado
+                    $idBloque = (int)$stmt->fetchColumn();
+                    $baseDatos->prepare("UPDATE cita SET id_bloque = ? WHERE id_cita = ?")
+                        ->execute([$idBloque, $idCita]);
 
-                error_log("Bloque de agenda creado correctamente y vinculado a la cita");
+                    error_log("Bloque de agenda creado correctamente ID: $idBloque y vinculado a la cita");
+                } else {
+                    error_log("Error al crear el bloque de agenda");
+                }
             } else {
-                error_log("No se creó bloque de agenda porque ya existe");
+                error_log("No se creo bloque de agenda porque ya existe");
             }
-        }        /* Registrar notificación en la base de datos */
-        /* Formatear fecha y hora para el mensaje */
+        }
+
+        // Si se cancela, eliminar el bloque de agenda si existe
+        if ($accion === 'RECHAZAR' && !empty($fila['id_bloque'])) {
+            // Primero desvinculamos la cita del bloque
+            $baseDatos->prepare("UPDATE cita SET id_bloque = NULL WHERE id_cita = ?")
+                ->execute([$idCita]);
+            
+            // Luego eliminamos el bloque
+            $baseDatos->prepare("DELETE FROM bloque_agenda WHERE id_bloque = ? AND tipo_bloque = 'CITA'")
+                ->execute([$fila['id_bloque']]);
+            
+            error_log("Bloque de agenda {$fila['id_bloque']} eliminado por cancelacion de cita");
+        }
+
+        // Registrar notificacion en la base de datos
         $fechaFormateada = date('d/m/Y', strtotime($fila['fecha_hora']));
         $horaFormateada = date('H:i', strtotime($fila['fecha_hora']));
 
-        /* Crear un mensaje más completo y profesional */
-        $asuntoEmail = $accion === 'CONFIRMAR' ? 'Confirmación de su cita' : 'Cancelación de su cita';
+        $asuntoEmail = $accion === 'CONFIRMAR' ? 'Confirmacion de su cita' : 'Cancelacion de su cita';
 
-        /* HTML para el cuerpo del email */
+        // Mensaje HTML para el email
         $mensaje = '
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 5px;">
             <div style="text-align: center; margin-bottom: 20px;">
-                <img src="https://iatrenda-petaka.s3.eu-west-3.amazonaws.com/images/petaka.jpg" alt="Clínica Petaka Logo" style="max-width: 150px;" />
-                <h2 style="color: #3a6ea5;">Clínica Logopédica Petaka</h2>
+                <img src="https://iatrenda-petaka.s3.eu-west-3.amazonaws.com/images/petaka.jpg" alt="Clinica Petaka Logo" style="max-width: 150px;" />
+                <h2 style="color: #3a6ea5;">Clinica Logopedica Petaka</h2>
             </div>
             
             <p>Estimado/a <strong>' . htmlspecialchars($fila['nombre_contacto']) . '</strong>,</p>
-              <p>' . ($accion === 'CONFIRMAR'
+            <p>' . ($accion === 'CONFIRMAR'
             ? 'Nos complace confirmarle que su cita ha sido <strong>confirmada</strong>.'
             : 'Le informamos que su cita ha sido <strong>cancelada</strong>.') . '</p>
             
@@ -815,17 +858,17 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             </div>
             
             ' . ($accion === 'CONFIRMAR' ? '
-            <p>Por favor, recuerde llegar 10 minutos antes de la hora de su cita. Si necesita cancelar o reprogramar, contáctenos con al menos 24 horas de antelación.</p>
+            <p>Por favor, recuerde llegar 10 minutos antes de la hora de su cita. Si necesita cancelar o reprogramar, contactenos con al menos 24 horas de antelacion.</p>
             
             <div style="background-color: #e8f4fc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <p><strong>Ubicación:</strong></p>
+                <p><strong>Ubicacion:</strong></p>
                 <p>Av. Ejemplo 123</p>
                 <p>29680 Estepona</p>
                 <p>Tel: +34 123 456 789</p>
                 <p>Email: info@clinicapetaka.com</p>
             </div>
             ' : '
-            <p>Si desea programar una nueva cita, puede hacerlo a través de nuestra página web o contactándonos directamente.</p>
+            <p>Si desea programar una nueva cita, puede hacerlo a traves de nuestra pagina web o contactandonos directamente.</p>
             ') . '
             
             <p>Gracias por confiar en nuestros servicios.</p>
@@ -835,12 +878,13 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             <hr style="border: 1px solid #eee; margin: 20px 0;" />
             
             <div style="font-size: 10px; color: #777; text-align: justify;">
-                <p><strong>ADVERTENCIA LEGAL:</strong> Este mensaje, junto a la documentación que en su caso se adjunta, se dirige exclusivamente a su destinatario y puede contener información privilegiada o confidencial. Si no es Vd. el destinatario indicado, queda notificado de que la utilización, divulgación y/o copia sin autorización está prohibida en virtud de la legislación vigente. Si ha recibido este mensaje por error, le rogamos que nos lo comunique inmediatamente por esta misma vía y proceda a su destrucción.</p>
+                <p><strong>ADVERTENCIA LEGAL:</strong> Este mensaje, junto a la documentacion que en su caso se adjunta, se dirige exclusivamente a su destinatario y puede contener informacion privilegiada o confidencial. Si no es Vd. el destinatario indicado, queda notificado de que la utilizacion, divulgacion y/o copia sin autorizacion esta prohibida en virtud de la legislacion vigente. Si ha recibido este mensaje por error, le rogamos que nos lo comunique inmediatamente por esta misma via y proceda a su destruccion.</p>
                 
-                <p>Conforme a lo dispuesto en la L.O. 3/2018 de 5 de diciembre, de Protección de Datos Personales y garantía de los derechos digitales, Clínica Petaka, logopedas, le informa que los datos de carácter personal que proporcione serán recogidos en un fichero cuyo responsable es Clínica Petaka, logopedas y serán tratados con la exclusiva finalidad expresada en el mismo. Podrá acceder a sus datos, rectificarlos, cancelarlos y oponerse a su tratamiento, en los términos y en las condiciones previstas en la LOPD, dirigiéndose por escrito a info@clinicapetaka.com.</p>
+                <p>Conforme a lo dispuesto en la L.O. 3/2018 de 5 de diciembre, de Proteccion de Datos Personales y garantia de los derechos digitales, Clinica Petaka, logopedas, le informa que los datos de caracter personal que proporcione seran recogidos en un fichero cuyo responsable es Clinica Petaka, logopedas y seran tratados con la exclusiva finalidad expresada en el mismo. Podra acceder a sus datos, rectificarlos, cancelarlos y oponerse a su tratamiento, en los terminos y en las condiciones previstas en la LOPD, dirigiendose por escrito a info@clinicapetaka.com.</p>
             </div>
         </div>';
-        error_log("Insertando notificación: De=$idUsuario, Para={$fila['id_paciente']}, Cita=$idCita");
+
+        error_log("Insertando notificacion: De=$idUsuario, Para={$fila['id_paciente']}, Cita=$idCita");
 
         $declaracionNotificacion = $baseDatos->prepare("
             INSERT INTO notificacion(id_emisor,id_destino,id_cita,tipo,asunto,cuerpo)
@@ -854,54 +898,56 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             ':b' => $mensaje
         ]);
 
-        error_log("Notificación insertada correctamente");
+        error_log("Notificacion insertada correctamente");
         $baseDatos->commit();
-        error_log("Transacción confirmada correctamente");
+        error_log("Transaccion confirmada correctamente");
 
-        /* Enviar email*/
+        // Enviar email
         try {
-            // Usar 'pacienteemail' en lugar de 'pacienteEmail'
             $emailPaciente = $fila['pacienteemail'] ?? '';
-
-            error_log("=== DEBUG EMAIL ===");
-            error_log("Email del paciente: '$emailPaciente'");
-            error_log("Tipo de email: " . gettype($emailPaciente));
-
-            // Verificar que el paciente tenga email
+            
             if (!empty($emailPaciente) && filter_var($emailPaciente, FILTER_VALIDATE_EMAIL)) {
-                error_log("✓ Email válido encontrado: $emailPaciente");
-                error_log("Asunto: $asuntoEmail");
-
+                error_log("Intentando enviar email a $emailPaciente");
                 $emailEnviado = enviarEmail(
                     $emailPaciente,
                     $asuntoEmail,
                     $mensaje
                 );
-                error_log("Resultado del envío de email: " . ($emailEnviado ? "ENVIADO" : "FALLÓ"));
-
-                if (!$emailEnviado) {
-                    error_log("La función enviarEmail() devolvió FALSE");
-                }
+                error_log("Resultado del envio de email: " . ($emailEnviado ? "Enviado" : "Fallo"));
             } else {
-                if (empty($emailPaciente)) {
-                    error_log("Email está vacío o es NULL");
-                } else {
-                    error_log("Email no es válido: '$emailPaciente'");
-                }
-                error_log("No se puede enviar email al paciente ID: {$fila['id_paciente']}");
+                error_log("No se puede enviar email: paciente sin email valido. Email: '$emailPaciente'");
+            }
+        } catch (Exception $e) {           
+            error_log("Error enviando email para cita $idCita: " . $e->getMessage());
+        }
+
+        // Registrar actividad en el log
+        try {
+            $logResult = registrarActividad(
+                $idUsuario,
+                $fila['id_paciente'], 
+                'cita', 
+                'estado', 
+                $fila['estado'], 
+                $nuevoEstado, 
+                'UPDATE'
+            );
+            if (!$logResult) {
+                error_log("Warning: No se pudo registrar el log de actividad");
             }
         } catch (Exception $e) {
-            error_log("EXCEPCIÓN enviando email para cita $idCita: " . $e->getMessage());
+            error_log("Warning: Error al registrar actividad - " . $e->getMessage());
         }
+
         return true;
+        
     } catch (Exception $e) {
-        /* Rollback en caso de error */
+        // Rollback en caso de error
         $baseDatos->rollBack();
-        error_log("Error procesando notificación: " . $e->getMessage());
+        error_log("Error procesando notificacion: " . $e->getMessage());
         return false;
     }
 }
-
 /* Función para buscar a una persona*/
 function buscarPersona(string $email, string $telefono = '', string $nif = ''): ?array
 {
