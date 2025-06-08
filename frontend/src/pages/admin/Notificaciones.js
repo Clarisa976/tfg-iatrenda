@@ -43,7 +43,9 @@ export default function Notificaciones() {
     } finally {
       setLoad(false);
     }
-  };  const accion = async (id, tipoAcc) => {
+  };  // Función para procesar acciones de confirmación/cancelación de citas
+  // Fix: Ahora muestra el mensaje específico del servidor en lugar de un mensaje genérico
+  const accion = async (id, tipoAcc) => {
     try {
       const token = localStorage.getItem('token');
       const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
@@ -65,12 +67,13 @@ export default function Notificaciones() {
       if (!response.ok) {
         throw new Error(`Error HTTP: ${response.status}`);
       }
-      
-      const data = await response.json();
+        const data = await response.json();
       console.log('Respuesta del servidor:', data);
       
       if (data.ok) {
-        toast.success(`Cita ${tipoAcc === 'CONFIRMAR' ? 'confirmada' : 'cancelada'}`);
+        // Usar el mensaje específico del servidor o un mensaje por defecto
+        const mensaje = data.mensaje || `Cita ${tipoAcc === 'CONFIRMAR' ? 'confirmada' : 'cancelada'}`;
+        toast.success(mensaje);
         setItems(lst => {
           const nuevo = lst.filter(x => x.id !== id);
           window.dispatchEvent(new CustomEvent('noti-count', {detail: nuevo.length}));
