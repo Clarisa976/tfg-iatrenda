@@ -762,14 +762,13 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
                 $fechaInicio = $fila['fecha_hora'];
                 
                 try {
-                    // Forzar zona horaria de Madrid
-                    $dt = new DateTime($fechaInicio, new DateTimeZone('Europe/Madrid'));
+
+                    $dt = new DateTime($fechaInicio, new DateTimeZone('UTC'));
                     $dtFin = clone $dt;
                     $dtFin->add(new DateInterval('PT1H')); // +1 hora
                     
-
                     $fechaFin = $dtFin->format('Y-m-d H:i:s');
-                    
+
                     if (strpos($fechaInicio, '+') !== false || strpos($fechaInicio, 'Z') !== false) {
                         $fechaFin = $dtFin->format('Y-m-d H:i:sP');
                     }
@@ -778,7 +777,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
                     
                 } catch (Exception $e) {
                     error_log("Error procesando fecha: " . $e->getMessage());
-
+                    // Metodo alternativo sin zona horaria
                     $fechaInicioLimpia = preg_replace('/\+\d{2}$/', '', $fechaInicio);
                     $fechaFin = date('Y-m-d H:i:s', strtotime($fechaInicioLimpia . ' +1 hour'));
                 }
@@ -838,12 +837,14 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             error_log("Bloque de agenda {$fila['id_bloque']} eliminado por cancelacion de cita");
         }
 
-        // Formatear fecha y hora con zona horaria de Madrid
+        // Formatear fecha y hora - convertir de UTC a Madrid para mostrar
         try {
-            $dtEmail = new DateTime($fila['fecha_hora'], new DateTimeZone('Europe/Madrid'));
+            // La fecha viene en UTC, convertir a Madrid para mostrar correctamente
+            $dtEmail = new DateTime($fila['fecha_hora'], new DateTimeZone('UTC'));
+            $dtEmail->setTimezone(new DateTimeZone('Europe/Madrid'));
             $fechaFormateada = $dtEmail->format('d/m/Y');
             $horaFormateada = $dtEmail->format('H:i');
-            error_log("Email - Fecha formateada: $fechaFormateada, Hora: $horaFormateada");
+            error_log("Email - Fecha UTC: {$fila['fecha_hora']}, Convertida a Madrid: $fechaFormateada $horaFormateada");
         } catch (Exception $e) {
             // Fallback
             $fechaFormateada = date('d/m/Y', strtotime($fila['fecha_hora']));
