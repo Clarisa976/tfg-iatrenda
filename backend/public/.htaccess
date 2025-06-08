@@ -11,7 +11,34 @@ RewriteEngine On
 RewriteCond %{REQUEST_URI} ^/uploads/.*$
 RewriteRule ^(.*)$ - [L]
 
+# Allow direct access to static files (CSS, JS, images)
+RewriteCond %{REQUEST_URI} ^/static/.*$
+RewriteRule ^(.*)$ - [L]
+
+# API routes go to index.php
+RewriteCond %{REQUEST_URI} ^/api/.*$
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Admin endpoints go to index.php
+RewriteCond %{REQUEST_URI} ^/admin/(usuario|notificaciones|eventos|informes|logs).*$
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Frontend routes (SPA) go to index.html
+RewriteCond %{REQUEST_URI} ^/(admin|profesional|paciente)/.*$
+RewriteRule ^(.*)$ index.html [L]
+
+# Legal pages go to index.html
+RewriteCond %{REQUEST_URI} ^/(terminos|privacidad|cookies)$
+RewriteRule ^(.*)$ index.html [L]
+
+# Password creation page go to index.html
+RewriteCond %{REQUEST_URI} ^/crear-contrasena$
+RewriteRule ^(.*)$ index.html [L]
+
+# All other API requests go to index.php
 RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
+
 RewriteRule ^prueba-rewrite$ prueba.txt [L]
 
