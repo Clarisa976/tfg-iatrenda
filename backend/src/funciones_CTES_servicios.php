@@ -1105,7 +1105,7 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
                 error_log("Enviando email de activacion a persona existente ID: $id");
                 $uid   = rtrim(strtr(base64_encode((string)$id), '+/', '-_'), '=');
                 $front = getenv('FRONTEND_URL') ?: 'http://localhost:3000';
-                $link  = "$front/crear-contrasena?u=$uid";
+                $link  = "$front/crear-contrasena?uid=$uid";
                 $html  = "
                   <p>Hola {$datos['nombre']}:</p>
                   <p>Hemos completado tu registro en <strong>Clinica Petaka</strong>.</p>
@@ -1138,8 +1138,8 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
     /* email crear contraseña*/
     if ($esRolLogin && !empty($datos['email'])) {
         $uid   = rtrim(strtr(base64_encode((string)$idNuevo), '+/', '-_'), '=');
-        $front = getenv('FRONTEND_URL');
-        $link  = "$front/crear-contrasena?u=$uid";
+        $front = getenv('FRONTEND_URL') ?: 'http://localhost:3000';
+        $link  = "$front/crear-contrasena?uid=$uid";
         $html  = "
           <p>Hola {$datos['nombre']}:</p>
           <p>Hemos creado tu usuario en <strong>Clinica Petaka</strong>.</p>
