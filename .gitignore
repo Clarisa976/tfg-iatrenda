@@ -4,4 +4,5 @@
 .env.local
 .env.staging
 
-*.sqlbackend/vendor/
+*.sql
+backend/vendor/
