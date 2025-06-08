@@ -32,7 +32,7 @@
     "start-backend": "php -S localhost:8081 -t ../backend/public",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
