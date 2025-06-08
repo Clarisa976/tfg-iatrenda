@@ -161,14 +161,12 @@ export default function Notificaciones() {
                     className="btn-primary"
                     onClick={() => accion(n.id, 'CONFIRMAR')}
                     style={{ marginRight: '8px' }}
-                  >
-                    ✓ Confirmar
+                  >Confirmar
                   </button>
                   <button 
                     className="btn-secondary"
                     onClick={() => accion(n.id, 'CANCELAR')}
-                  >
-                    ✗ Rechazar
+                  >Rechazar
                   </button>
                 </td>
               </tr>

@@ -1,4 +1,5 @@
 <?php
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -105,16 +106,16 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
 {
     try {
         $baseDatos = conectar();
-        
+
         // Map action types to valid enum values
         $validActions = ['INSERT', 'UPDATE', 'DELETE', 'SELECT'];
         $accionMapeada = strtoupper($queAccion);
-        
+
         // If the action is not valid, map common variations
         if (!in_array($accionMapeada, $validActions)) {
             $accionMap = [
                 'CREATE' => 'INSERT',
-                'CREAR' => 'INSERT', 
+                'CREAR' => 'INSERT',
                 'ADD' => 'INSERT',
                 'MODIFY' => 'UPDATE',
                 'EDIT' => 'UPDATE',
@@ -129,7 +130,7 @@ function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTab
         if (empty($ipAddress) || $ipAddress === '') {
             $ipAddress = null; // PostgreSQL inet type requires NULL for empty values
         }
-        
+
         $consulta = "INSERT INTO log_evento_dato
                 (id_actor,id_afectado,tabla_afectada,campo_afectado,
                  valor_antiguo,valor_nuevo,accion,ip)
@@ -177,12 +178,12 @@ function iniciarSesionConEmail(string $email, string $contraseña): array
 {
     error_log("=== iniciarSesionConEmail START ===");
     error_log("Email: " . $email);
-    
+
     try {
         error_log("Attempting database connection...");
         $pdo = conectar();
         error_log("Database connection successful");
-        
+
         $consulta = "SELECT id_persona id,
                        (nombre || ' ' || apellido1) nombre,
                        email,
@@ -192,24 +193,24 @@ function iniciarSesionConEmail(string $email, string $contraseña): array
                   AND  password_hash = ENCODE(DIGEST(:p, 'sha256'), 'hex')
                   AND  activo = true
                 LIMIT  1";
-        
+
         error_log("Preparing query...");
         $busqueda = $pdo->prepare($consulta);
-        
+
         error_log("Executing query...");
         $busqueda->execute(['e' => $email, 'p' => $contraseña]);
-        
+
         error_log("Fetching results...");
         if ($datosUsuario = $busqueda->fetch()) {
             error_log("User found: " . json_encode($datosUsuario));
-            
+
             // Crear el token de sesión para que el usuario pueda navegar
             $contenidoToken = [
                 'sub' => (int)$datosUsuario['id'],
                 'rol' => $datosUsuario['rol'],
                 'exp' => time() + intval(getenv('JWT_EXPIRACION') ?: 3600)
             ];
-            
+
             error_log("Creating JWT token...");
             $tokenSesion = \Firebase\JWT\JWT::encode($contenidoToken, getenv('JWT_SECRETO') ?: 'CAMBIAR_POR_SECRETO', 'HS256');
             error_log("JWT token created successfully");
@@ -222,7 +223,7 @@ function iniciarSesionConEmail(string $email, string $contraseña): array
             error_log("Login success result: " . json_encode($result));
             return $result;
         }
-        
+
         error_log("No user found with provided credentials");
         return [
             'ok' => false,
@@ -315,7 +316,8 @@ function pedirCitaNueva(string $nombre, string $email, ?string $telefono, string
 
     if (!$idProf) {
         return ['ok' => false, 'mensaje' => 'No hay profesionales disponibles para esta fecha y hora', 'status' => 409];
-    }    try {
+    }
+    try {
         // Crear la cita en el sistema usando RETURNING para PostgreSQL
         $consultaCita = "INSERT INTO cita
                (id_paciente,id_profesional,id_bloque,
@@ -328,24 +330,24 @@ function pedirCitaNueva(string $nombre, string $email, ?string $telefono, string
                 :nom,:tel,:email,
                 :motivo,'WEB')
              RETURNING id_cita";
-        
+
         $stmtCita = $baseDatos->prepare($consultaCita);
         $citaCreada = $stmtCita->execute([
-            ':pac'=> $idPersona,
-            ':prof'=> $idProf,
-            ':ts'=> $ts,
-            ':nom'=> $nombre,
-            ':tel'=> $telefono, 
-            ':email'=> $email,
-            ':motivo'=> $motivo
+            ':pac' => $idPersona,
+            ':prof' => $idProf,
+            ':ts' => $ts,
+            ':nom' => $nombre,
+            ':tel' => $telefono,
+            ':email' => $email,
+            ':motivo' => $motivo
         ]);
-        
+
         if (!$citaCreada) {
             return ['ok' => false, 'mensaje' => 'Error al crear la cita', 'status' => 500];
         }
-        
+
         $idCita = $stmtCita->fetchColumn();
-        
+
         // Registrar la actividad
         registrarActividad(
             $quienLoPide,
@@ -411,7 +413,8 @@ function buscarOCrearPersona(string $nombre, string $email, ?string $telefono): 
         // Si no tiene teléfono, le ponemos un valor único para evitar conflictos
         $telefonoParaGuardar = 'SIN_TEL_' . uniqid();
         error_log("Asignando teléfono temporal para evitar conflictos: $telefonoParaGuardar");
-    }    $nuevaPersona = $baseDatos->prepare("
+    }
+    $nuevaPersona = $baseDatos->prepare("
       INSERT INTO persona
         (nombre, apellido1, email, telefono, rol)
       VALUES
@@ -510,22 +513,24 @@ function obtenerEventosAgenda(string $desde, string $hasta, ?int $idProfesional 
         LEFT JOIN persona c ON c.id_persona = b.id_creador
        WHERE DATE(b.fecha_inicio) <= :h
          AND DATE(b.fecha_fin) >= :d
-    ";    $parametros = [':d' => $desde, ':h' => $hasta];
+    ";
+    $parametros = [':d' => $desde, ':h' => $hasta];
     if ($idProfesional !== null) {
         $consultaSqlBloques .= " AND b.id_profesional = :p";
         $parametros[':p'] = $idProfesional;
     }
     $consultaBloques = $baseDatos->prepare($consultaSqlBloques);
     $consultaBloques->execute($parametros);
-    
+
     $resultado = $consultaBloques->fetchAll(PDO::FETCH_ASSOC);
     error_log("Se encontraron " . count($resultado) . " eventos para el período solicitado");
-    
+
     return $resultado;
 }
 
 /* Función para crear un bloque agenda */
-function crearBloqueAgenda(int $idProfesional, string $fechaInicio, string $fechaFin, string $tipoBloque, string $comentario = '', int $idCreador = 0 ): bool {
+function crearBloqueAgenda(int $idProfesional, string $fechaInicio, string $fechaFin, string $tipoBloque, string $comentario = '', int $idCreador = 0): bool
+{
 
     if ($idProfesional === 0) {
         foreach (getProfesionales() as $profesional) {
@@ -655,7 +660,7 @@ function obtenerNotificacionesPendientes(int $idUsuario, string $rol): array
 function procesarNotificacion(int $idCita, string $accion, int $idUsuario, string $rol): bool
 {
     error_log("Iniciando procesarNotificacion: ID=$idCita, Acción=$accion, Usuario=$idUsuario, Rol=$rol");
-    
+
     // Normalizar la acción (RECHAZAR o CANCELAR → CANCELADA)
     if ($accion === 'RECHAZAR' || $accion === 'CANCELAR') {
         $nuevoEstado = 'CANCELADA';
@@ -665,10 +670,11 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
         error_log("Acción desconocida: $accion");
         return false;
     }
-    
+
     error_log("Nuevo estado para cita $idCita: $nuevoEstado");
     $baseDatos = conectar();
-    $baseDatos->beginTransaction();    try {        /* Bloquear la cita */
+    $baseDatos->beginTransaction();
+    try {        /* Bloquear la cita */
         $consulta = $baseDatos->prepare("
             SELECT c.*, 
                    p.email pacienteEmail,
@@ -681,7 +687,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             error_log("procesarNotificacion: Cita $idCita no encontrada");
             throw new Exception('Cita inexistente');
         }
-        
+
         error_log("Datos de la cita: " . json_encode($fila));
 
         /* Verificar permisos del profesional */
@@ -720,7 +726,8 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
                     WHERE id_persona = ?
                 ");
                 $declaracionPaciente->execute([$fila['id_paciente']]);
-                $nombrePaciente = $declaracionPaciente->fetchColumn() ?: 'Paciente';                error_log("Creando bloque de agenda: Prof={$fila['id_profesional']}, Inicio=$fechaInicio, Fin=$fechaFin");
+                $nombrePaciente = $declaracionPaciente->fetchColumn() ?: 'Paciente';
+                error_log("Creando bloque de agenda: Prof={$fila['id_profesional']}, Inicio=$fechaInicio, Fin=$fechaFin");
                 $stmt = $baseDatos->prepare("
                     INSERT INTO bloque_agenda (
                         id_profesional, fecha_inicio, fecha_fin, 
@@ -819,14 +826,18 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
 
         /* Enviar email*/
         try {
-            error_log("Intentando enviar email a {$fila['pacienteEmail']}");
-            $emailEnviado = enviarEmail(
-                $fila['pacienteEmail'],
-                $asuntoEmail,
-                $mensaje
-            );
-            error_log("Resultado del envío de email: " . ($emailEnviado ? "Enviado" : "Falló"));
-        } catch (Exception $e) {           
+            if (!empty($fila['pacienteEmail']) && filter_var($fila['pacienteEmail'], FILTER_VALIDATE_EMAIL)) {
+                error_log("Intentando enviar email a {$fila['pacienteEmail']}");
+                $emailEnviado = enviarEmail(
+                    $fila['pacienteEmail'],
+                    $asuntoEmail,
+                    $mensaje
+                );
+                error_log("Resultado del envío de email: " . ($emailEnviado ? "Enviado" : "Falló"));
+            } else {
+                error_log("No se puede enviar email: paciente sin email válido. Email recibido: '" . ($fila['pacienteEmail'] ?? 'NULL') . "'");
+            }
+        } catch (Exception $e) {
             error_log("Error enviando email para cita $idCita: " . $e->getMessage());
         }
 
@@ -887,7 +898,8 @@ function decodificarUid(string $uid): int
 }
 
 /* Función para actualizar o insertar una persona*/
-function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor = 0, int $forzarId = 0 ): int {
+function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor = 0, int $forzarId = 0): int
+{
     $baseDatos = conectar();
     $rolesLogin = ['PACIENTE', 'PROFESIONAL', 'ADMIN'];
     $esRolLogin = in_array($rolFinal, $rolesLogin, true);
@@ -920,9 +932,10 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
             $registroPrevio = $fila;
             $registroPrevio['reactivado'] = true;
         }
-    }    
+    }
     foreach (['email', 'telefono', 'nif'] as $campo) {
-        if (empty($datos[$campo])) continue;        $consulta = "SELECT id_persona,rol FROM persona
+        if (empty($datos[$campo])) continue;
+        $consulta = "SELECT id_persona,rol FROM persona
                 WHERE $campo=:v AND activo=true";
         $parametros = [':v' => $datos[$campo]];
         if ($registroPrevio) {
@@ -1044,7 +1057,7 @@ function actualizarOInsertarTutor(array $datosTutor): int
         : "INSERT INTO tutor
               SET id_tutor = :id,
                   metodo_contacto_preferido = :m";
-                  
+
     // FIXED: Handle metodo_contacto_preferido that could be an array or comma-separated string
     // This fix ensures we properly handle both formats from frontend components
     $metodoContacto = '';
@@ -1060,7 +1073,7 @@ function actualizarOInsertarTutor(array $datosTutor): int
         // Legacy field name support
         $metodoContacto = $datosTutor['metodo'];
     }
-    
+
     $baseDatos->prepare($consultaSql)->execute([
         ':id' => $id,
         ':m'  => strtoupper($metodoContacto ?: 'TEL')
@@ -1081,28 +1094,29 @@ function actualizarOInsertarPaciente(int $id, array $datosPaciente): bool
 
     if ($esMenor && !empty($datosPaciente['tutor']) && is_array($datosPaciente['tutor'])) {
         error_log("Procesando datos de tutor para paciente menor");
-        
+
         // FIXED: Ensure tutor data has correct format before passing it to actualizarOInsertarTutor
         // This fix addresses inconsistencies in how tutor data was being processed
         $tutorData = $datosPaciente['tutor'];
-        
+
         // Convert metodo_contacto_preferido to proper format if it's an array
         if (isset($tutorData['metodo_contacto_preferido']) && is_array($tutorData['metodo_contacto_preferido'])) {
             $tutorData['metodo_contacto_preferido'] = implode(',', $tutorData['metodo_contacto_preferido']);
             error_log("Convertido metodo_contacto_preferido de array a string: " . $tutorData['metodo_contacto_preferido']);
         }
-        
+
         $idTutor = actualizarOInsertarTutor($tutorData); // crea / actualiza tutor
-    }$consulta = $baseDatos->prepare("SELECT 1 FROM paciente WHERE id_paciente = ?");
+    }
+    $consulta = $baseDatos->prepare("SELECT 1 FROM paciente WHERE id_paciente = ?");
     $consulta->execute([$id]);
-    
+
     // Extraer los datos que necesitamos
-    $observaciones = isset($datosPaciente['observaciones_generales']) 
-        ? $datosPaciente['observaciones_generales'] 
+    $observaciones = isset($datosPaciente['observaciones_generales'])
+        ? $datosPaciente['observaciones_generales']
         : (isset($datosPaciente['observ']) ? $datosPaciente['observ'] : null);
-    
+
     error_log("Observaciones del paciente: " . ($observaciones ?? 'ninguna'));
-    
+
     $consultaSql = $consulta->fetch()
         ? "UPDATE paciente
                SET tipo_paciente = :t,
@@ -1111,7 +1125,8 @@ function actualizarOInsertarPaciente(int $id, array $datosPaciente): bool
              WHERE id_paciente = :id"
         : "INSERT INTO paciente
                (id_paciente, tipo_paciente, observaciones_generales, id_tutor)
-             VALUES (:id, :t, :obs, :tu)";    return $baseDatos->prepare($consultaSql)->execute([
+             VALUES (:id, :t, :obs, :tu)";
+    return $baseDatos->prepare($consultaSql)->execute([
         ':id'  => $id,
         ':t'   => $tipoPaciente,
         ':obs' => $observaciones,
@@ -1185,32 +1200,32 @@ function eliminarUsuario(int $id, int $actor = 0): array
 function marcarUsuarioInactivo(int $id, int $actor = 0): array
 {
     error_log("Marcando usuario inactivo: ID=$id, Actor=$actor");
-    
+
     // Verificar que el usuario exista
     $baseDatos = conectar();
     $consulta = $baseDatos->prepare("SELECT activo FROM persona WHERE id_persona = ?");
     $consulta->execute([$id]);
     $usuario = $consulta->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$usuario) {
         error_log("Usuario $id no encontrado");
         return ['ok' => false, 'code' => 404, 'msg' => 'Usuario no encontrado'];
     }
-    
+
     // Si ya está inactivo, no hacer nada
     if ($usuario['activo'] === false) {
         error_log("Usuario $id ya está inactivo");
         return ['ok' => true, 'msg' => 'Usuario ya está inactivo'];
     }
-    
+
     if (citasActivas($id) > 0) {
         error_log("Usuario $id tiene citas activas, no se puede marcar como inactivo");
         return ['ok' => false, 'code' => 409, 'msg' => 'El usuario tiene citas activas'];
     }
-    
+
     $exito = execLogged('UPDATE persona SET activo=false WHERE id_persona=:id', [':id' => $id], $actor, 'persona', $id);
     error_log("Resultado marcar inactivo usuario $id: " . ($exito ? "Éxito" : "Error"));
-    
+
     return $exito ? ['ok' => true] : ['ok' => false, 'code' => 500, 'msg' => 'Error SQL'];
 }
 
@@ -1387,7 +1402,7 @@ function getTratamientosPaciente(int $idPac, int $idProf = null): array
 
     $consulta = $baseDatos->prepare($consultaSql);
     $consulta->execute([$idPac]);
-    $filas = $consulta->fetchAll(PDO::FETCH_ASSOC);   
+    $filas = $consulta->fetchAll(PDO::FETCH_ASSOC);
     $tratamientos = [];
     foreach ($filas as $fila) {
         $idTratamiento = $fila['id_tratamiento'];
@@ -1418,7 +1433,8 @@ function getTratamientosPaciente(int $idPac, int $idProf = null): array
 }
 
 
-function crearTratamiento( int $idPac, int $idProf, string $titulo, string $desc, $file = null, ?string $fechaInicio = null,  ?string $fechaFin = null, ?int $frecuencia = null ): void {
+function crearTratamiento(int $idPac, int $idProf, string $titulo, string $desc, $file = null, ?string $fechaInicio = null,  ?string $fechaFin = null, ?int $frecuencia = null): void
+{
     $baseDatos = conectar();
     $baseDatos->beginTransaction();
     try {
@@ -1430,7 +1446,8 @@ function crearTratamiento( int $idPac, int $idProf, string $titulo, string $desc
            LIMIT 1
         ");
         $consultaHistorial->execute([$idPac]);
-        $idHist = $consultaHistorial->fetchColumn();        if (!$idHist) {
+        $idHist = $consultaHistorial->fetchColumn();
+        if (!$idHist) {
             $stmt = $baseDatos->prepare("
               INSERT INTO historial_clinico (id_paciente, fecha_inicio)
               VALUES (?, CURRENT_DATE)
@@ -1594,7 +1611,8 @@ function crearDocumentoHistorial(int $idPac, int $idProf, $file = null, string $
             if ($tipo === 'documento' || $tipo === '') {
                 $tipo = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? 'imagen'
                     : ($ext === 'pdf' ? 'pdf' : 'documento');
-            }            /* Registrar documento (SIN diagnósticos - esos están en historial_clinico) */            $consultaDocumento = $baseDatos->prepare("
+            }            /* Registrar documento (SIN diagnósticos - esos están en historial_clinico) */
+            $consultaDocumento = $baseDatos->prepare("
                 INSERT INTO documento_clinico
                        (id_historial, id_profesional, ruta, nombre_archivo, tipo, fecha_subida, id_tratamiento)
                 VALUES (:h, :p, :r, :n, :t, CURRENT_TIMESTAMP, NULL)
