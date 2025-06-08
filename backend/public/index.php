@@ -595,6 +595,66 @@ $app->put('/admin/usuarios/{id}', function ($req, $res, $args) {
     }
 });
 
+/* /admin/informes - Usar función existente getInformeMes() */
+$app->get('/admin/informes', function ($req, $res, $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+    }
+
+    $params = $req->getQueryParams();
+    $year = (int)($params['year'] ?? date('Y'));
+    $month = (int)($params['month'] ?? date('m'));
+    
+    error_log("Obteniendo estadísticas para $year-$month");
+    
+    try {
+        $estadisticas = getInformeMes($year, $month);
+        return jsonResponse(['ok' => true, 'data' => $estadisticas]);
+    } catch (Exception $e) {
+        error_log("Error obteniendo estadísticas: " . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error interno del servidor'], 500);
+    }
+});
+
+/* /admin/logs - Usar función existente exportLogsCsv() */
+$app->get('/admin/logs', function ($req, $res, $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+    }
+
+    $params = $req->getQueryParams();
+    $year = (int)($params['year'] ?? date('Y'));
+    $month = (int)($params['month'] ?? date('m'));
+    
+    error_log("Generando CSV de logs para $year-$month");
+    
+    try {
+        $csvContent = exportLogsCsv($year, $month);
+        
+        if (empty($csvContent)) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'No hay logs para el período seleccionado'], 404);
+        }
+        
+        $filename = sprintf('logs_%04d_%02d.csv', $year, $month);
+        
+        $response = $res
+            ->withHeader('Content-Type', 'text/csv; charset=utf-8')
+            ->withHeader('Content-Disposition', "attachment; filename=\"$filename\"")
+            ->withHeader('Content-Length', strlen($csvContent));
+        
+        $response->getBody()->write($csvContent);
+        
+        error_log("CSV generado exitosamente: $filename");
+        return $response;
+        
+    } catch (Exception $e) {
+        error_log("Error generando CSV de logs: " . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error interno del servidor'], 500);
+    }
+});
+
 /* crear-contrasena*/
 $app->post('/crear-contrasena', function ($req) {
     $b = $req->getParsedBody() ?? [];
