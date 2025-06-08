@@ -313,7 +313,7 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
   return (
     <div className="modal-backdrop" onClick={handleBackdrop}>      
     <div
-        className="modal add-user-modal add-user-modal-wide"
+        className={`modal add-user-modal ${step === 0 ? 'modal-type-selection' : 'add-user-modal-wide'}`}
         onClick={e => e.stopPropagation()}
       >
         {/*elegir tipo */}

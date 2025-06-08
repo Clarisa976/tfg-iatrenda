@@ -55,26 +55,36 @@ export default function App() {
     return () => window.removeEventListener('pageshow', handlePageReload);
   }, []);
 
-  // Verificar token y restaurar sesión al cargar
   useEffect(() => {
+    const cleanupSession = () => {
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
+      setUser(null);
+    };
+
+    // Manejar la recarga de la página
+    const handleBeforeUnload = () => {
+      cleanupSession();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Verificar token y restaurar sesión al cargar
     const token = localStorage.getItem('token');
     if (!token) {
-      setUser(null);
+      cleanupSession();
       return;
     }
 
-    // Configurar axios con el token
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    
-    // Intentar obtener la información del usuario a partir del token
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (payload.exp * 1000 <= Date.now()) {
-        // Token expirado
-        setUser(null);
-        localStorage.removeItem('token');
+        cleanupSession();
         return;
       }
+
+      // Configurar axios con el token
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Petición para validar el token 
       axios.get(`${process.env.REACT_APP_API_URL}/status`)
@@ -82,18 +92,19 @@ export default function App() {
           if (response.data.ok) {
             setUser({id: payload.sub, rol: payload.rol, role: payload.rol});
           } else {
-            setUser(null);
-            localStorage.removeItem('token');
+            cleanupSession();
           }
         })
         .catch(() => {
-          setUser(null);
-          localStorage.removeItem('token');
+          cleanupSession();
         });
     } catch (error) {
-      setUser(null);
-      localStorage.removeItem('token');
+      cleanupSession();
     }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   // Oculta el toast tras 5s
@@ -154,9 +165,9 @@ export default function App() {
           )}
 
           {/* Redirigir si intenta acceder sin permiso */}
-          <Route path="/admin/*" element={<Navigate to="/" replace state={{ sessionExpired: true }} />} />
-          <Route path="/profesional/*" element={<Navigate to="/" replace state={{ sessionExpired: true }} />} />
-          <Route path="/paciente/*" element={<Navigate to="/" replace state={{ sessionExpired: true }} />} />
+          <Route path="/admin/*" element={<Navigate to="/" replace />} />
+          <Route path="/profesional/*" element={<Navigate to="/" replace />} />
+          <Route path="/paciente/*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 

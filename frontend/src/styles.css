@@ -781,6 +781,11 @@ h1, h2, h3, h4, h5, h6 {
   box-sizing: border-box;
 }
 
+/* Modal específico para selección de tipo de usuario */
+.modal-type-selection {
+  max-width: 400px !important;
+}
+
 /* Encabezado del modal */
 .modal-header {
   display: flex;
@@ -823,6 +828,15 @@ h1, h2, h3, h4, h5, h6 {
 /* Cuerpo del modal */
 .modal-body {
   margin-bottom: 1.5rem;
+}
+
+/* Nueva clase para cuerpo de modal centrado */
+.modal-body-centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
 }
 
 /* Pie del modal */

@@ -1031,6 +1031,7 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
             $registroPrevio['reactivado'] = true;
         }
     }
+    
     foreach (['email', 'telefono', 'nif'] as $campo) {
         if (empty($datos[$campo])) continue;
         $consulta = "SELECT id_persona,rol FROM persona
@@ -1076,7 +1077,9 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
             $asignaciones[] = "$campo = :$campo";
             $valores[":$campo"] = ($datos[$campo] === '') ? null : $datos[$campo];
         }
-    }    /* UPDATE*/
+    }
+
+    /* UPDATE*/
     if ($registroPrevio) {
         $id = (int)$registroPrevio['id_persona'];
 
@@ -1093,8 +1096,36 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
             $baseDatos->prepare("UPDATE persona SET " . implode(', ', $asignaciones) . " WHERE id_persona=:id")
                 ->execute($valores);
         }
+
+        // Enviar email de contraseña si no tiene password y es rol de login
+        if ($esRolLogin && !empty($datos['email'])) {
+            $tienePassword = !empty($registroPrevio['password_hash']);
+            
+            if (!$tienePassword) {
+                error_log("Enviando email de activacion a persona existente ID: $id");
+                $uid   = rtrim(strtr(base64_encode((string)$id), '+/', '-_'), '=');
+                $front = getenv('FRONTEND_URL') ?: 'http://localhost:3000';
+                $link  = "$front/crear-contrasena?u=$uid";
+                $html  = "
+                  <p>Hola {$datos['nombre']}:</p>
+                  <p>Hemos completado tu registro en <strong>Clinica Petaka</strong>.</p>
+                  <p>Establece tu contraseña aqui: <a href=\"$link\">Crear contraseña</a></p>";
+                
+                try {
+                    enviarEmail($datos['email'], 'Crea tu contraseña – Petaka', $html);
+                    error_log("Email de activacion enviado correctamente a {$datos['email']}");
+                } catch (Exception $e) {
+                    error_log("Error enviando email de activacion: " . $e->getMessage());
+                }
+            } else {
+                error_log("Persona ID: $id ya tiene contraseña, no se envia email de activacion");
+            }
+        }
+
         return $id;
-    }    /*INSERT*/
+    }
+
+    /*INSERT*/
     $columnas = array_map(fn($p) => substr($p, 1), array_keys($valores));
     $consultaSql  = "INSERT INTO persona (" . implode(',', $columnas) . ",rol,fecha_alta)
              VALUES (" . implode(',', array_keys($valores)) . ",:rol,CURRENT_DATE)
@@ -1107,14 +1138,16 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
     /* email crear contraseña*/
     if ($esRolLogin && !empty($datos['email'])) {
         $uid   = rtrim(strtr(base64_encode((string)$idNuevo), '+/', '-_'), '=');
-        $front = getenv('FRONTEND_URL') ?: 'http://localhost:3000';
+        $front = getenv('FRONTEND_URL');
         $link  = "$front/crear-contrasena?u=$uid";
         $html  = "
           <p>Hola {$datos['nombre']}:</p>
-          <p>Hemos creado tu usuario en <strong>Clínica Petaka</strong>.</p>
-          <p>Establece tu contraseña aquí: <a href=\"$link\">Crear contraseña</a></p>";
+          <p>Hemos creado tu usuario en <strong>Clinica Petaka</strong>.</p>
+          <p>Establece tu contraseña aqui: <a href=\"$link\">Crear contraseña</a></p>";
         enviarEmail($datos['email'], 'Crea tu contraseña – Petaka', $html);
-    }    /* registrar en el sistema lo que pasó */
+    }
+
+    /* registrar en el sistema lo que pasó */
     registrarActividad($actor, $idNuevo, 'persona', null, null, json_encode($datos), 'INSERT');
 
     return $idNuevo;
