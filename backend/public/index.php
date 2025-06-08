@@ -975,6 +975,62 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
     }
 });
 
+/* ---------- RUTAS S3 DOCUMENTOS ---------- */
+
+// Health check S3
+$app->get('/api/s3/health', function (Request $request, Response $response) {
+    $controller = new App\Controllers\DocumentController();
+    return $controller->healthCheck($request, $response);
+});
+
+// Subir documento a S3
+$app->post('/api/s3/upload', function (Request $request, Response $response) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    
+    // Solo profesionales y admins pueden subir documentos
+    if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+    
+    $controller = new App\Controllers\DocumentController();
+    return $controller->uploadDocument($request, $response);
+});
+
+// Descargar documento desde S3
+$app->get('/api/s3/download/{id}', function (Request $request, Response $response, array $args) {
+    $controller = new App\Controllers\DocumentController();
+    return $controller->downloadDocument($request, $response, $args);
+});
+
+// Listar documentos S3
+$app->get('/api/s3/documentos', function (Request $request, Response $response) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    
+    $controller = new App\Controllers\DocumentController();
+    return $controller->listDocuments($request, $response);
+});
+
+// Eliminar documento S3
+$app->delete('/api/s3/documentos/{id}', function (Request $request, Response $response, array $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    
+    // Solo profesionales y admins pueden eliminar documentos
+    if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+    
+    $controller = new App\Controllers\DocumentController();
+    return $controller->deleteDocument($request, $response, $args);
+});
 
 /* corre la aplicación */
 $app->run();

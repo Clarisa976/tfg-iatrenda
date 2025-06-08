@@ -3,6 +3,8 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+require_once __DIR__ . '/Services/S3Service.php';
+require_once __DIR__ . '/Controllers/DocumentController.php';
 
 function conectar()
 {
