@@ -1030,10 +1030,10 @@ function actualizarOInsertarProfesional(int $id, array $datosProfesional, int $a
 
 function actualizarOInsertarTutor(array $datosTutor): int
 {
-
+    // First create/update the tutor as a person
     $id = actualizarOInsertarPersona($datosTutor, 'TUTOR');
 
-
+    // Check if tutor record already exists
     $baseDatos = conectar();
     $consulta = $baseDatos->prepare("SELECT 1 FROM tutor WHERE id_tutor = ?");
     $consulta->execute([$id]);
@@ -1044,10 +1044,26 @@ function actualizarOInsertarTutor(array $datosTutor): int
         : "INSERT INTO tutor
               SET id_tutor = :id,
                   metodo_contacto_preferido = :m";
-
+                  
+    // FIXED: Handle metodo_contacto_preferido that could be an array or comma-separated string
+    // This fix ensures we properly handle both formats from frontend components
+    $metodoContacto = '';
+    if (isset($datosTutor['metodo_contacto_preferido'])) {
+        if (is_array($datosTutor['metodo_contacto_preferido'])) {
+            // Convert array to comma-separated string for database storage
+            $metodoContacto = implode(',', $datosTutor['metodo_contacto_preferido']);
+        } else {
+            // Already a string, use as is
+            $metodoContacto = $datosTutor['metodo_contacto_preferido'];
+        }
+    } else if (isset($datosTutor['metodo'])) {
+        // Legacy field name support
+        $metodoContacto = $datosTutor['metodo'];
+    }
+    
     $baseDatos->prepare($consultaSql)->execute([
         ':id' => $id,
-        ':m'  => strtoupper($datosTutor['metodo'] ?? 'TEL')
+        ':m'  => strtoupper($metodoContacto ?: 'TEL')
     ]);
 
     return $id;
@@ -1055,18 +1071,38 @@ function actualizarOInsertarTutor(array $datosTutor): int
 
 function actualizarOInsertarPaciente(int $id, array $datosPaciente): bool
 {
+    error_log("actualizarOInsertarPaciente - ID: $id, Datos: " . json_encode($datosPaciente));
     $baseDatos = conectar();
 
-    $tipoPaciente      = strtoupper($datosPaciente['tipo_paciente'] ?? 'ADULTO');
-    $esMenor   = $tipoPaciente !== 'ADULTO';
-    $idTutor   = null;
+    $tipoPaciente = strtoupper($datosPaciente['tipo_paciente'] ?? 'ADULTO');
+    error_log("Tipo de paciente: $tipoPaciente");
+    $esMenor = $tipoPaciente !== 'ADULTO';
+    $idTutor = null;
 
     if ($esMenor && !empty($datosPaciente['tutor']) && is_array($datosPaciente['tutor'])) {
-        $idTutor = actualizarOInsertarTutor($datosPaciente['tutor']);       // crea / actualiza tutor
-    }
-
-    $consulta = $baseDatos->prepare("SELECT 1 FROM paciente WHERE id_paciente = ?");
+        error_log("Procesando datos de tutor para paciente menor");
+        
+        // FIXED: Ensure tutor data has correct format before passing it to actualizarOInsertarTutor
+        // This fix addresses inconsistencies in how tutor data was being processed
+        $tutorData = $datosPaciente['tutor'];
+        
+        // Convert metodo_contacto_preferido to proper format if it's an array
+        if (isset($tutorData['metodo_contacto_preferido']) && is_array($tutorData['metodo_contacto_preferido'])) {
+            $tutorData['metodo_contacto_preferido'] = implode(',', $tutorData['metodo_contacto_preferido']);
+            error_log("Convertido metodo_contacto_preferido de array a string: " . $tutorData['metodo_contacto_preferido']);
+        }
+        
+        $idTutor = actualizarOInsertarTutor($tutorData); // crea / actualiza tutor
+    }$consulta = $baseDatos->prepare("SELECT 1 FROM paciente WHERE id_paciente = ?");
     $consulta->execute([$id]);
+    
+    // Extraer los datos que necesitamos
+    $observaciones = isset($datosPaciente['observaciones_generales']) 
+        ? $datosPaciente['observaciones_generales'] 
+        : (isset($datosPaciente['observ']) ? $datosPaciente['observ'] : null);
+    
+    error_log("Observaciones del paciente: " . ($observaciones ?? 'ninguna'));
+    
     $consultaSql = $consulta->fetch()
         ? "UPDATE paciente
                SET tipo_paciente = :t,
@@ -1074,16 +1110,12 @@ function actualizarOInsertarPaciente(int $id, array $datosPaciente): bool
                    id_tutor = :tu
              WHERE id_paciente = :id"
         : "INSERT INTO paciente
-               SET id_paciente = :id,
-                   tipo_paciente = :t,
-                   observaciones_generales = :obs,
-                   id_tutor = :tu";
-
-    return $baseDatos->prepare($consultaSql)->execute([
+               (id_paciente, tipo_paciente, observaciones_generales, id_tutor)
+             VALUES (:id, :t, :obs, :tu)";    return $baseDatos->prepare($consultaSql)->execute([
         ':id'  => $id,
         ':t'   => $tipoPaciente,
-        ':obs' => $datosPaciente['observaciones_generales'] ?? null,
-        ':tu'  => $idTutor 
+        ':obs' => $observaciones,
+        ':tu'  => $idTutor
     ]);
 }
 

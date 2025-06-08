@@ -387,30 +387,30 @@ $app->get('/notificaciones', function ($req) {
 $app->post('/notificaciones/{id}', function ($req,$res,$args){
     $val = verificarTokenUsuario();
     if ($val === false)
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);    $idCita = (int)$args['id'];
-    $acc    = strtoupper(trim(($req->getParsedBody()['accion']??'')));
-    if (!in_array($acc,['CONFIRMAR','RECHAZAR','CANCELAR'],true)) {
-        // Si llega 'CANCELAR' lo convertimos a 'RECHAZAR' para compatibilidad
-        if ($acc === 'CANCELAR') {
-            $acc = 'RECHAZAR';
-        } else {
-            return jsonResponse(['ok'=>false,'mensaje'=>'Acción inválida'],400);
-        }
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
+    
+    $idCita = (int)$args['id'];
+    $acc    = strtoupper(trim(($req->getParsedBody()['accion']??'')));    if (!in_array($acc,['CONFIRMAR','RECHAZAR','CANCELAR'],true)) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acción inválida'],400);
     }
 
     // Si llega 'CANCELAR' lo convertimos a 'RECHAZAR' para compatibilidad
     if ($acc === 'CANCELAR') {
         $acc = 'RECHAZAR';
-    }
-
-    $uid = (int)$val['usuario']['id_persona'];
+        error_log("Convirtiendo acción CANCELAR a RECHAZAR para compatibilidad");
+    }    $uid = (int)$val['usuario']['id_persona'];
     $rol = strtolower($val['usuario']['rol']);
 
+    error_log("Procesando notificación - Cita ID: $idCita, Acción: $acc, Usuario: $uid, Rol: $rol");
 
     $ok = procesarNotificacion($idCita,$acc,$uid,$rol);
-    return $ok
-      ? jsonResponse(['ok'=>true])
-      : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo procesar'],500);
+    
+    if ($ok) {
+        $mensaje = ($acc === 'CONFIRMAR') ? 'Cita confirmada correctamente' : 'Cita rechazada correctamente';
+        return jsonResponse(['ok'=>true, 'mensaje'=>$mensaje]);
+    } else {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No se pudo procesar la acción'], 500);
+    }
 });
 
 // Handler específico para OPTIONS en /notificaciones/{id}
@@ -439,11 +439,11 @@ $app->get('/', fn() => jsonResponse(['ok'=>true, 'mensaje'=>'API Slim funcionand
 $app->post('/admin/usuarios', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-
-    $actorId = $val['usuario']['id_persona'];
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);    $actorId = $val['usuario']['id_persona'];
     
     $body = $req->getParsedBody() ?? [];
+    error_log("POST /admin/usuarios - Body recibido: " . json_encode($body));
+    
     $tipo = strtoupper(trim($body['tipo'] ?? ''));
     $pdat = $body['persona'] ?? [];
     $xdat = $body['extra']   ?? [];
@@ -453,9 +453,16 @@ $app->post('/admin/usuarios', function ($req) {
 
     $idPersona = actualizarOInsertarPersona($pdat, $tipo, $actorId);
 
+    // Si $xdat contiene tutor, extraer y procesar por separado
+    $tutor = null;
+    if ($tipo === 'PACIENTE' && isset($xdat['tutor']) && $xdat['tutor']) {
+        $tutor = $xdat['tutor'];
+        unset($xdat['tutor']);
+    }
+
     $ok = ($tipo==='PROFESIONAL')
-        ? actualizarOInsertarProfesional($idPersona,$xdat)
-        : actualizarOInsertarPaciente($idPersona,$xdat);
+        ? actualizarOInsertarProfesional($idPersona, $xdat)
+        : actualizarOInsertarPaciente($idPersona, $xdat);
 
     return $ok
       ? jsonResponse(['ok'=>true,'id'=>$idPersona])
@@ -485,10 +492,12 @@ $app->delete('/admin/borrar-usuario/{id}', function ($req, $res, $args) {
 });
 
 /* /admin/usuario/{id} - PUT para editar usuario existente */
-$app->put('/admin/usuario/{id}', function ($req, $res, $args) {
+$app->put('/admin/usuarios/{id}', function ($req, $res, $args) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);    $id = (int)$args['id'];
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    
+    $id = (int)$args['id'];
     $actorId = $val['usuario']['id_persona'];
     
     $body = $req->getParsedBody() ?? [];
@@ -499,25 +508,27 @@ $app->put('/admin/usuario/{id}', function ($req, $res, $args) {
     $consulta = $baseDatos->prepare("SELECT rol FROM persona WHERE id_persona = ?");
     $consulta->execute([$id]);
     $usuarioActual = $consulta->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$usuarioActual) {
+      if (!$usuarioActual) {
         return jsonResponse(['ok'=>false,'mensaje'=>'Usuario no encontrado'], 404);
     }
     
     $rolFinal = strtoupper($body['rol'] ?? $usuarioActual['rol']);
     
     if (!in_array($rolFinal, ['PROFESIONAL','PACIENTE','ADMIN'], true))
-        return jsonResponse(['ok'=>false,'mensaje'=>'Rol inválido'], 400);    try {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Rol inválido'], 400);
+    
+    try {
         // Usar actualizarOInsertarPersona con el ID forzado para actualización
         error_log("Actualizando usuario ID: $id con rol: $rolFinal");
-        $idPersona = actualizarOInsertarPersona($body, $rolFinal, $actorId, $id);
-          // Actualizar datos específicos según el rol
+        $idPersona = actualizarOInsertarPersona($body, $rolFinal, $actorId, $id);        // Actualizar datos específicos según el rol
         if ($rolFinal === 'PROFESIONAL') {
-            $xdat = $body['datosprofesional'] ?? [];
+            // Intentar obtener datos profesionales desde varias posibles fuentes
+            $xdat = $body['datosprofesional'] ?? $body['extra'] ?? [];
             error_log("Actualizando datos profesionales: " . json_encode($xdat));
             $ok = actualizarOInsertarProfesional($idPersona, $xdat, $actorId);
         } else if ($rolFinal === 'PACIENTE') {
-            $xdat = $body['datospaciente'] ?? [];
+            // Intentar obtener datos paciente desde varias posibles fuentes
+            $xdat = $body['datospaciente'] ?? $body['extra'] ?? [];
             error_log("Actualizando datos paciente: " . json_encode($xdat));
             $ok = actualizarOInsertarPaciente($idPersona, $xdat);
         } else {
@@ -685,23 +696,48 @@ $app->put('/pac/perfil', function(Request $req): Response {
     $idPaciente = (int)$val['usuario']['id_persona'];
     $data = $req->getParsedBody() ?? [];
     
-    // Actualizar solo datos de contacto 
-    $permitidos = [
-      'email','telefono','tipo_via','nombre_calle','numero','escalera',
-      'piso','puerta','codigo_postal','ciudad','provincia','pais'
-    ];
-    $personaData = array_intersect_key($data['persona'] ?? [], array_flip($permitidos));
-    
-    if (!empty($personaData)) {
-      // Auditoría
-      error_log("Paciente ID $idPaciente actualizando datos de contacto: " . json_encode($personaData));
-      actualizarOInsertarPersona($personaData, 'PACIENTE', $idPaciente, $idPaciente);
+    // Process persona data
+    if (!empty($data['persona'])) {
+      // Permitir solo los campos de contacto
+      $permitidos = [
+        'email','telefono','tipo_via','nombre_calle','numero','escalera',
+        'piso','puerta','codigo_postal','ciudad','provincia','pais'
+      ];
+      $personaData = array_intersect_key($data['persona'] ?? [], array_flip($permitidos));
+      
+      if (!empty($personaData)) {
+        // Auditoría
+        error_log("Paciente ID $idPaciente actualizando datos de contacto: " . json_encode($personaData));
+        actualizarOInsertarPersona($personaData, 'PACIENTE', $idPaciente, $idPaciente);
+      }
     }
     
+    // Process paciente data
+    if (!empty($data['paciente'])) {
+      error_log("Paciente ID $idPaciente actualizando datos de paciente: " . json_encode($data['paciente']));
+      
+      // FIXED: Proper handling of paciente updates
+      actualizarOInsertarPaciente($idPaciente, $data['paciente']);
+    }
+    
+    // FIXED: Improved handling of tutor data when patients update their own profile
+    // Process tutor data if needed
+    if (!empty($data['tutor']) && isset($data['paciente']['tipo_paciente']) && $data['paciente']['tipo_paciente'] !== 'ADULTO') {
+      error_log("Paciente ID $idPaciente actualizando datos de tutor: " . json_encode($data['tutor']));
+      
+      // Modificar el paciente para incluir el tutor
+      $datosPaciente = [
+        'tipo_paciente' => $data['paciente']['tipo_paciente'] ?? 'ADOLESCENTE',
+        'observaciones_generales' => $data['paciente']['observaciones_generales'] ?? '',
+        'tutor' => $data['tutor']
+      ];
+      
+      actualizarOInsertarPaciente($idPaciente, $datosPaciente);
+    }
 
     return jsonResponse([
       'ok' => true,
-      'mensaje' => 'Datos de contacto actualizados',
+      'mensaje' => 'Datos actualizados correctamente',
       'token' => $val['token']
     ]);
   } catch (\Exception $e) {
@@ -1204,3 +1240,197 @@ $app->delete('/api/s3/documentos/{id}', function (Request $request, Response $re
 
 /* corre la aplicación */
 $app->run();
+/* obtiene detalles de un paciente específico para el profesional */
+$app->get('/prof/pacientes/{id}', function(Request $req, Response $res, array $args): Response {
+    try {
+        $val = verificarTokenUsuario();
+        if ($val === false) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        }
+        
+        if ($val['usuario']['rol'] !== 'PROFESIONAL') {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        }
+        
+        $idProfesional = (int)$val['usuario']['id_persona'];
+        $idPaciente = (int)$args['id'];
+        
+        if ($idPaciente <= 0) {
+            error_log("ID de paciente inválido: " . $idPaciente);
+            return jsonResponse(['ok'=>false,'mensaje'=>'ID de paciente no válido'], 400);
+        }
+        
+        // Verificar que el paciente pertenece al profesional
+        if (!verificarPacienteProfesional($idPaciente, $idProfesional)) {
+            error_log("Acceso no autorizado: Profesional ID: $idProfesional, Paciente ID: $idPaciente");
+            return jsonResponse(['ok'=>false,'mensaje'=>'No tiene acceso a este paciente'], 403);
+        }
+        
+        $detallesPaciente = getDetallesPacienteProfesional($idPaciente, $idProfesional);
+        
+        return jsonResponse([
+            'ok' => true,
+            'data' => $detallesPaciente,
+            'token' => $val['token']
+        ]);
+        
+    } catch (Exception $e) {
+        error_log("Error en /prof/pacientes/{id}: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error al cargar el paciente: ' . $e->getMessage()], 500);
+    }
+});
+
+/* actualiza datos de un paciente por parte del profesional */
+$app->put('/prof/pacientes/{id}', function(Request $req, Response $res, array $args): Response {
+    try {
+        $val = verificarTokenUsuario();
+        if ($val === false) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        }
+        
+        if ($val['usuario']['rol'] !== 'PROFESIONAL') {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        }
+        
+        $idProfesional = (int)$val['usuario']['id_persona'];
+        $idPaciente = (int)$args['id'];
+        
+        if ($idPaciente <= 0) {
+            error_log("ID de paciente inválido: " . $idPaciente);
+            return jsonResponse(['ok'=>false,'mensaje'=>'ID de paciente no válido'], 400);
+        }
+        
+        // Verificar que el paciente pertenece al profesional
+        if (!verificarPacienteProfesional($idPaciente, $idProfesional)) {
+            error_log("Acceso no autorizado: Profesional ID: $idProfesional, Paciente ID: $idPaciente");
+            return jsonResponse(['ok'=>false,'mensaje'=>'No tiene acceso a este paciente'], 403);
+        }
+        
+        $data = $req->getParsedBody() ?? [];
+        
+        // Actualizar datos de persona
+        if (!empty($data['persona'])) {
+            error_log("Actualizando datos de persona para paciente ID: $idPaciente por profesional ID: $idProfesional");
+            actualizarOInsertarPersona($data['persona'], 'PACIENTE', $idProfesional, $idPaciente);
+        }
+        
+        // FIXED: Properly handle tutor data when updating patient information
+        // Actualizar datos de paciente
+        if (!empty($data['paciente'])) {
+            error_log("Actualizando datos de paciente ID: $idPaciente por profesional ID: $idProfesional");
+            
+            // Extraer datos del tutor si existen
+            $datosPaciente = $data['paciente'];
+            
+            // Verificar si hay tutor y actualizar
+            if (isset($datosPaciente['tutor']) && is_array($datosPaciente['tutor']) && $datosPaciente['tipo_paciente'] !== 'ADULTO') {
+                error_log("Actualizando datos de tutor para paciente ID: $idPaciente");
+            }
+            
+            actualizarOInsertarPaciente($idPaciente, $datosPaciente);
+        }
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Datos del paciente actualizados correctamente',
+            'token' => $val['token']
+        ]);
+        
+    } catch (Exception $e) {
+        error_log("Error en /prof/pacientes/{id} PUT: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error al actualizar el paciente: ' . $e->getMessage()], 500);
+    }
+});
+
+/* obtiene listado de pacientes del profesional */
+$app->get('/prof/pacientes', function(Request $req): Response {
+    try {
+        $val = verificarTokenUsuario();
+        if ($val === false) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        }
+        
+        if ($val['usuario']['rol'] !== 'PROFESIONAL') {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        }
+        
+        $idProfesional = (int)$val['usuario']['id_persona'];
+        
+        // Obtener listado de pacientes del profesional
+        $baseDatos = conectar();
+        $consulta = $baseDatos->prepare("
+            SELECT DISTINCT 
+                p.id_persona, 
+                p.nombre, 
+                p.apellido1, 
+                p.apellido2,
+                (SELECT MIN(c2.fecha_hora) 
+                 FROM cita c2 
+                 WHERE c2.id_paciente = p.id_persona 
+                 AND c2.id_profesional = :idprof
+                 AND c2.fecha_hora > CURRENT_TIMESTAMP
+                 AND c2.estado NOT IN ('CANCELADA', 'NO_ATENDIDA')
+                ) as proxima_cita
+            FROM persona p
+            JOIN cita c ON c.id_paciente = p.id_persona
+            WHERE c.id_profesional = :idprof
+            AND p.activo = true
+            ORDER BY proxima_cita ASC NULLS LAST, p.apellido1, p.nombre
+        ");
+        
+        $consulta->execute([':idprof' => $idProfesional]);
+        $pacientes = $consulta->fetchAll(PDO::FETCH_ASSOC);
+        
+        return jsonResponse([
+            'ok' => true,
+            'pacientes' => $pacientes,
+            'token' => $val['token']
+        ]);
+        
+    } catch (Exception $e) {
+        error_log("Error en /prof/pacientes GET: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error al obtener los pacientes: ' . $e->getMessage()], 500);
+    }
+});
+
+/* API para procesar acciones en citas por profesionales */
+$app->post('/prof/citas/{id}/accion', function(Request $req, Response $res, array $args): Response {
+    try {
+        $val = verificarTokenUsuario();
+        if ($val === false) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        }
+        
+        if ($val['usuario']['rol'] !== 'PROFESIONAL') {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        }
+        
+        $idProfesional = (int)$val['usuario']['id_persona'];
+        $idCita = (int)$args['id'];
+        $body = $req->getParsedBody() ?? [];
+        
+        $accion = strtoupper(trim($body['accion'] ?? ''));
+        $fecha = $body['fecha'] ?? null;
+        
+        if (empty($accion)) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acción no especificada'], 400);
+        }
+        
+        error_log("Profesional ID: $idProfesional realizando acción: $accion en cita ID: $idCita");
+        
+        procesarAccionCitaProfesional($idCita, [
+            'accion' => $accion,
+            'fecha' => $fecha
+        ]);
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Acción procesada correctamente',
+            'token' => $val['token']
+        ]);
+        
+    } catch (Exception $e) {
+        error_log("Error en /prof/citas/{id}/accion: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+        return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()], 500);
+    }
+});

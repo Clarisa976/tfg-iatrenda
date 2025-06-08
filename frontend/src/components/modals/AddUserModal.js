@@ -162,17 +162,22 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
                      ...fill(tu, blankTu),
                      metodo: tu.tel ? 'TEL' : 'EMAIL'
                    } : null }
-    };
-
-    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
+    };    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
     const url     = isEdit
       ? `${baseURL}/admin/usuarios/${initialUser.id}`
       : `${baseURL}/admin/usuarios`;
-    const method  = isEdit ? 'put' : 'post';    try {
+    const method  = isEdit ? 'put' : 'post';
+    
+    try {
+      console.log(`Enviando solicitud ${method.toUpperCase()} a ${url}`);
+      console.log('Datos enviados:', body);
+      
       const res = await axios({
         method, url, data: body,
         headers: { Authorization:`Bearer ${tk}` }
       });
+
+      console.log('Respuesta recibida:', res.data);
 
       if (res.data.ok) {
         onSuccess(p.nombre, null);
@@ -181,11 +186,11 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
         onSuccess(null, {
           ok:false, titulo:'Error', mensaje: res.data.mensaje || 'Fallo al guardar'
         });
-      }
-    } catch (e) {
-      const msg = e.response?.data?.mensaje
-                || 'Error de comunicación con el servidor.';
-      onSuccess(null, { ok:false, titulo:'Error', mensaje:msg });
+      }    } catch (e) {
+      console.error('Error en la solicitud:', e);
+      const errMsg = e.response?.data?.mensaje || e.message || 'Error de comunicación con el servidor.';
+      console.error('Mensaje de error:', errMsg);
+      onSuccess(null, { ok:false, titulo:'Error', mensaje:errMsg });
     }
   };
 

@@ -103,16 +103,23 @@ const BloqueTutor = memo(({ pTut, hTut, edit }) => (
         <div className="datos-perfil-flex">          <label>
             <input
               type="checkbox"
-              disabled={!edit}
-              checked={pTut.metodo_contacto_preferido?.includes('TEL') || false}
+              disabled={!edit}              checked={pTut.metodo_contacto_preferido?.includes('TEL') || false}
               onChange={e => {
-                const currentMethods = pTut.metodo_contacto_preferido?.split(',') || [];
+                // FIXED: Get current methods as array regardless of source format
+                // This fixes inconsistencies in how metodo_contacto_preferido was handled
+                let metodosActuales = [];
+                if (pTut.metodo_contacto_preferido) {
+                  metodosActuales = typeof pTut.metodo_contacto_preferido === 'string' 
+                    ? pTut.metodo_contacto_preferido.split(',') 
+                    : [...pTut.metodo_contacto_preferido];
+                }
+                
                 if (e.target.checked) {
-                  const newMethods = [...currentMethods, 'TEL'].filter(m => m);
-                  hTut('metodo_contacto_preferido', newMethods.join(','));
+                  const newMethods = [...metodosActuales, 'TEL'].filter(m => m);
+                  hTut('metodo_contacto_preferido', newMethods);
                 } else {
-                  const newMethods = currentMethods.filter(m => m !== 'TEL');
-                  hTut('metodo_contacto_preferido', newMethods.join(','));
+                  const newMethods = metodosActuales.filter(m => m !== 'TEL');
+                  hTut('metodo_contacto_preferido', newMethods);
                 }
               }}
             /> Teléfono
@@ -120,16 +127,21 @@ const BloqueTutor = memo(({ pTut, hTut, edit }) => (
           <label>
             <input
               type="checkbox"
-              disabled={!edit}
-              checked={pTut.metodo_contacto_preferido?.includes('EMAIL') || false}
-              onChange={e => {
-                const currentMethods = pTut.metodo_contacto_preferido?.split(',') || [];
+              disabled={!edit}              checked={pTut.metodo_contacto_preferido?.includes('EMAIL') || false}              onChange={e => {
+                // Get current methods as array
+                let metodosActuales = [];
+                if (pTut.metodo_contacto_preferido) {
+                  metodosActuales = typeof pTut.metodo_contacto_preferido === 'string' 
+                    ? pTut.metodo_contacto_preferido.split(',') 
+                    : [...pTut.metodo_contacto_preferido];
+                }
+                
                 if (e.target.checked) {
-                  const newMethods = [...currentMethods, 'EMAIL'].filter(m => m);
-                  hTut('metodo_contacto_preferido', newMethods.join(','));
+                  const newMethods = [...metodosActuales, 'EMAIL'].filter(m => m);
+                  hTut('metodo_contacto_preferido', newMethods);
                 } else {
-                  const newMethods = currentMethods.filter(m => m !== 'EMAIL');
-                  hTut('metodo_contacto_preferido', newMethods.join(','));
+                  const newMethods = metodosActuales.filter(m => m !== 'EMAIL');
+                  hTut('metodo_contacto_preferido', newMethods);
                 }
               }}
             /> Email
