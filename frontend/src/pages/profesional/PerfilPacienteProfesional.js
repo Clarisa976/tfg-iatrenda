@@ -14,30 +14,9 @@ import SubirDocumento from '../../components/modals/SubirDocumento';
 import ModalTratamiento from '../../components/modals/ModalTratamiento';
 
 
-
 registerLocale('es', es);
 
-// Hook para manejar URLs de S3
-const useS3Documents = (documentos) => {
- //const [documentUrls, setDocumentUrls] = useState({});
-  
-  const getDocumentUrl = async (documentoId) => {
-    try {
-      const tk = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/download/${documentoId}`, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${tk}` },
-        redirect: 'manual'
-      });
-      return response.status === 302 ? response.headers.get('Location') : null;
-    } catch (error) {
-      console.error('Error obteniendo URL de S3:', error);
-      return null;
-    }
-  };
 
-  return { getDocumentUrl };
-};
 const TabBtn = ({ label, sel, onClick }) => (
   <button className={`tab-btn ${sel ? 'tab-button-selected' : 'tab-button-unselected'}`}
     onClick={onClick}>{label}</button>
@@ -288,8 +267,6 @@ export default function PerfilPacienteProfesional() {
   const [pTut, setPTut] = useState({});
   const [rgpd, setRgpd] = useState(false);
 
-  const { getDocumentUrl } = useS3Documents(data?.tratamientos?.flatMap(t => t.documentos || []) || []);
-
 const cancelEdit = () => {
   // Restaurar datos originales
   setPPer(data.persona || {});
@@ -342,7 +319,6 @@ const fetchData = useCallback(async () => {
     setData({ tratamientos: [], documentos: [], citas: [] });
   }
 }, [id]);
-
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -441,24 +417,7 @@ const doAccion = async (idCita, accion, fecha = null) => {
           {data.tratamientos.map(t => (
             <li key={t.id_tratamiento}
               className="tratamiento-item"
-              onClick={async () => {
-  // Cargar URLs de documentos antes de abrir modal
-  if (t.documentos && t.documentos.length > 0) {
-    const tratamientoConUrls = { ...t };
-    for (const doc of tratamientoConUrls.documentos) {
-      if (!doc.url_descarga) {
-        const url = await getDocumentUrl(doc.id_documento);
-        if (url) {
-          doc.url_descarga = url;
-          doc.url_temporal = true;
-        }
-      }
-    }
-    setSelT(tratamientoConUrls);
-  } else {
-    setSelT(t);
-  }
-}}>
+              onClick={() => setSelT(t)}>
               <h5>{t.titulo || 'Sin título'}</h5>
               <p>{t.notas?.substring(0, 120) || 'Sin descripción'}</p>
               {t.documentos && t.documentos.length > 0 && (

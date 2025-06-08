@@ -88,6 +88,7 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${tk}`
+
         },
         body: formData
       });

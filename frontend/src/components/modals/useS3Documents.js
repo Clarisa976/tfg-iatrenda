@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+// hooks/useS3Documents.js
+import { useState, useEffect, useCallback } from 'react';
 
 export const useS3Documents = (documentos) => {
   const [documentUrls, setDocumentUrls] = useState({});
@@ -6,7 +7,7 @@ export const useS3Documents = (documentos) => {
   const [urlErrors, setUrlErrors] = useState({});
 
   // Función para obtener URL firmada de S3
-  const getS3DocumentUrl = async (documentoId) => {
+  const getS3DocumentUrl = useCallback(async (documentoId) => {
     try {
       const tk = localStorage.getItem('token');
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/download/${documentoId}`, {
@@ -27,7 +28,7 @@ export const useS3Documents = (documentos) => {
       console.error('Error obteniendo URL de S3:', error);
       return null;
     }
-  };
+  }, []);
 
   // Cargar URLs cuando cambian los documentos
   useEffect(() => {
@@ -37,7 +38,7 @@ export const useS3Documents = (documentos) => {
       for (const documento of documentos) {
         const docId = documento.id_documento;
         
-        // Si ya tenemos la URL, no la volvemos a cargar
+        // Si ya tenemos la URL o está cargando, continuar
         if (documentUrls[docId] || loadingUrls[docId]) continue;
 
         setLoadingUrls(prev => ({ ...prev, [docId]: true }));
@@ -68,21 +69,22 @@ export const useS3Documents = (documentos) => {
     };
 
     loadUrls();
-  }, [documentos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentos]); // Solo documentos, ignoramos el resto
 
-  const getDocumentUrl = (documentoId) => {
+  const getDocumentUrl = useCallback((documentoId) => {
     return documentUrls[documentoId] || null;
-  };
+  }, [documentUrls]);
 
-  const isDocumentLoading = (documentoId) => {
+  const isDocumentLoading = useCallback((documentoId) => {
     return loadingUrls[documentoId] || false;
-  };
+  }, [loadingUrls]);
 
-  const hasDocumentError = (documentoId) => {
+  const hasDocumentError = useCallback((documentoId) => {
     return urlErrors[documentoId] || false;
-  };
+  }, [urlErrors]);
 
-  const downloadDocument = async (documento) => {
+  const downloadDocument = useCallback(async (documento) => {
     try {
       const tk = localStorage.getItem('token');
       
@@ -117,7 +119,7 @@ export const useS3Documents = (documentos) => {
       console.error('Error al descargar documento:', error);
       alert('Error al descargar el documento');
     }
-  };
+  }, []);
 
   return {
     getDocumentUrl,
