@@ -2,6 +2,14 @@
   publish = "build"
   command = "npm run build"
 
+[[headers]]
+  for = "/*"
+    [headers.values]
+    Access-Control-Allow-Origin = "https://iatrenda.netlify.app"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Origin, Authorization, Content-Type"
+    Access-Control-Allow-Credentials = "true"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

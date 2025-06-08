@@ -34,7 +34,11 @@ export default function InformesYLogs() {
       try {
         const url = `${process.env.REACT_APP_API_URL}/admin/informes?year=${selectedYear}&month=${selectedMonth}`;
         const { data } = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Access-Control-Request-Method': 'GET',
+            'Access-Control-Request-Headers': 'Authorization'
+          }
         });
         if (data.ok) {
           setStats(data.data);
@@ -58,7 +62,11 @@ export default function InformesYLogs() {
       const url = `${process.env.REACT_APP_API_URL}/admin/logs?year=${selectedYear}&month=${selectedMonth}`;
       
       const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Access-Control-Request-Method': 'GET',
+          'Access-Control-Request-Headers': 'Authorization'
+        },
         responseType: 'blob'
       });
 
