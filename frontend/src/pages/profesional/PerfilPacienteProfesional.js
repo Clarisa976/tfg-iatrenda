@@ -392,6 +392,7 @@ const doAccion = async (idCita, accion, fecha = null) => {
         setError('');
         obtenerProfesionalId();
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [repro.show]);
 
     // Obtener ID del profesional desde el token
