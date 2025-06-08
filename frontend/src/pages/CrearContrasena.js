@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
@@ -9,28 +8,41 @@ export default function CrearContrasena() {
   const [sp] = useSearchParams();
   const uid = sp.get('uid') || '';
 
+  // DEBUG TEMPORAL - agregar esto
+  console.log('=== DEBUG CREAR CONTRASEÑA ===');
+  console.log('URL completa:', window.location.href);
+  console.log('Search params completos:', window.location.search);
+  console.log('UID extraído:', uid);
+  console.log('Todos los parámetros:', Object.fromEntries(sp.entries()));
+
   const [pass, setPass] = useState('');
   const [show, setShow] = useState(false);
   const [ok, setOk] = useState(null);
   const [err, setErr] = useState('');
 
-
   const enviar = async () => {
     if (pass.length < 8) {
       setErr('La contraseña debe tener al menos 8 caracteres');
       return;
-    } try {
+    } 
+    
+    try {
+      console.log('Enviando al backend:', { uid, password: '***' });
       await axios.post(
         `${process.env.REACT_APP_API_URL}/crear-contrasena`,
         { uid, password: pass }
       );
       setOk(true);
     } catch (e) {
+      console.error('Error del backend:', e.response?.data || e.message);
       setOk(false);
     }
   };
-  if (!uid) return <p className="enlace-incorrecto">Enlace incorrecto</p>;
 
+  if (!uid) {
+    console.log('⚠️ UID vacío - mostrando mensaje de enlace incorrecto');
+    return <p className="enlace-incorrecto">Enlace incorrecto</p>;
+  }
 
   return (
     <div className="crear-contrasena-container">
@@ -56,7 +68,6 @@ export default function CrearContrasena() {
         </div>
         {err && <p className="error-message">{err}</p>}
 
-        {/* respuesta del backend */}
         {ok === false && (
           <p className="backend-error-message">
             El enlace ha caducado o ya fue usado.
@@ -71,7 +82,9 @@ export default function CrearContrasena() {
           Guardar
         </button>
       </>
-      )}      {ok === true && (
+      )}
+
+      {ok === true && (
         <p className="success-message">
           Contraseña guardada correctamente. Ya puedes iniciar sesión.
         </p>

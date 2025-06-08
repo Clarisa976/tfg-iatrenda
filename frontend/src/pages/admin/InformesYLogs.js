@@ -20,8 +20,9 @@ const meses = [
 const años = Array.from({ length: year - 2022 }, (_, i) => 2023 + i);
 
 export default function InformesYLogs() {
-
   const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingDownload, setLoadingDownload] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(month);
   const [selectedYear, setSelectedYear] = useState(year);
   const token = localStorage.getItem('token');
@@ -29,39 +30,68 @@ export default function InformesYLogs() {
   /* carga estadísticas */
   useEffect(() => {
     async function fetchStats() {
+      setLoading(true);
       try {
         const url = `${process.env.REACT_APP_API_URL}/admin/informes?year=${selectedYear}&month=${selectedMonth}`;
         const { data } = await axios.get(url, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (data.ok) setStats(data.data);
-      } catch { toast.error('No se pudieron obtener las estadísticas'); }
+        if (data.ok) {
+          setStats(data.data);
+        } else {
+          toast.error('Error al obtener estadísticas: ' + (data.mensaje || 'Error desconocido'));
+        }
+      } catch (error) {
+        console.error('Error al cargar estadísticas:', error);
+        toast.error('No se pudieron obtener las estadísticas: ' + (error.response?.data?.mensaje || error.message));
+      } finally {
+        setLoading(false);
+      }
     }
     fetchStats();
   }, [token, selectedMonth, selectedYear]);
 
   /* descarga CSV de logs */
   const descargarLogs = async () => {
+    setLoadingDownload(true);
     try {
-      // Construir la URL con los parámetros de año y mes
       const url = `${process.env.REACT_APP_API_URL}/admin/logs?year=${selectedYear}&month=${selectedMonth}`;
       
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
-      const blob = new Blob([res.data], { type: 'text/csv' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `logs_${selectedYear}_${String(selectedMonth).padStart(2, '0')}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      
-      toast.success('Logs descargados correctamente');
+
+      // Verificar si la respuesta es realmente un CSV
+      if (res.headers['content-type']?.includes('text/csv')) {
+        const blob = new Blob([res.data], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `logs_${selectedYear}_${String(selectedMonth).padStart(2, '0')}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+        
+        toast.success('Logs descargados correctamente');
+      } else {
+        // Si no es un CSV, probablemente es un mensaje de error
+        const reader = new FileReader();
+        reader.onload = function() {
+          try {
+            const errorData = JSON.parse(this.result);
+            toast.error(errorData.mensaje || 'Error al descargar los logs');
+          } catch {
+            toast.error('Error al procesar la respuesta del servidor');
+          }
+        };
+        reader.readAsText(res.data);
+      }
     } catch (error) {
       console.error('Error al descargar logs:', error);
-      toast.error('No se pudieron descargar los logs');
+      toast.error('No se pudieron descargar los logs: ' + (error.response?.data?.mensaje || error.message));
+    } finally {
+      setLoadingDownload(false);
     }
   };
 
@@ -103,7 +133,9 @@ export default function InformesYLogs() {
 
       {/* estadísticas */}
       <h3>Estadísticas - {fechaSeleccionada}</h3>
-      {stats ? (
+      {loading ? (
+        <p>Cargando estadísticas...</p>
+      ) : stats ? (
         <div className="stats-grid">
           <div className="stat-card">
             <BarChart2 size={28} />
@@ -134,13 +166,20 @@ export default function InformesYLogs() {
             </div>
           </div>
         </div>
-      ) : <p>Cargando…</p>}      
+      ) : (
+        <p>No hay datos disponibles para el período seleccionado</p>
+      )}      
+
       {/* logs */}
       <h3 className="informes-logs-title">Logs</h3>
       <p>Descarga el histórico de eventos registrados para {fechaSeleccionada}:</p>
-      <button className="btn-reserva blue" onClick={descargarLogs}>
+      <button 
+        className="btn-reserva blue" 
+        onClick={descargarLogs}
+        disabled={loadingDownload}
+      >
         <FileDown size={18} className="informes-icono-margin" />
-        Descargar CSV
+        {loadingDownload ? 'Descargando...' : 'Descargar CSV'}
       </button>
     </div>
   );
