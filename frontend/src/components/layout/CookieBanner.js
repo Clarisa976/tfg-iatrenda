@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import '../../styles.css';
 
 export default function CookieConsent() {
@@ -23,7 +24,7 @@ export default function CookieConsent() {
       <div className="cookie-text">
         <p>Usamos cookies para mejorar tu experiencia.</p>
         <p className="cookie-leer">
-          <a href="/cookies">[Leer más]</a>
+          <Link to="/cookies">[Leer más]</Link>
         </p>
       </div>
       <div className="cookie-buttons">

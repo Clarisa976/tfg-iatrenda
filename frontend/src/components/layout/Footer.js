@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapPin, Phone, Mail, Instagram, Facebook, Linkedin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   const logo2 = process.env.REACT_APP_LOGO_2_IMG;
@@ -33,9 +34,9 @@ export default function Footer() {
         <div className="footer__section">
           <h3>SÍGUENOS EN</h3>
           <div className="footer__socials">
-            <a href="www.instagram.com" aria-label="Instagram"><Instagram /></a>
-            <a href="wwww.facebok.com" aria-label="Facebook"><Facebook /></a>
-            <a href="www.linkedin.com" aria-label="LinkedIn"><Linkedin /></a>
+            <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Instagram /></a>
+            <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Facebook /></a>
+            <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><Linkedin /></a>
           </div>
         </div>
 
@@ -43,9 +44,9 @@ export default function Footer() {
         <div className="footer__section">
           <h3>ENLACES GENERALES</h3>
           <ul className="footer__links">
-            <li><a href="/terminos">Términos y condiciones de uso</a></li>
-            <li><a href="/privacidad">Política de privacidad</a></li>
-            <li><a href="/cookies">Cookies</a></li>
+            <li><Link to="/terminos">Términos y condiciones de uso</Link></li>
+            <li><Link to="/privacidad">Política de privacidad</Link></li>
+            <li><Link to="/cookies">Cookies</Link></li>
           </ul>
         </div>
       </div>
