@@ -557,9 +557,9 @@ const doAccion = async (idCita, accion, fecha = null) => {
       const noOcupada = !horasOcupadas.includes(timeStr);
 
       // Para depuración
-      if (dentroDelRango && !noOcupada) {
-        console.log(`Hora ${timeStr} bloqueada porque está ocupada`);
-      }
+      /* if (dentroDelRango && !noOcupada) {
+       console.log(`Hora ${timeStr} bloqueada porque está ocupada`);
+      }*/
 
       return dentroDelRango && noOcupada;
     };// Función para filtrar fechas válidas

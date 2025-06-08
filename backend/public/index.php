@@ -1084,7 +1084,36 @@ $app->get('/pac/profesional/{id}/horas-disponibles', function(Request $req, Resp
         return jsonResponse(['ok'=>false,'mensaje'=>'Error interno'], 500);
     }
 });
-
+$app->get('/prof/horas-disponibles', function(Request $req, Response $res): Response {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    
+    if ($val['usuario']['rol'] !== 'PROFESIONAL') {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+    
+    $params = $req->getQueryParams();
+    $profesionalId = (int)($params['profesional_id'] ?? 0);
+    $fecha = $params['fecha'] ?? '';
+    
+    if (!$profesionalId || !$fecha) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Faltan parámetros'], 400);
+    }
+    
+    try {
+        $horasDisponibles = obtenerHorasDisponibles($profesionalId, $fecha);
+        
+        return jsonResponse([
+            'ok' => true,
+            'horas' => $horasDisponibles,
+            'token' => $val['token']
+        ]);
+    } catch (Exception $e) {
+        return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()], 500);
+    }
+});
 /* buscar profesional por nombre para pacientes */
 $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
     $val = verificarTokenUsuario();
