@@ -1343,15 +1343,23 @@ $app->get('/api/s3/health', function (Request $request, Response $response) {
 
 // Subir documento a S3
 $app->post('/api/s3/upload', function (Request $request, Response $response) {
+    error_log('=== INICIO RUTA S3 UPLOAD ===');
+    
     $val = verificarTokenUsuario();
     if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        error_log('Token inválido en ruta S3');
+        $response->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'No autorizado']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
     }
     
     // Solo profesionales y admins pueden subir documentos
     if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        error_log('Rol no autorizado: ' . $val['usuario']['rol']);
+        $response->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'Acceso denegado']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
     }
+    
+    error_log('Usuario autorizado: ' . $val['usuario']['id_persona'] . ' - Rol: ' . $val['usuario']['rol']);
     
     $controller = new App\Controllers\DocumentController();
     return $controller->uploadDocument($request, $response);
@@ -1367,7 +1375,8 @@ $app->get('/api/s3/download/{id}', function (Request $request, Response $respons
 $app->get('/api/s3/documentos', function (Request $request, Response $response) {
     $val = verificarTokenUsuario();
     if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        $response->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'No autorizado']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
     }
     
     $controller = new App\Controllers\DocumentController();
@@ -1378,17 +1387,21 @@ $app->get('/api/s3/documentos', function (Request $request, Response $response) 
 $app->delete('/api/s3/documentos/{id}', function (Request $request, Response $response, array $args) {
     $val = verificarTokenUsuario();
     if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        $response->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'No autorizado']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
     }
     
     // Solo profesionales y admins pueden eliminar documentos
     if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        $response->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'Acceso denegado']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
     }
     
     $controller = new App\Controllers\DocumentController();
     return $controller->deleteDocument($request, $response, $args);
 });
+
+
 
 /* GET /prof/perfil */
 $app->get('/prof/perfil', function(Request $req, Response $res): Response {

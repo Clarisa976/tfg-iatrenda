@@ -18,14 +18,16 @@ class DocumentController {
      */
     public function uploadDocument($request, $response) {
         try {
-
-            error_log('=== UPLOAD DEBUG START ===');
-        error_log('POST data: ' . json_encode($request->getParsedBody()));
-        error_log('Files: ' . json_encode(array_keys($request->getUploadedFiles())));
-
+            error_log('=== UPLOAD DOCUMENT START ===');
+            error_log('POST data: ' . json_encode($request->getParsedBody()));
+            error_log('Files: ' . json_encode(array_keys($request->getUploadedFiles())));
 
             $uploadedFiles = $request->getUploadedFiles();
             $data = $request->getParsedBody();
+
+            // Debug de los datos recibidos
+            error_log('Datos recibidos: ' . print_r($data, true));
+            error_log('Archivos recibidos: ' . print_r(array_keys($uploadedFiles), true));
 
             // Determinar si es tratamiento o documento de historial
             $tipo = $data['tipo'] ?? 'historial';
@@ -37,15 +39,14 @@ class DocumentController {
             }
 
         } catch (\Exception $e) {
-            error_log('Error in uploadDocument: ' . $e->getMessage());
-
             error_log('=== ERROR EN UPLOAD ===');
-    error_log('Error message: ' . $e->getMessage());
-    error_log('Stack trace: ' . $e->getTraceAsString());
-    error_log('=== END ERROR ===');
+            error_log('Error message: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            error_log('=== END ERROR ===');
+            
             return $this->jsonResponse($response, [
                 'ok' => false,
-                'mensaje' => 'Error interno del servidor'
+                'mensaje' => 'Error interno del servidor: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -55,23 +56,21 @@ class DocumentController {
      */
     private function handleTreatmentUpload($data, $uploadedFiles, $response) {
         try {
+            error_log('=== TREATMENT UPLOAD START ===');
+            
             // Validar datos requeridos para tratamiento
             if (!isset($data['id_paciente']) || !isset($data['titulo']) || !isset($data['notas'])) {
+                error_log('Datos incompletos. Recibido: ' . print_r($data, true));
                 return $this->jsonResponse($response, [
                     'ok' => false,
                     'mensaje' => 'Datos del tratamiento incompletos (id_paciente, titulo, notas son requeridos)'
                 ], 400);
             }
 
-            // Obtener ID del profesional desde el token
+            // Obtener ID del profesional desde el token (ya validado en la ruta)
             $val = verificarTokenUsuario();
-            if ($val === false) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'No autorizado'
-                ], 401);
-            }
             $profesionalId = $val['usuario']['id_persona'];
+            error_log('Profesional ID: ' . $profesionalId);
 
             // 1. Crear historial clínico si no existe
             $historialId = $this->getOrCreateHistorial($data['id_paciente']);
@@ -81,6 +80,7 @@ class DocumentController {
                     'mensaje' => 'Error al crear/obtener historial clínico'
                 ], 500);
             }
+            error_log('Historial ID: ' . $historialId);
 
             // 2. Crear tratamiento en base de datos
             $tratamientoData = [
@@ -97,20 +97,25 @@ class DocumentController {
             if (!$tratamientoId) {
                 return $this->jsonResponse($response, [
                     'ok' => false,
-                    'mensaje' => 'Error al crear tratamiento'
+                    'mensaje' => 'Error al crear tratamiento en base de datos'
                 ], 500);
             }
+            error_log('Tratamiento ID creado: ' . $tratamientoId);
 
             // 3. Si hay archivo, subirlo a S3
             $documentData = null;
+            $documentId = null;
+            
             if (isset($uploadedFiles['file'])) {
+                error_log('Procesando archivo...');
                 $uploadedFile = $uploadedFiles['file'];
                 
                 // Validar archivo
                 if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+                    error_log('Error en archivo: ' . $uploadedFile->getError());
                     return $this->jsonResponse($response, [
                         'ok' => false,
-                        'mensaje' => 'Error en la subida del archivo'
+                        'mensaje' => 'Error en la subida del archivo: ' . $uploadedFile->getError()
                     ], 400);
                 }
 
@@ -127,6 +132,8 @@ class DocumentController {
                 ];
                 
                 $fileType = $uploadedFile->getClientMediaType();
+                error_log('Tipo de archivo: ' . $fileType);
+                
                 if (!in_array($fileType, $allowedTypes)) {
                     return $this->jsonResponse($response, [
                         'ok' => false,
@@ -147,6 +154,7 @@ class DocumentController {
                 $fileContent = $uploadedFile->getStream()->getContents();
                 $fileName = $uploadedFile->getClientFilename();
                 
+                error_log('Subiendo archivo a S3: ' . $fileName);
                 $uploadResult = $this->s3Service->uploadFile(
                     $fileContent,
                     $fileName,
@@ -159,9 +167,10 @@ class DocumentController {
                 );
 
                 if (!$uploadResult['success']) {
+                    error_log('Error subida S3: ' . $uploadResult['error']);
                     return $this->jsonResponse($response, [
                         'ok' => false,
-                        'mensaje' => $uploadResult['error']
+                        'mensaje' => 'Error al subir archivo: ' . $uploadResult['error']
                     ], 500);
                 }
 
@@ -176,6 +185,7 @@ class DocumentController {
                 ];
 
                 $documentId = $this->saveDocumentToDatabase($documentData);
+                error_log('Documento guardado con ID: ' . $documentId);
             }
 
             return $this->jsonResponse($response, [
@@ -185,7 +195,7 @@ class DocumentController {
                     'id_tratamiento' => $tratamientoId,
                     'id_historial' => $historialId,
                     'documento' => $documentData ? [
-                        'id' => $documentId ?? null,
+                        'id' => $documentId,
                         's3_key' => $documentData['ruta'],
                         'nombre' => $documentData['nombre_original']
                     ] : null
@@ -194,6 +204,7 @@ class DocumentController {
 
         } catch (\Exception $e) {
             error_log('Error creating treatment: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
             return $this->jsonResponse($response, [
                 'ok' => false,
                 'mensaje' => 'Error al crear tratamiento: ' . $e->getMessage()
@@ -232,14 +243,8 @@ class DocumentController {
                 ], 400);
             }
 
-            // Obtener ID del profesional desde el token
+            // Obtener ID del profesional desde el token (ya validado en la ruta)
             $val = verificarTokenUsuario();
-            if ($val === false) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'No autorizado'
-                ], 401);
-            }
             $profesionalId = $val['usuario']['id_persona'];
 
             // Validar tipo de archivo
@@ -338,99 +343,6 @@ class DocumentController {
                 'ok' => false,
                 'mensaje' => 'Error interno del servidor'
             ], 500);
-        }
-    }
-
-    /**
-     * Obtener o crear historial clínico para un paciente
-     */
-    private function getOrCreateHistorial($pacienteId) {
-        try {
-            $baseDatos = conectar();
-            
-            // Buscar historial existente
-            $sql = "SELECT id_historial FROM historial_clinico WHERE id_paciente = ? ORDER BY fecha_inicio DESC LIMIT 1";
-            $stmt = $baseDatos->prepare($sql);
-            $stmt->execute([$pacienteId]);
-            $historial = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($historial) {
-                return $historial['id_historial'];
-            }
-            
-            // Crear nuevo historial
-            $sql = "INSERT INTO historial_clinico (id_paciente, fecha_inicio) VALUES (?, CURRENT_DATE) RETURNING id_historial";
-            $stmt = $baseDatos->prepare($sql);
-            $stmt->execute([$pacienteId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            return $result['id_historial'];
-            
-        } catch (\Exception $e) {
-            error_log('Error getting/creating historial: ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Guardar tratamiento en base de datos
-     */
-    private function saveTreatmentToDatabase($data) {
-        try {
-            $baseDatos = conectar();
-            
-            $sql = "INSERT INTO tratamiento 
-                    (id_historial, id_profesional, fecha_inicio, fecha_fin, frecuencia_sesiones, notas) 
-                    VALUES (?, ?, ?, ?, ?, ?) RETURNING id_tratamiento";
-            
-            $stmt = $baseDatos->prepare($sql);
-            $stmt->execute([
-                $data['id_historial'],
-                $data['id_profesional'],
-                $data['fecha_inicio'],
-                $data['fecha_fin'],
-                $data['frecuencia_sesiones'],
-                $data['notas']
-            ]);
-            
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return (int)$result['id_tratamiento'];
-            
-        } catch (\Exception $e) {
-            error_log('Error saving treatment to DB: ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Actualizar diagnósticos en historial
-     */
-    private function updateHistorialDiagnosticos($historialId, $data) {
-        try {
-            $baseDatos = conectar();
-            
-            $updates = [];
-            $params = [];
-            
-            if (!empty($data['diagnostico_preliminar'])) {
-                $updates[] = "diagnostico_preliminar = ?";
-                $params[] = $data['diagnostico_preliminar'];
-            }
-            
-            if (!empty($data['diagnostico_final'])) {
-                $updates[] = "diagnostico_final = ?";
-                $params[] = $data['diagnostico_final'];
-            }
-            
-            if (!empty($updates)) {
-                $params[] = $historialId;
-                $sql = "UPDATE historial_clinico SET " . implode(', ', $updates) . " WHERE id_historial = ?";
-                $stmt = $baseDatos->prepare($sql);
-                $stmt->execute($params);
-            }
-            
-        } catch (\Exception $e) {
-            error_log('Error updating historial diagnosticos: ' . $e->getMessage());
         }
     }
 
@@ -594,53 +506,161 @@ class DocumentController {
     }
 
     /**
-     * Métodos privados para base de datos
+     * Obtener o crear historial clínico para un paciente
+     */
+    private function getOrCreateHistorial($pacienteId) {
+        try {
+            $baseDatos = conectar();
+            
+            // Buscar historial existente
+            $sql = "SELECT id_historial FROM historial_clinico WHERE id_paciente = ? ORDER BY fecha_inicio DESC LIMIT 1";
+            $stmt = $baseDatos->prepare($sql);
+            $stmt->execute([$pacienteId]);
+            $historial = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($historial) {
+                error_log('Historial existente encontrado: ' . $historial['id_historial']);
+                return $historial['id_historial'];
+            }
+            
+            // Crear nuevo historial
+            $sql = "INSERT INTO historial_clinico (id_paciente, fecha_inicio) VALUES (?, CURRENT_DATE)";
+            $stmt = $baseDatos->prepare($sql);
+            $success = $stmt->execute([$pacienteId]);
+            
+            if ($success) {
+                $newId = $baseDatos->lastInsertId();
+                error_log('Nuevo historial creado: ' . $newId);
+                return $newId;
+            }
+            
+            return null;
+            
+        } catch (\Exception $e) {
+            error_log('Error getting/creating historial: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Guardar tratamiento en base de datos
+     */
+    private function saveTreatmentToDatabase($data) {
+        try {
+            $baseDatos = conectar();
+            
+            $sql = "INSERT INTO tratamiento 
+                    (id_historial, id_profesional, fecha_inicio, fecha_fin, frecuencia_sesiones, notas) 
+                    VALUES (?, ?, ?, ?, ?, ?)";
+            
+            $stmt = $baseDatos->prepare($sql);
+            $success = $stmt->execute([
+                $data['id_historial'],
+                $data['id_profesional'],
+                $data['fecha_inicio'],
+                $data['fecha_fin'],
+                $data['frecuencia_sesiones'],
+                $data['notas']
+            ]);
+            
+            if ($success) {
+                return $baseDatos->lastInsertId();
+            }
+            
+            return null;
+            
+        } catch (\Exception $e) {
+            error_log('Error saving treatment to DB: ' . $e->getMessage());
+            error_log('SQL Data: ' . print_r($data, true));
+            return null;
+        }
+    }
+
+    /**
+     * Actualizar diagnósticos en historial
+     */
+    private function updateHistorialDiagnosticos($historialId, $data) {
+        try {
+            $baseDatos = conectar();
+            
+            $updates = [];
+            $params = [];
+            
+            if (!empty($data['diagnostico_preliminar'])) {
+                $updates[] = "diagnostico_preliminar = ?";
+                $params[] = $data['diagnostico_preliminar'];
+            }
+            
+            if (!empty($data['diagnostico_final'])) {
+                $updates[] = "diagnostico_final = ?";
+                $params[] = $data['diagnostico_final'];
+            }
+            
+            if (!empty($updates)) {
+                $params[] = $historialId;
+                $sql = "UPDATE historial_clinico SET " . implode(', ', $updates) . " WHERE id_historial = ?";
+                $stmt = $baseDatos->prepare($sql);
+                $stmt->execute($params);
+            }
+            
+        } catch (\Exception $e) {
+            error_log('Error updating historial diagnosticos: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Guardar documento en base de datos
      */
     private function saveDocumentToDatabase($data) {
         try {
             $baseDatos = conectar();
             
-            if ($data['id_historial']) {
+            if (isset($data['id_historial']) && $data['id_historial']) {
                 $sql = "INSERT INTO documento_clinico 
-                        (id_historial, id_profesional, ruta, tipo, nombre_original, fecha_subida) 
-                        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) RETURNING id_documento";
+                        (id_historial, id_profesional, ruta, tipo) 
+                        VALUES (?, ?, ?, ?)";
                 $params = [
                     $data['id_historial'],
                     $data['id_profesional'],
                     $data['ruta'],
-                    $data['tipo'],
-                    $data['nombre_original']
+                    $data['tipo']
                 ];
             } else {
                 $sql = "INSERT INTO documento_clinico 
-                        (id_tratamiento, id_profesional, ruta, tipo, nombre_original, fecha_subida) 
-                        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) RETURNING id_documento";
+                        (id_tratamiento, id_profesional, ruta, tipo) 
+                        VALUES (?, ?, ?, ?)";
                 $params = [
                     $data['id_tratamiento'],
                     $data['id_profesional'],
                     $data['ruta'],
-                    $data['tipo'],
-                    $data['nombre_original']
+                    $data['tipo']
                 ];
             }
             
             $stmt = $baseDatos->prepare($sql);
-            $stmt->execute($params);
+            $success = $stmt->execute($params);
             
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return (int)$result['id_documento'];
+            if ($success) {
+                return $baseDatos->lastInsertId();
+            }
+            
+            return null;
             
         } catch (\Exception $e) {
             error_log('Error saving S3 document to DB: ' . $e->getMessage());
+            error_log('SQL params: ' . print_r($params, true));
             throw $e;
         }
     }
 
+    /**
+     * Obtener documento de la base de datos
+     */
     private function getDocumentFromDatabase($documentId) {
         try {
             $baseDatos = conectar();
             $sql = "SELECT dc.*, 
-                           COALESCE(dc.nombre_original, 'documento') as nombre_original
+                           'documento' as nombre_original
                     FROM documento_clinico dc 
                     WHERE dc.id_documento = ?";
             $stmt = $baseDatos->prepare($sql);
@@ -652,6 +672,9 @@ class DocumentController {
         }
     }
 
+    /**
+     * Obtener documentos de la base de datos
+     */
     private function getDocumentsFromDatabase($historialId, $tratamientoId, $pacienteId = null) {
         try {
             $baseDatos = conectar();
@@ -681,7 +704,7 @@ class DocumentController {
             $whereClause = implode(' OR ', $conditions);
             
             $sql = "SELECT dc.id_documento, 
-                           COALESCE(dc.nombre_original, 'documento') as nombre_original,
+                           'documento' as nombre_original,
                            dc.tipo, 
                            dc.fecha_subida,
                            dc.ruta,
@@ -702,6 +725,9 @@ class DocumentController {
         }
     }
 
+    /**
+     * Eliminar documento de la base de datos
+     */
     private function deleteDocumentFromDatabase($documentId) {
         try {
             $baseDatos = conectar();
@@ -715,6 +741,9 @@ class DocumentController {
         }
     }
 
+    /**
+     * Crear respuesta JSON
+     */
     private function jsonResponse($response, $data, $status = 200) {
         $response->getBody()->write(json_encode($data, JSON_UNESCAPED_UNICODE));
         return $response
@@ -722,3 +751,4 @@ class DocumentController {
             ->withStatus($status);
     }
 }
+?>

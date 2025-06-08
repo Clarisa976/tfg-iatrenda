@@ -57,56 +57,46 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
     setIsLoading(true);
 
     try {
+      const formData = new FormData();
+      
+      // Datos del tratamiento
+      formData.append('titulo', tit);
+      formData.append('notas', desc);
+      formData.append('fecha_inicio', fechaInicio || '');
+      formData.append('fecha_fin', fechaFin || '');
+      formData.append('frecuencia_sesiones', frecuencia || '1');
+      formData.append('id_paciente', idPaciente);
+      formData.append('tipo', 'tratamiento');
+      
+      // Agregar archivo si existe
       if (file) {
-        // Si hay archivo, usar AWS S3
-        const formDataFile = new FormData();
-        
-        // Datos del tratamiento
-        formDataFile.append('titulo', tit);
-        formDataFile.append('notas', desc);
-        formDataFile.append('fecha_inicio', fechaInicio || '');
-        formDataFile.append('fecha_fin', fechaFin || '');
-        formDataFile.append('frecuencia_sesiones', frecuencia || '1');
-        formDataFile.append('id_paciente', idPaciente);
-        formDataFile.append('tipo', 'tratamiento');
-        formDataFile.append('file', file);
+        formData.append('file', file);
+      }
 
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${tk}`
-          },
-          body: formDataFile
-        });
+      console.log('Enviando datos:', {
+        titulo: tit,
+        notas: desc,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        frecuencia_sesiones: frecuencia,
+        id_paciente: idPaciente,
+        tipo: 'tratamiento',
+        hasFile: !!file
+      });
 
-        const result = await response.json();
-        console.log('Respuesta del servidor (con archivo):', result);
-        if (!result.ok) {
-          throw new Error(result.mensaje || 'Error al crear tratamiento');
-        }
-      } else {
-        // Si NO hay archivo, crear tratamiento sin archivo (ruta normal)
-        const fd = new FormData();
-        fd.append('titulo', tit);
-        fd.append('descripcion', desc);
-        if (fechaInicio) fd.append('fecha_inicio', fechaInicio);
-        if (fechaFin) fd.append('fecha_fin', fechaFin);
-        if (frecuencia) fd.append('frecuencia', frecuencia);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${tk}`
+        },
+        body: formData
+      });
 
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/prof/pacientes/${idPaciente}/tareas`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${tk}`,
-            'Content-Type': 'multipart/form-data'
-          },
-          body: fd
-        });
-
-        const result = await response.json();
-        console.log('Respuesta del servidor (sin archivo):', result);
-        if (!result.ok) {
-          throw new Error(result.mensaje || 'Error al crear tratamiento');
-        }
+      const result = await response.json();
+      console.log('Respuesta del servidor:', result);
+      
+      if (!response.ok || !result.ok) {
+        throw new Error(result.mensaje || `Error ${response.status}: ${response.statusText}`);
       }
 
       // Limpiar formulario y cerrar modal
@@ -125,7 +115,9 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
 
       // Actualizar datos
       onDone();
+      
     } catch (e) {
+      console.error('Error completo:', e);
       setGeneralError('Error al guardar tratamiento: ' + e.message);
     } finally {
       setIsLoading(false);
