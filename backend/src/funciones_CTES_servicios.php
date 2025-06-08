@@ -491,6 +491,7 @@ function getProfesionales(string $search = ''): array
 function obtenerEventosAgenda(string $desde, string $hasta, ?int $idProfesional = null): array
 {
     $baseDatos = conectar();
+    error_log("Obteniendo eventos de agenda desde $desde hasta $hasta" . ($idProfesional ? " para profesional ID: $idProfesional" : ""));
 
     /* Bloques */
     $consultaSqlBloques = "
@@ -509,16 +510,18 @@ function obtenerEventosAgenda(string $desde, string $hasta, ?int $idProfesional 
         LEFT JOIN persona c ON c.id_persona = b.id_creador
        WHERE DATE(b.fecha_inicio) <= :h
          AND DATE(b.fecha_fin) >= :d
-    ";
-    $parametros = [':d' => $desde, ':h' => $hasta];
+    ";    $parametros = [':d' => $desde, ':h' => $hasta];
     if ($idProfesional !== null) {
         $consultaSqlBloques .= " AND b.id_profesional = :p";
         $parametros[':p'] = $idProfesional;
     }
     $consultaBloques = $baseDatos->prepare($consultaSqlBloques);
     $consultaBloques->execute($parametros);
-
-    return $consultaBloques->fetchAll(PDO::FETCH_ASSOC);
+    
+    $resultado = $consultaBloques->fetchAll(PDO::FETCH_ASSOC);
+    error_log("Se encontraron " . count($resultado) . " eventos para el período solicitado");
+    
+    return $resultado;
 }
 
 /* Función para crear un bloque agenda */
@@ -652,10 +655,20 @@ function obtenerNotificacionesPendientes(int $idUsuario, string $rol): array
 function procesarNotificacion(int $idCita, string $accion, int $idUsuario, string $rol): bool
 {
     error_log("Iniciando procesarNotificacion: ID=$idCita, Acción=$accion, Usuario=$idUsuario, Rol=$rol");
-    $nuevoEstado = $accion === 'CONFIRMAR' ? 'CONFIRMADA' : 'CANCELADA';
+    
+    // Normalizar la acción (RECHAZAR o CANCELAR → CANCELADA)
+    if ($accion === 'RECHAZAR' || $accion === 'CANCELAR') {
+        $nuevoEstado = 'CANCELADA';
+    } else if ($accion === 'CONFIRMAR') {
+        $nuevoEstado = 'CONFIRMADA';
+    } else {
+        error_log("Acción desconocida: $accion");
+        return false;
+    }
+    
+    error_log("Nuevo estado para cita $idCita: $nuevoEstado");
     $baseDatos = conectar();
-    $baseDatos->beginTransaction();
-    try {        /* Bloquear la cita */
+    $baseDatos->beginTransaction();    try {        /* Bloquear la cita */
         $consulta = $baseDatos->prepare("
             SELECT c.*, 
                    p.email pacienteEmail,
@@ -668,6 +681,8 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             error_log("procesarNotificacion: Cita $idCita no encontrada");
             throw new Exception('Cita inexistente');
         }
+        
+        error_log("Datos de la cita: " . json_encode($fila));
 
         /* Verificar permisos del profesional */
         if ($rol === 'profesional' && (int)$fila['id_profesional'] !== $idUsuario) {
@@ -1115,10 +1130,13 @@ function getUsuarioDetalle(int $id): ?array
 
 function citasActivas(int $id): int
 {
+    error_log("Verificando citas activas para usuario ID: $id");
     $consulta = 'SELECT COUNT(*) FROM cita WHERE estado != \'CANCELADA\' AND (id_paciente=:id OR id_profesional=:id)';
-    $consultaPreparada  = conectar()->prepare($consulta);
+    $consultaPreparada = conectar()->prepare($consulta);
     $consultaPreparada->execute([':id' => $id]);
-    return (int)$consultaPreparada->fetchColumn();
+    $count = (int)$consultaPreparada->fetchColumn();
+    error_log("Total citas activas para usuario $id: $count");
+    return $count;
 }
 
 /* elimina una persona solo si TODAS sus citas están canceladas */
@@ -1134,10 +1152,33 @@ function eliminarUsuario(int $id, int $actor = 0): array
 /* marca una persona como inactiva solo si NO tiene citas activas */
 function marcarUsuarioInactivo(int $id, int $actor = 0): array
 {
+    error_log("Marcando usuario inactivo: ID=$id, Actor=$actor");
+    
+    // Verificar que el usuario exista
+    $baseDatos = conectar();
+    $consulta = $baseDatos->prepare("SELECT activo FROM persona WHERE id_persona = ?");
+    $consulta->execute([$id]);
+    $usuario = $consulta->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$usuario) {
+        error_log("Usuario $id no encontrado");
+        return ['ok' => false, 'code' => 404, 'msg' => 'Usuario no encontrado'];
+    }
+    
+    // Si ya está inactivo, no hacer nada
+    if ($usuario['activo'] === false) {
+        error_log("Usuario $id ya está inactivo");
+        return ['ok' => true, 'msg' => 'Usuario ya está inactivo'];
+    }
+    
     if (citasActivas($id) > 0) {
+        error_log("Usuario $id tiene citas activas, no se puede marcar como inactivo");
         return ['ok' => false, 'code' => 409, 'msg' => 'El usuario tiene citas activas'];
     }
+    
     $exito = execLogged('UPDATE persona SET activo=false WHERE id_persona=:id', [':id' => $id], $actor, 'persona', $id);
+    error_log("Resultado marcar inactivo usuario $id: " . ($exito ? "Éxito" : "Error"));
+    
     return $exito ? ['ok' => true] : ['ok' => false, 'code' => 500, 'msg' => 'Error SQL'];
 }
 

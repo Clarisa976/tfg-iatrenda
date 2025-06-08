@@ -387,12 +387,21 @@ $app->get('/notificaciones', function ($req) {
 $app->post('/notificaciones/{id}', function ($req,$res,$args){
     $val = verificarTokenUsuario();
     if ($val === false)
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-
-    $idCita = (int)$args['id'];
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);    $idCita = (int)$args['id'];
     $acc    = strtoupper(trim(($req->getParsedBody()['accion']??'')));
-    if (!in_array($acc,['CONFIRMAR','RECHAZAR'],true))
-        return jsonResponse(['ok'=>false,'mensaje'=>'Acción inválida'],400);
+    if (!in_array($acc,['CONFIRMAR','RECHAZAR','CANCELAR'],true)) {
+        // Si llega 'CANCELAR' lo convertimos a 'RECHAZAR' para compatibilidad
+        if ($acc === 'CANCELAR') {
+            $acc = 'RECHAZAR';
+        } else {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acción inválida'],400);
+        }
+    }
+
+    // Si llega 'CANCELAR' lo convertimos a 'RECHAZAR' para compatibilidad
+    if ($acc === 'CANCELAR') {
+        $acc = 'RECHAZAR';
+    }
 
     $uid = (int)$val['usuario']['id_persona'];
     $rol = strtolower($val['usuario']['rol']);
@@ -462,10 +471,13 @@ $app->delete('/admin/borrar-usuario/{id}', function ($req, $res, $args) {
     $id = (int)$args['id'];
     $actorId = $val['usuario']['id_persona'];
     
+    error_log("DELETE /admin/borrar-usuario/{$id} - Solicitud de marcar como inactivo por admin ID: $actorId");
+    
     $resultado = marcarUsuarioInactivo($id, $actorId);
     
     if (!$resultado['ok']) {
         $codigo = $resultado['code'] ?? 500;
+        error_log("Error al marcar usuario $id como inactivo: " . ($resultado['msg'] ?? 'Error desconocido'));
         return jsonResponse(['ok'=>false,'mensaje'=>$resultado['msg']], $codigo);
     }
     
@@ -476,12 +488,11 @@ $app->delete('/admin/borrar-usuario/{id}', function ($req, $res, $args) {
 $app->put('/admin/usuario/{id}', function ($req, $res, $args) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-
-    $id = (int)$args['id'];
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);    $id = (int)$args['id'];
     $actorId = $val['usuario']['id_persona'];
     
     $body = $req->getParsedBody() ?? [];
+    error_log("PUT /admin/usuario/{$id} - Body recibido: " . json_encode($body));
     
     // Determinar el tipo basado en el rol actual o el nuevo rol
     $baseDatos = conectar();
@@ -496,17 +507,18 @@ $app->put('/admin/usuario/{id}', function ($req, $res, $args) {
     $rolFinal = strtoupper($body['rol'] ?? $usuarioActual['rol']);
     
     if (!in_array($rolFinal, ['PROFESIONAL','PACIENTE','ADMIN'], true))
-        return jsonResponse(['ok'=>false,'mensaje'=>'Rol inválido'], 400);
-
-    try {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Rol inválido'], 400);    try {
         // Usar actualizarOInsertarPersona con el ID forzado para actualización
+        error_log("Actualizando usuario ID: $id con rol: $rolFinal");
         $idPersona = actualizarOInsertarPersona($body, $rolFinal, $actorId, $id);
           // Actualizar datos específicos según el rol
         if ($rolFinal === 'PROFESIONAL') {
             $xdat = $body['datosprofesional'] ?? [];
+            error_log("Actualizando datos profesionales: " . json_encode($xdat));
             $ok = actualizarOInsertarProfesional($idPersona, $xdat, $actorId);
         } else if ($rolFinal === 'PACIENTE') {
             $xdat = $body['datospaciente'] ?? [];
+            error_log("Actualizando datos paciente: " . json_encode($xdat));
             $ok = actualizarOInsertarPaciente($idPersona, $xdat);
         } else {
             $ok = true; // Para ADMIN no hay datos extra
