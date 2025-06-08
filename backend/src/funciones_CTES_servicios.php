@@ -1408,72 +1408,113 @@ function getInformeMes(int $año, int $mes): array
 function exportLogsCsv(int $año, int $mes): string
 {
     $baseDatos = conectar();
+    
+    try {
+        error_log("exportLogsCsv: Iniciando para año=$año, mes=$mes");
 
-    /* Si se pasa 0 como mes, mostrar todos los logs (sin filtro por fecha) */
-    if ($mes === 0) {
-        $consulta = "
-          SELECT TO_CHAR(l.fecha,'DD/MM/YYYY HH24:MI')   AS fecha,
-                 COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
-                 l.accion,
-                 l.tabla_afectada,
-                 COALESCE(l.campo_afectado, '-') AS campo_afectado,
-                 COALESCE(l.valor_antiguo, '-') AS valor_antiguo,
-                 COALESCE(l.valor_nuevo, '-') AS valor_nuevo,
-                 COALESCE(l.ip, '-') AS ip
-            FROM log_evento_dato l
-       LEFT JOIN persona actor ON actor.id_persona = l.id_actor ORDER BY l.fecha DESC";
-        $consultaPreparada = $baseDatos->prepare($consulta);
-        $consultaPreparada->execute();
-    } else {
-        /* Usar el mes específico */
-        $fechaInicio = sprintf('%d-%02d-01 00:00:00', $año, $mes);
-        $fechaFin = date('Y-m-d 23:59:59', strtotime("$fechaInicio +1 month -1 day"));
-        $consulta = "
-          SELECT TO_CHAR(l.fecha,'DD/MM/YYYY HH24:MI')   AS fecha,
-                 COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
-                 l.accion,
-                 l.tabla_afectada,
-                 COALESCE(l.campo_afectado, '-') AS campo_afectado,
-                 COALESCE(l.valor_antiguo, '-') AS valor_antiguo,
-                 COALESCE(l.valor_nuevo, '-') AS valor_nuevo,
-                 COALESCE(l.ip, '-') AS ip
-            FROM log_evento_dato l
-       LEFT JOIN persona actor ON actor.id_persona = l.id_actor
-           WHERE l.fecha BETWEEN :d AND :h ORDER BY l.fecha DESC";
+        /* Si se pasa 0 como mes, mostrar todos los logs (sin filtro por fecha) */
+        if ($mes === 0) {
+            $consulta = "
+              SELECT 
+                     l.fecha,
+                     COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
+                     l.accion,
+                     l.tabla_afectada,
+                     COALESCE(l.campo_afectado, '-') AS campo_afectado,
+                     COALESCE(l.valor_antiguo, '-') AS valor_antiguo,
+                     COALESCE(l.valor_nuevo, '-') AS valor_nuevo,
+                     COALESCE(l.ip, '-') AS ip
+                FROM log_evento_dato l
+           LEFT JOIN persona actor ON actor.id_persona = l.id_actor 
+           ORDER BY l.fecha DESC";
+            $consultaPreparada = $baseDatos->prepare($consulta);
+            $consultaPreparada->execute();
+        } else {
+            /* Usar el mes específico */
+            $fechaInicio = sprintf('%d-%02d-01 00:00:00', $año, $mes);
+            $fechaFin = date('Y-m-d 23:59:59', strtotime("$fechaInicio +1 month -1 day"));
+            
+            error_log("exportLogsCsv: Rango de fechas $fechaInicio a $fechaFin");
+            
+            $consulta = "
+              SELECT 
+                     l.fecha,
+                     COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
+                     l.accion,
+                     l.tabla_afectada,
+                     COALESCE(l.campo_afectado, '-') AS campo_afectado,
+                     COALESCE(l.valor_antiguo, '-') AS valor_antiguo,
+                     COALESCE(l.valor_nuevo, '-') AS valor_nuevo,
+                     COALESCE(l.ip, '-') AS ip
+                FROM log_evento_dato l
+           LEFT JOIN persona actor ON actor.id_persona = l.id_actor
+               WHERE l.fecha BETWEEN :d AND :h 
+           ORDER BY l.fecha DESC";
 
-        $consultaPreparada = $baseDatos->prepare($consulta);
-        $consultaPreparada->execute([':d' => $fechaInicio, ':h' => $fechaFin]);
+            $consultaPreparada = $baseDatos->prepare($consulta);
+            $consultaPreparada->execute([':d' => $fechaInicio, ':h' => $fechaFin]);
+        }
+
+        error_log("exportLogsCsv: Consulta ejecutada correctamente");
+
+        /* Crear el archivo CSV */
+        $archivo = fopen('php://temp', 'r+');
+        if (!$archivo) {
+            throw new Exception("No se pudo crear el archivo temporal");
+        }
+
+        /* Escribir cabeceras */
+        $encabezados = ['Fecha', 'Actor', 'Acción', 'Tabla', 'Campo', 'Valor antiguo', 'Valor nuevo', 'IP'];
+        fputcsv($archivo, $encabezados, ';');
+
+        /* Contar filas obtenidas */
+        $contadorFilas = 0;
+
+        /* Agregar datos al CSV */
+        while ($fila = $consultaPreparada->fetch(PDO::FETCH_ASSOC)) {
+            // Formatear fecha para CSV
+            $fechaFormateada = date('d/m/Y H:i', strtotime($fila['fecha']));
+            
+            $filaCsv = [
+                $fechaFormateada,
+                $fila['actor'],
+                $fila['accion'],
+                $fila['tabla_afectada'],
+                $fila['campo_afectado'],
+                $fila['valor_antiguo'],
+                $fila['valor_nuevo'],
+                $fila['ip']
+            ];
+            
+            fputcsv($archivo, $filaCsv, ';');
+            $contadorFilas++;
+        }
+
+        error_log("exportLogsCsv: $contadorFilas filas procesadas");
+
+        // Si no hay registros, agregar mensaje informativo
+        if ($contadorFilas === 0) {
+            $mensaje = $mes === 0
+                ? "No hay registros disponibles en el sistema"
+                : "No hay registros disponibles para " . date('F Y', strtotime($fechaInicio));
+            $filaSinDatos = [$mensaje, "", "", "", "", "", "", ""];
+            fputcsv($archivo, $filaSinDatos, ';');
+            error_log("exportLogsCsv: No hay datos, agregando mensaje informativo");
+        }
+
+        // Obtener resultado como string
+        rewind($archivo);
+        $csv = stream_get_contents($archivo);
+        fclose($archivo);
+
+        error_log("exportLogsCsv: CSV generado exitosamente, tamaño: " . strlen($csv));
+        return $csv;
+        
+    } catch (Exception $e) {
+        error_log("exportLogsCsv: ERROR - " . $e->getMessage());
+        error_log("exportLogsCsv: Stack trace - " . $e->getTraceAsString());
+        throw $e;
     }
-
-    /* Crear el archivo CSV */
-    $archivo = fopen('php://temp', 'r+');
-
-    /* Escribir cabeceras */
-    $encabezados = ['Fecha', 'Actor', 'Acción', 'Tabla', 'Campo', 'Valor antiguo', 'Valor nuevo', 'IP'];
-    fputcsv($archivo, $encabezados, ';');
-
-    /* Contar filas obtenidas */
-    $contadorFilas = 0;    /* Agregar datos al CSV */
-    while ($fila = $consultaPreparada->fetch(PDO::FETCH_NUM)) {
-        fputcsv($archivo, $fila, ';');
-        $contadorFilas++;
-    }
-
-    // Si no hay registros, agregar mensaje informativo
-    if ($contadorFilas === 0) {
-        $mensaje = $mes === 0
-            ? "No hay registros disponibles en el sistema"
-            : "No hay registros disponibles para " . date('F Y', strtotime($fechaInicio));
-        $filaSinDatos = [$mensaje, "", "", "", "", "", "", ""];
-        fputcsv($archivo, $filaSinDatos, ';');
-    }
-
-    // Obtener resultado como string
-    rewind($archivo);
-    $csv = stream_get_contents($archivo);
-    fclose($archivo);
-
-    return $csv;
 }
 
 function getPacientesProfesional(int $idProf): array

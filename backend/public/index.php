@@ -628,16 +628,22 @@ $app->get('/admin/logs', function ($req, $res, $args) {
     $year = (int)($params['year'] ?? date('Y'));
     $month = (int)($params['month'] ?? date('m'));
     
-    error_log("Generando CSV de logs para $year-$month");
+    error_log("=== DEBUG LOGS CSV ===");
+    error_log("Año: $year, Mes: $month");
+    error_log("Usuario: {$val['usuario']['id_persona']} - Rol: {$val['usuario']['rol']}");
     
     try {
+        error_log("Llamando a exportLogsCsv($year, $month)");
         $csvContent = exportLogsCsv($year, $month);
+        error_log("CSV generado, longitud: " . strlen($csvContent));
         
         if (empty($csvContent)) {
+            error_log("CSV vacío");
             return jsonResponse(['ok' => false, 'mensaje' => 'No hay logs para el período seleccionado'], 404);
         }
         
         $filename = sprintf('logs_%04d_%02d.csv', $year, $month);
+        error_log("Enviando archivo: $filename");
         
         $response = $res
             ->withHeader('Content-Type', 'text/csv; charset=utf-8')
@@ -646,12 +652,17 @@ $app->get('/admin/logs', function ($req, $res, $args) {
         
         $response->getBody()->write($csvContent);
         
-        error_log("CSV generado exitosamente: $filename");
+        error_log("CSV enviado exitosamente");
         return $response;
         
     } catch (Exception $e) {
-        error_log("Error generando CSV de logs: " . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => 'Error interno del servidor'], 500);
+        error_log("EXCEPCIÓN en logs CSV: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error: ' . $e->getMessage()], 500);
+    } catch (Error $e) {
+        error_log("ERROR FATAL en logs CSV: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        return jsonResponse(['ok' => false, 'mensaje' => 'Error fatal del servidor'], 500);
     }
 });
 
