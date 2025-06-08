@@ -163,14 +163,14 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
       {/* MENÚ PRINCIPAL */}
       <div className={`menu-desplegable${navOpen ? ' open' : ''}`}>
         <nav className="nav-links">
-          <a href="#top" onClick={e => handleNavLink(e, 'top')}>Inicio</a>
-          <a href="#quienes-somos" onClick={e => handleNavLink(e, 'quienes-somos')}>Quiénes somos</a>
-          <a href="#servicios" onClick={e => handleNavLink(e, 'servicios')}>Servicios</a>
+          <a href="/" onClick={e => handleNavLink(e, 'top')}>Inicio</a>
+          <a href="/#quienes-somos" onClick={e => handleNavLink(e, 'quienes-somos')}>Quiénes somos</a>
+          <a href="/#servicios" onClick={e => handleNavLink(e, 'servicios')}>Servicios</a>
           
           {/* Solo mostrar "Reserve su cita" si NO está logueado */}
           {!isLoggedIn && (
             <a className="btn-reserva"
-              href="#"
+              href="/reservar"
               onClick={e => { e.preventDefault(); onReservarCita(); }}>
               Reserve su cita
             </a>
@@ -191,7 +191,12 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
                       {item.label}
                     </Link>
                   ) : (
-                    <a key={index} href="#" onClick={e => { e.preventDefault(); item.action(); }}>
+                    <a key={index} 
+                       href={item.label === 'Mi perfil' ? '/paciente/mi-perfil' : 
+                             item.label === 'Tareas para casa' ? '/paciente/mi-perfil?section=tareas' : 
+                             item.label === 'Historial clínico' ? '/paciente/mi-perfil?section=historial' : '/'
+                       }
+                       onClick={e => { e.preventDefault(); item.action(); }}>
                       {item.label}
                     </a>
                   )
@@ -199,7 +204,7 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
                 <Link to="/" onClick={() => { onLogout(); setUserOpen(false); }}>Cerrar sesión</Link>
               </>
             ) : (
-              <a href="#" onClick={e => { e.preventDefault(); onAccessClick(); setUserOpen(false); }}>Acceso</a>
+              <a href="/acceso" onClick={e => { e.preventDefault(); onAccessClick(); setUserOpen(false); }}>Acceso</a>
             )}
           </div>
 
@@ -218,7 +223,12 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
                         {item.label}
                       </Link>
                     ) : (
-                      <a key={index} href="#" onClick={e => { e.preventDefault(); item.action(); }}>
+                      <a key={index} 
+                         href={item.label === 'Mi perfil' ? '/paciente/mi-perfil' : 
+                               item.label === 'Tareas para casa' ? '/paciente/mi-perfil?section=tareas' : 
+                               item.label === 'Historial clínico' ? '/paciente/mi-perfil?section=historial' : '/'
+                         }
+                         onClick={e => { e.preventDefault(); item.action(); }}>
                         {item.label}
                       </a>
                     )
@@ -226,7 +236,7 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
                   <Link to="/" onClick={() => { onLogout(); setUserOpen(false); }}>Cerrar sesión</Link>
                 </>
               ) : (
-                <a href="#" onClick={e => { e.preventDefault(); onAccessClick(); setUserOpen(false); }}>Acceso</a>
+                <a href="/acceso" onClick={e => { e.preventDefault(); onAccessClick(); setUserOpen(false); }}>Acceso</a>
               )}
             </div>
           </aside>

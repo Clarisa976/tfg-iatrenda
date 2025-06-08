@@ -33,9 +33,9 @@ export default function Footer() {
         <div className="footer__section">
           <h3>SÍGUENOS EN</h3>
           <div className="footer__socials">
-            <a href="#" aria-label="Instagram"><Instagram /></a>
-            <a href="#" aria-label="Facebook"><Facebook /></a>
-            <a href="#" aria-label="LinkedIn"><Linkedin /></a>
+            <a href="www.instagram.com" aria-label="Instagram"><Instagram /></a>
+            <a href="wwww.facebok.com" aria-label="Facebook"><Facebook /></a>
+            <a href="www.linkedin.com" aria-label="LinkedIn"><Linkedin /></a>
           </div>
         </div>
 
