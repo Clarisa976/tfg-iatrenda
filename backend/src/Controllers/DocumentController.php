@@ -55,6 +55,10 @@ class DocumentController {
      * Manejar subida de tratamiento (con o sin archivo)
      */
     private function handleTreatmentUpload($data, $uploadedFiles, $response) {
+        $baseDatos = null;
+        $uploadedToS3 = false;
+        $s3Key = null;
+        
         try {
             error_log('=== TREATMENT UPLOAD START ===');
             
@@ -72,9 +76,15 @@ class DocumentController {
             $profesionalId = $val['usuario']['id_persona'];
             error_log('Profesional ID: ' . $profesionalId);
 
+            // Iniciar transacción
+            $baseDatos = conectar();
+            $baseDatos->beginTransaction();
+            error_log('Transacción iniciada');
+
             // 1. Crear historial clínico si no existe
-            $historialId = $this->getOrCreateHistorial($data['id_paciente']);
+            $historialId = $this->getOrCreateHistorial($data['id_paciente'], $baseDatos);
             if (!$historialId) {
+                $baseDatos->rollBack();
                 return $this->jsonResponse($response, [
                     'ok' => false,
                     'mensaje' => 'Error al crear/obtener historial clínico'
@@ -93,8 +103,9 @@ class DocumentController {
                 'titulo' => $data['titulo']
             ];
 
-            $tratamientoId = $this->saveTreatmentToDatabase($tratamientoData);
+            $tratamientoId = $this->saveTreatmentToDatabase($tratamientoData, $baseDatos);
             if (!$tratamientoId) {
+                $baseDatos->rollBack();
                 return $this->jsonResponse($response, [
                     'ok' => false,
                     'mensaje' => 'Error al crear tratamiento en base de datos'
@@ -102,7 +113,7 @@ class DocumentController {
             }
             error_log('Tratamiento ID creado: ' . $tratamientoId);
 
-            // 3. Si hay archivo, subirlo a S3
+            // 3. Si hay archivo, procesarlo
             $documentData = null;
             $documentId = null;
             
@@ -112,6 +123,7 @@ class DocumentController {
                 
                 // Validar archivo
                 if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+                    $baseDatos->rollBack();
                     error_log('Error en archivo: ' . $uploadedFile->getError());
                     return $this->jsonResponse($response, [
                         'ok' => false,
@@ -135,6 +147,7 @@ class DocumentController {
                 error_log('Tipo de archivo: ' . $fileType);
                 
                 if (!in_array($fileType, $allowedTypes)) {
+                    $baseDatos->rollBack();
                     return $this->jsonResponse($response, [
                         'ok' => false,
                         'mensaje' => 'Tipo de archivo no permitido. Permitidos: PDF, JPG, PNG, GIF, DOC, DOCX, TXT'
@@ -144,6 +157,7 @@ class DocumentController {
                 // Validar tamaño (max 10MB)
                 $maxSize = 10 * 1024 * 1024; // 10MB
                 if ($uploadedFile->getSize() > $maxSize) {
+                    $baseDatos->rollBack();
                     return $this->jsonResponse($response, [
                         'ok' => false,
                         'mensaje' => 'El archivo es demasiado grande. Máximo 10MB'
@@ -167,6 +181,7 @@ class DocumentController {
                 );
 
                 if (!$uploadResult['success']) {
+                    $baseDatos->rollBack();
                     error_log('Error subida S3: ' . $uploadResult['error']);
                     return $this->jsonResponse($response, [
                         'ok' => false,
@@ -174,19 +189,37 @@ class DocumentController {
                     ], 500);
                 }
 
+                $uploadedToS3 = true;
+                $s3Key = $uploadResult['key'];
+                error_log('Archivo subido a S3 con clave: ' . $s3Key);
+
                 // Guardar documento en base de datos
                 $documentData = [
-                    'id_historial' => $historialId,  // Siempre asociar al historial
-                    'id_tratamiento' => $tratamientoId,  // También asociar al tratamiento específico
+                    'id_historial' => $historialId,
+                    'id_tratamiento' => $tratamientoId,
                     'id_profesional' => $profesionalId,
                     'ruta' => $uploadResult['key'],
-                    'tipo' => $fileType, // Tipo de archivo (PDF, JPG, etc.)
+                    'tipo' => $fileType,
                     'nombre_archivo' => $fileName
                 ];
 
-                $documentId = $this->saveDocumentToDatabase($documentData);
+                $documentId = $this->saveDocumentToDatabase($documentData, $baseDatos);
+                if (!$documentId) {
+                    // Si falla guardar en BD, eliminar de S3
+                    error_log('Error al guardar documento en BD, eliminando de S3...');
+                    $this->s3Service->deleteFile($s3Key);
+                    $baseDatos->rollBack();
+                    return $this->jsonResponse($response, [
+                        'ok' => false,
+                        'mensaje' => 'Error al guardar documento en base de datos'
+                    ], 500);
+                }
                 error_log('Documento guardado con ID: ' . $documentId);
             }
+
+            // Todo OK, confirmar transacción
+            $baseDatos->commit();
+            error_log('Transacción confirmada');
 
             return $this->jsonResponse($response, [
                 'ok' => true,
@@ -197,7 +230,7 @@ class DocumentController {
                     'documento' => $documentData ? [
                         'id' => $documentId,
                         's3_key' => $documentData['ruta'],
-                        'nombre' => $documentData['nombre_original']
+                        'nombre' => $documentData['nombre_archivo']
                     ] : null
                 ]
             ], 201);
@@ -205,6 +238,19 @@ class DocumentController {
         } catch (\Exception $e) {
             error_log('Error creating treatment: ' . $e->getMessage());
             error_log('Stack trace: ' . $e->getTraceAsString());
+            
+            // Rollback de la base de datos
+            if ($baseDatos && $baseDatos->inTransaction()) {
+                $baseDatos->rollBack();
+                error_log('Rollback realizado');
+            }
+            
+            // Si se subió algo a S3, eliminarlo
+            if ($uploadedToS3 && $s3Key) {
+                error_log('Eliminando archivo de S3: ' . $s3Key);
+                $this->s3Service->deleteFile($s3Key);
+            }
+            
             return $this->jsonResponse($response, [
                 'ok' => false,
                 'mensaje' => 'Error al crear tratamiento: ' . $e->getMessage()
@@ -216,6 +262,10 @@ class DocumentController {
      * Manejar subida de documento al historial
      */
     private function handleDocumentUpload($data, $uploadedFiles, $response) {
+        $baseDatos = null;
+        $uploadedToS3 = false;
+        $s3Key = null;
+        
         try {
             // Validar que se subió un archivo
             if (!isset($uploadedFiles['file'])) {
@@ -276,9 +326,14 @@ class DocumentController {
                 ], 400);
             }
 
+            // Iniciar transacción
+            $baseDatos = conectar();
+            $baseDatos->beginTransaction();
+
             // 1. Crear historial clínico si no existe
-            $historialId = $this->getOrCreateHistorial($data['id_paciente']);
+            $historialId = $this->getOrCreateHistorial($data['id_paciente'], $baseDatos);
             if (!$historialId) {
+                $baseDatos->rollBack();
                 return $this->jsonResponse($response, [
                     'ok' => false,
                     'mensaje' => 'Error al crear/obtener historial clínico'
@@ -301,28 +356,45 @@ class DocumentController {
             );
 
             if (!$uploadResult['success']) {
+                $baseDatos->rollBack();
                 return $this->jsonResponse($response, [
                     'ok' => false,
                     'mensaje' => $uploadResult['error']
                 ], 500);
             }
 
+            $uploadedToS3 = true;
+            $s3Key = $uploadResult['key'];
+
             // 3. Actualizar historial con diagnósticos si se proporcionaron
             if (!empty($data['diagnostico_preliminar']) || !empty($data['diagnostico_final'])) {
-                $this->updateHistorialDiagnosticos($historialId, $data);
+                $this->updateHistorialDiagnosticos($historialId, $data, $baseDatos);
             }
 
             // 4. Guardar documento en base de datos
             $documentData = [
                 'id_historial' => $historialId,
-                'id_tratamiento' => null,  // NULL para documentos generales del historial
+                'id_tratamiento' => null,
                 'id_profesional' => $profesionalId,
                 'ruta' => $uploadResult['key'],
-                'tipo' => $fileType, // Tipo de archivo (PDF, JPG, etc.)
+                'tipo' => $fileType,
                 'nombre_archivo' => $fileName
             ];
 
-            $documentId = $this->saveDocumentToDatabase($documentData);
+            $documentId = $this->saveDocumentToDatabase($documentData, $baseDatos);
+            
+            if (!$documentId) {
+                // Si falla guardar en BD, eliminar de S3
+                $this->s3Service->deleteFile($s3Key);
+                $baseDatos->rollBack();
+                return $this->jsonResponse($response, [
+                    'ok' => false,
+                    'mensaje' => 'Error al guardar documento en base de datos'
+                ], 500);
+            }
+
+            // Todo OK, confirmar transacción
+            $baseDatos->commit();
 
             return $this->jsonResponse($response, [
                 'ok' => true,
@@ -339,6 +411,17 @@ class DocumentController {
 
         } catch (\Exception $e) {
             error_log('Error uploading document to S3: ' . $e->getMessage());
+            
+            // Rollback de la base de datos
+            if ($baseDatos && $baseDatos->inTransaction()) {
+                $baseDatos->rollBack();
+            }
+            
+            // Si se subió algo a S3, eliminarlo
+            if ($uploadedToS3 && $s3Key) {
+                $this->s3Service->deleteFile($s3Key);
+            }
+            
             return $this->jsonResponse($response, [
                 'ok' => false,
                 'mensaje' => 'Error interno del servidor'
@@ -508,9 +591,11 @@ class DocumentController {
     /**
      * Obtener o crear historial clínico para un paciente
      */
-    private function getOrCreateHistorial($pacienteId) {
+    private function getOrCreateHistorial($pacienteId, $baseDatos = null) {
         try {
-            $baseDatos = conectar();
+            if (!$baseDatos) {
+                $baseDatos = conectar();
+            }
             
             // Buscar historial existente
             $sql = "SELECT id_historial FROM historial_clinico WHERE id_paciente = ? ORDER BY fecha_inicio DESC LIMIT 1";
@@ -546,14 +631,16 @@ class DocumentController {
     /**
      * Guardar tratamiento en base de datos
      */
-    private function saveTreatmentToDatabase($data) {
+    private function saveTreatmentToDatabase($data, $baseDatos = null) {
         try {
-            $baseDatos = conectar();
+            if (!$baseDatos) {
+                $baseDatos = conectar();
+            }
             
             // PostgreSQL - usar RETURNING
             $sql = "INSERT INTO tratamiento 
-                    (id_historial, id_profesional, fecha_inicio, fecha_fin, frecuencia_sesiones, notas) 
-                    VALUES (?, ?, ?, ?, ?, ?) RETURNING id_tratamiento";
+                    (id_historial, id_profesional, fecha_inicio, fecha_fin, frecuencia_sesiones, titulo, notas) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id_tratamiento";
             
             $stmt = $baseDatos->prepare($sql);
             $stmt->execute([
@@ -562,6 +649,7 @@ class DocumentController {
                 $data['fecha_inicio'],
                 $data['fecha_fin'],
                 $data['frecuencia_sesiones'],
+                $data['titulo'],
                 $data['notas']
             ]);
             
@@ -582,9 +670,11 @@ class DocumentController {
     /**
      * Actualizar diagnósticos en historial
      */
-    private function updateHistorialDiagnosticos($historialId, $data) {
+    private function updateHistorialDiagnosticos($historialId, $data, $baseDatos = null) {
         try {
-            $baseDatos = conectar();
+            if (!$baseDatos) {
+                $baseDatos = conectar();
+            }
             
             $updates = [];
             $params = [];
@@ -614,17 +704,19 @@ class DocumentController {
     /**
      * Guardar documento en base de datos
      */
-    private function saveDocumentToDatabase($data) {
+    private function saveDocumentToDatabase($data, $baseDatos = null) {
         try {
-            $baseDatos = conectar();
+            if (!$baseDatos) {
+                $baseDatos = conectar();
+            }
             
             // PostgreSQL - usar RETURNING
             $sql = "INSERT INTO documento_clinico 
                     (id_historial, id_tratamiento, id_profesional, ruta, tipo, nombre_archivo) 
                     VALUES (?, ?, ?, ?, ?, ?) RETURNING id_documento";
             $params = [
-                $data['id_historial'],        // Siempre requerido
-                $data['id_tratamiento'],      // Puede ser NULL
+                $data['id_historial'],
+                $data['id_tratamiento'],
                 $data['id_profesional'],
                 $data['ruta'],
                 $data['tipo'],
