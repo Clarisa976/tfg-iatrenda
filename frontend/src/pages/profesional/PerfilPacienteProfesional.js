@@ -37,7 +37,7 @@ const getEstadoClass = (estado) => {
   };
   return clases[estado] || '';
 };
-/*const api = {
+const api = {
   get: async (url, params = {}) => {
     const token = localStorage.getItem('token');
     const queryString = new URLSearchParams(params).toString();
@@ -100,7 +100,7 @@ const getEstadoClass = (estado) => {
     });
     return response.json();
   }
-};*/
+};
 
 // Componente Input memoizado
 const InputField = memo(({ obj, onChange, fieldKey, label, type = 'text', full = false, edit }) => {
@@ -282,59 +282,25 @@ const cancelEdit = () => {
     if (tk) axios.defaults.headers.common.Authorization = `Bearer ${tk}`;
   }, []);
 
-const fetchData = useCallback(async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`/prof/pacientes/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json' 
-      }
-    });
-
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-
-      const errorText = await response.text();
-      console.error('Respuesta no JSON recibida:', errorText);
-      throw new Error('El servidor no devolvió una respuesta JSON válida');
-    }
-
-
-    const clonedResponse = response.clone();
-    
-
-    let r;
+  const fetchData = useCallback(async () => {
     try {
-      r = await response.json();
-    } catch (parseError) {
-
-      const text = await clonedResponse.text();
-      console.error('Error parseando JSON:', parseError);
-      console.error('Contenido de la respuesta:', text);
-      throw new Error('La respuesta del servidor no es un JSON válido');
+      console.log('Fetching updated patient data...');
+      const r = await axios.get(`/prof/pacientes/${id}`);
+      if (!r.data?.ok) throw new Error(r.data?.mensaje || 'Error API');
+      const d = r.data.data;
+      console.log('Patient data updated:', d);
+      setData(d);
+      setPPer(d.persona || {});
+      setPPac(d.paciente || {});
+      setPTut(d.tutor || {});
+      setRgpd(d.consentimiento_activo || false);
+      if (r.data.token) localStorage.setItem('token', r.data.token);
+    } catch (e) {
+      console.error(e);
+      msg(false, 'Error', e.message);
+      setData({ tratamientos: [], documentos: [], citas: [] });
     }
-
-    if (!response.ok || !r?.ok) {
-      throw new Error(r?.mensaje || `Error del servidor: ${response.status}`);
-    }
-    
-    const d = r.data;
-    console.log('Patient data updated:', d);
-    setData(d);
-    setPPer(d.persona || {});
-    setPPac(d.paciente || {});
-    setPTut(d.tutor || {});
-    setRgpd(d.consentimiento_activo || false);
-    if (r.token) localStorage.setItem('token', r.token);
-  } catch (e) {
-    console.error('Error en fetchData:', e);
-    msg(false, 'Error', e.message);
-    setData({ tratamientos: [], documentos: [], citas: [] });
-  }
-}, [id]);
+  }, [id]);
 
 
   useEffect(() => {
@@ -369,56 +335,31 @@ const fetchData = useCallback(async () => {
 
  
   const savePerfil = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`/prof/pacientes/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    try {
+      await axios.put(`/prof/pacientes/${id}`, {
         persona: pPer,
         paciente: { ...pPac, tutor: pPac.tipo_paciente !== 'ADULTO' ? pTut : null },
         rgpd
-      })
-    });
-    const result = await response.json();
-    
-    if (!result.ok) {
-      throw new Error(result.mensaje || 'Error al actualizar paciente');
-    }
-    
-    msg(true, '¡Éxito!', 'Paciente actualizado correctamente');
-    setEdit(false);
-  } catch (e) { 
-    msg(false, 'Error', e.message || 'El paciente no se ha podido actualizar'); 
-  }
-};
+      });
+      msg(true, '¡Éxito!', 'Paciente actualizado correctamente');
+      setEdit(false);
+    } catch (e) { msg(false, 'Error', e.response?.data?.mensaje || 'El paciente no se ha podido actualizar'); }
+  };
+
 const doAccion = async (idCita, accion, fecha = null) => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`/prof/citas/${idCita}/accion`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ accion, ...(fecha ? { fecha } : {}) })
-    });
-    const result = await response.json();
-    
-    if (result?.token) {
-      localStorage.setItem('token', result.token);
+    try {
+      const response = await axios.post(`/prof/citas/${idCita}/accion`, { accion, ...(fecha ? { fecha } : {}) });
+      if (response.data?.token) {
+        localStorage.setItem('token', response.data.token);
+      }
+      await fetchData();
+      msg(true, 'Éxito', 'La cita se ha actualizado correctamente');
+    } catch (e) {
+      console.error('Error al realizar acción en cita:', e);
+      const errorMsg = e.response?.data?.mensaje || 'No se pudo cambiar la cita. Por favor, inténtalo de nuevo.';
+      msg(false, 'Error', errorMsg);
     }
-    await fetchData();
-    msg(true, 'Éxito', 'La cita se ha actualizado correctamente');
-  } catch (e) {
-    console.error('Error al realizar acción en cita:', e);
-    const errorMsg = e.response?.data?.mensaje || 'No se pudo cambiar la cita. Por favor, inténtalo de nuevo.';
-    msg(false, 'Error', errorMsg);
-  }
-};
+  };
 
   if (data === null) return <div className="loading-estado">Cargando…</div>;
 
