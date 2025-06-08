@@ -643,7 +643,7 @@ console.log('Datos que se envían al backend:', {
 
     if (!repro.show) return null;
 
-    const fechaActualCita = repro.citaActual?.fecha_hora ?
+   /* const fechaActualCita = repro.citaActual?.fecha_hora ?
       new Date(repro.citaActual.fecha_hora).toLocaleString('es-ES', {
         year: 'numeric',
         month: 'long',
@@ -651,7 +651,7 @@ console.log('Datos que se envían al backend:', {
         hour: '2-digit',
         minute: '2-digit',
         weekday: 'long'
-      }) : '';
+      }) : '';*/
 
     return (
       <div className="modal-backdrop" onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}>
