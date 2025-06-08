@@ -576,15 +576,6 @@ const doAccion = async (idCita, accion, fecha = null) => {
       // No está en días bloqueados
       const noEstaBloqueado = !diasBloqueados.includes(fechaStr);
 
-      // A diferencia de la versión anterior, NO excluimos la fecha de la cita actual  porque sí queremos permitir reprogramar para el mismo día, quizás a otra hora
-
-      console.log('Validando fecha:', fechaStr, {
-        esLaborable,
-        esFutura,
-        noEstaBloqueado,
-        diasBloqueados
-      });
-
       return esLaborable && esFutura && noEstaBloqueado;
     };
 
