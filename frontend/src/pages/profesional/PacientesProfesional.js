@@ -1,37 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { EllipsisVertical } from 'lucide-react';
-import { useNavigate }      from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import '../../styles.css';
 
-export default function PacientesProfesional () {
+export default function PacientesProfesional() {
+  const [pacientes, setPacientes] = useState([]);
+  const [busqueda, setBusqueda] = useState('');
+  const navigate = useNavigate();
 
-  const [pacientes,setPacientes]=useState([]);
-  const [busqueda ,setBusqueda ]=useState('');
-  const navigate=useNavigate();
-
-  const cargar = ()=>{
-    const tk=localStorage.getItem('token');
-    axios.get('/prof/pacientes',{headers:{Authorization:`Bearer ${tk}`}})
-         .then(r=>{
-            const arr = Array.isArray(r.data.pacientes)?r.data.pacientes:[];
-            setPacientes(arr);
-            if(r.data.token) localStorage.setItem('token',r.data.token);
-         })
-         .catch(()=>setPacientes([]));
+  const cargar = () => {
+    const tk = localStorage.getItem('token');
+    axios.get('/prof/pacientes', { headers: { Authorization: `Bearer ${tk}` } })
+      .then(r => {
+        const arr = Array.isArray(r.data.pacientes) ? r.data.pacientes : [];
+        setPacientes(arr);
+        if (r.data.token) localStorage.setItem('token', r.data.token);
+      })
+      .catch(() => setPacientes([]));
   };
-  useEffect(cargar,[]);
 
-  const filtrados = pacientes.filter(p=>{
-    const nom=`${p.nombre} ${p.apellido1} ${p.apellido2||''}`.toLowerCase();
+  useEffect(cargar, []);
+
+  const filtrados = pacientes.filter(p => {
+    const nom = `${p.nombre} ${p.apellido1} ${p.apellido2 || ''}`.toLowerCase();
     return nom.includes(busqueda.toLowerCase());
   });
 
+  const verPerfil = p => navigate(`/profesional/paciente/${p.id_persona}`);
 
-  const verPerfil = p => navigate(`/prof/paciente/${p.id}`);
-
-
-  return(
+  return (
     <div className="usuarios-container">
       {/* encabezado */}
       <div className="usuarios-header">
@@ -44,7 +42,7 @@ export default function PacientesProfesional () {
         <div className="input-buscar">
           <input
             value={busqueda}
-            onChange={e=>setBusqueda(e.target.value)}
+            onChange={e => setBusqueda(e.target.value)}
             placeholder="Nombre o apellido"
           />
           <button className="btn-buscar">Buscar</button>
@@ -62,28 +60,29 @@ export default function PacientesProfesional () {
         </thead>
         <tbody>
           {filtrados.length ? (
-            filtrados.map(p=>(
-              <tr key={p.id}>
-                <td>{p.nombre} {p.apellido1}{p.apellido2?` ${p.apellido2}`:''}</td>
+            filtrados.map(p => (
+              <tr key={p.id_persona}>
+                <td>{p.nombre} {p.apellido1}{p.apellido2 ? ` ${p.apellido2}` : ''}</td>
                 <td>
                   {p.proxima_cita
-                    ? new Date(p.proxima_cita).toLocaleDateString('es-ES',{
-                        day:'2-digit',month:'2-digit',year:'numeric',
-                        hour:'2-digit',minute:'2-digit'})
+                    ? new Date(p.proxima_cita).toLocaleDateString('es-ES', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      })
                     : 'Sin citas programadas'}
                 </td>
                 <td className="acciones-col">
                   {/* escritorio / tablet */}
                   <div className="acciones-desktop">
-                    <button className="btn-action" onClick={()=>verPerfil(p)}>
+                    <button className="btn-action" onClick={() => verPerfil(p)}>
                       Ver perfil
                     </button>
                   </div>
                   {/* móvil */}
                   <div className="acciones-mobile">
-                    <EllipsisVertical size={20}/>
+                    <EllipsisVertical size={20} />
                     <div className="acciones-dropdown">
-                      <button className="dropdown-item" onClick={()=>verPerfil(p)}>
+                      <button className="dropdown-item" onClick={() => verPerfil(p)}>
                         Ver perfil
                       </button>
                     </div>
