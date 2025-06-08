@@ -97,7 +97,7 @@ function obtenerPerfilProfesional(int $idProfesional): array
     
     // Datos de persona
     $consultaPersona = $baseDatos->prepare("
-        SELECT nombre, apellido1, apellido2, email, telefono, 
+        SELECT id_persona, nombre, apellido1, apellido2, email, telefono, 
                fecha_nacimiento, tipo_via, nombre_calle, numero, 
                escalera, piso, puerta, codigo_postal, ciudad, 
                provincia, pais
