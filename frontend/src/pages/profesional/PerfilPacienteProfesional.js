@@ -276,25 +276,51 @@ const cancelEdit = () => {
   setEdit(false);
 };
 
- /* useEffect(() => {
+  useEffect(() => {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
     const tk = localStorage.getItem('token');
     if (tk) axios.defaults.headers.common.Authorization = `Bearer ${tk}`;
-  }, []);*/
+  }, []);
 
 const fetchData = useCallback(async () => {
   try {
-
     const token = localStorage.getItem('token');
     const response = await fetch(`/prof/pacientes/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json' 
       }
     });
-    const r = await response.json();
+
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+
+      const errorText = await response.text();
+      console.error('Respuesta no JSON recibida:', errorText);
+      throw new Error('El servidor no devolvió una respuesta JSON válida');
+    }
+
+
+    const clonedResponse = response.clone();
     
-    if (!r?.ok) throw new Error(r?.mensaje || 'Error API');
+
+    let r;
+    try {
+      r = await response.json();
+    } catch (parseError) {
+
+      const text = await clonedResponse.text();
+      console.error('Error parseando JSON:', parseError);
+      console.error('Contenido de la respuesta:', text);
+      throw new Error('La respuesta del servidor no es un JSON válido');
+    }
+
+    if (!response.ok || !r?.ok) {
+      throw new Error(r?.mensaje || `Error del servidor: ${response.status}`);
+    }
+    
     const d = r.data;
     console.log('Patient data updated:', d);
     setData(d);
@@ -304,7 +330,7 @@ const fetchData = useCallback(async () => {
     setRgpd(d.consentimiento_activo || false);
     if (r.token) localStorage.setItem('token', r.token);
   } catch (e) {
-    console.error(e);
+    console.error('Error en fetchData:', e);
     msg(false, 'Error', e.message);
     setData({ tratamientos: [], documentos: [], citas: [] });
   }

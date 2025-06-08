@@ -133,10 +133,10 @@ export default function App() {
     };
   }, []);
 
-  // Oculta el toast tras 3s para errores de permisos, 5s para otros
+  // Oculta el toast tras 2s para errores de permisos, 5s para otros
   useEffect(() => {
     if (!toast.show) return;
-    const timeout = toast.type === 'unauthorized' ? 3000 : 5000;
+    const timeout = toast.type === 'unauthorized' ? 2000 : 5000;
     const id = setTimeout(() => setToast(t => ({ ...t, show: false })), timeout);
     return () => clearTimeout(id);
   }, [toast.show, toast.type]);
