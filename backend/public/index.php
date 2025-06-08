@@ -28,6 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+/* Slim */
+$app = AppFactory::create();
+$app->addBodyParsingMiddleware();
 // Middleware para manejar las solicitudes OPTIONS de CORS
 $app->options('/{routes:.+}', function (Request $request, Response $response) {
     $origin = $request->getHeaderLine('Origin');
@@ -43,9 +46,6 @@ $app->options('/{routes:.+}', function (Request $request, Response $response) {
         ->withStatus(200);
 });
 
-/* Slim */
-$app = AppFactory::create();
-$app->addBodyParsingMiddleware();
 
 // Middleware para manejar las solicitudes OPTIONS de CORS
 $app->options('/{routes:.+}', function (Request $request, Response $response) {
