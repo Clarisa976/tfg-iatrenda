@@ -1,7 +1,12 @@
+/* ========================================
+   IMPORTACIÓN DE FUENTES
+======================================== */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap');
 
-/* Variables CSS */
+/* ========================================
+   VARIABLES CSS GLOBALES
+======================================== */
 :root {
   --gray: #4f4f4f;
   --blue: #2f80ed;
@@ -11,7 +16,9 @@
   --black: #000;
 }
 
-/* Reset y estilos base */
+/* ========================================
+   RESET Y ESTILOS BASE
+======================================== */
 * {
   margin: 0;
   padding: 0;
@@ -34,14 +41,11 @@ body {
   flex-direction: column;
 }
 
-.footer {
-  margin-top: auto;
-}
-
 a {
   cursor: pointer;
 }
 
+/* Estilos para encabezados */
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Montserrat', sans-serif;
   font-weight: 700;
@@ -49,7 +53,11 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0.3rem;
 }
 
-/* Header */
+/* ========================================
+   COMPONENTES - CABECERA/HEADER
+======================================== */
+
+/* Contenedor principal del header */
 .header {
   background: var(--white);
   position: sticky;
@@ -59,6 +67,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Barra superior del header */
 .top-bar {
   display: flex;
   align-items: center;
@@ -67,16 +76,19 @@ h1, h2, h3, h4, h5, h6 {
   margin: 15px;
 }
 
+/* Logo del sitio */
 .logo img {
   width: 120px;
   height: auto;
 }
 
+/* Contenedor de iconos */
 .icons {
   display: flex;
   gap: 12px;
 }
 
+/* Estilos para iconos individuales */
 .icon {
   background: none;
   border: none;
@@ -93,10 +105,12 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--green);
 }
 
+/* Icono de notificación con estado de alerta */
 .icon.bell-icon.red {
   color: var(--red);
 }
 
+/* Menú desplegable principal */
 .menu-desplegable {
   display: none;
 }
@@ -105,6 +119,7 @@ h1, h2, h3, h4, h5, h6 {
   display: block;
 }
 
+/* Enlaces de navegación */
 .nav-links {
   display: flex;
   flex-direction: column;
@@ -130,6 +145,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--blue);
 }
 
+/* Botón de reserva en navegación */
 .nav-links a.btn-reserva,
 .btn-reserva {
   display: inline-block;
@@ -156,6 +172,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 8px 16px;
 }
 
+/* Variantes del botón reserva */
 .btn-reserva.blue {
   background: var(--blue);
   color: var(--white);
@@ -165,6 +182,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
 }
 
+/* Menú desplegable de usuario para móvil */
 .user-dropdown {
   display: flex;
   flex-direction: column;
@@ -179,7 +197,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Inter';
   font-weight: 400;
   font-size: 16px;
-    color: var(--gray);
+  color: var(--gray);
   text-decoration: none;
   text-align: center;
   padding: 8px 16px;
@@ -189,12 +207,17 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--blue);
 }
 
+/* Sidebar para tablet y desktop */
 .overlay,
 .sidebar {
   display: none;
 }
 
-/* Hero */
+/* ========================================
+   SECCIÓN HERO PRINCIPAL
+======================================== */
+
+/* Contenedor principal del hero */
 .hero {
   position: relative;
   width: 100%;
@@ -207,6 +230,7 @@ h1, h2, h3, h4, h5, h6 {
   height: auto;
 }
 
+/* Overlay con gradiente del hero */
 .hero__overlay {
   position: absolute;
   inset: 0;
@@ -216,6 +240,7 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
 }
 
+/* Contenido del hero */
 .hero__content {
   position: absolute;
   bottom: 1%;
@@ -251,7 +276,10 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--gray);
 }
 
-/* Sobre nosotros */
+/* ========================================
+   SECCIÓN SOBRE NOSOTROS
+======================================== */
+
 .about {
   padding: 2rem 1rem;
   text-align: center;
@@ -298,6 +326,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0 25px;
 }
 
+/* Lista de características */
 .about__features {
   list-style: none;
   display: flex;
@@ -339,7 +368,10 @@ h1, h2, h3, h4, h5, h6 {
   text-align: left;
 }
 
-/* Servicios */
+/* ========================================
+   SECCIÓN SERVICIOS
+======================================== */
+
 .services {
   padding: 60px 1rem;
   text-align: center;
@@ -397,7 +429,10 @@ h1, h2, h3, h4, h5, h6 {
   margin-top: 40px;
 }
 
-/* Reseñas */
+/* ========================================
+   SECCIÓN RESEÑAS
+======================================== */
+
 .resenas {
   padding: 60px 1rem;
   text-align: center;
@@ -462,7 +497,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .resenas__date {
-    font-family: 'Inter', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 400;
   font-size: 12px;
   color: #4f4f4f;
@@ -496,6 +531,7 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.4;
 }
 
+/* Navegación del slider de reseñas */
 .resenas__nav {
   background: none;
   border: none;
@@ -514,7 +550,10 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--blue);
 }
 
-/* Footer */
+/* ========================================
+   FOOTER
+======================================== */
+
 .footer {
   background-color: var(--blue);
   color: var(--black);
@@ -566,6 +605,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--black);
 }
 
+/* Redes sociales en footer */
 .footer__socials {
   display: flex;
   justify-content: center;
@@ -590,6 +630,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--green);
 }
 
+/* Enlaces generales del footer */
 .footer__links {
   list-style: none;
   padding: 0;
@@ -609,6 +650,7 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-block;
 }
 
+/* Línea de copyright */
 .footer__bottom {
   margin-top: 2rem;
   font-family: 'Inter', sans-serif;
@@ -616,7 +658,11 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 400;
 }
 
-/* Elementos flotantes */
+/* ========================================
+   ELEMENTOS FLOTANTES Y OVERLAYS
+======================================== */
+
+/* Botón scroll hacia arriba */
 .scroll-top {
   position: fixed;
   right: 1rem;
@@ -695,7 +741,11 @@ h1, h2, h3, h4, h5, h6 {
   border: none;
 }
 
-/* Modales */
+/* ========================================
+   MODALES Y VENTANAS EMERGENTES
+======================================== */
+
+/* Fondo del modal */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -706,10 +756,12 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 9999;
 }
 
+/* Modal backdrop con z-index alto para confirmación */
 .modal-backdrop-confirmacion {
   z-index: 10000;
 }
 
+/* Contenedor del modal */
 .modal {
   background: var(--white);
   padding: 2rem;
@@ -719,6 +771,7 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
 }
 
+/* Encabezado del modal */
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -736,6 +789,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--blue);
 }
 
+/* Botón cerrar modal */
 .modal-close {
   position: absolute;
   right: 1rem;
@@ -746,6 +800,7 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
 }
 
+/* Título del modal */
 .modal-title {
   font-family: 'Montserrat', sans-serif;
   font-weight: 700;
@@ -755,14 +810,15 @@ h1, h2, h3, h4, h5, h6 {
   text-align: center;
 }
 
+/* Cuerpo del modal */
 .modal-body {
   margin-bottom: 1.5rem;
 }
 
+/* Pie del modal */
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  justify-content: center;
   gap: 1rem;
   border-top: 1px solid #e9ecef;
   padding-top: 1rem;
@@ -788,7 +844,11 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--black);
 }
 
-/* Formularios */
+/* ========================================
+   FORMULARIOS Y CAMPOS
+======================================== */
+
+/* Campo de formulario */
 .field {
   margin-bottom: 1rem;
 }
@@ -827,6 +887,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.875rem;
 }
 
+/* Textarea específico */
 .field textarea {
   min-height: 80px;
   font-family: inherit;
@@ -834,6 +895,7 @@ h1, h2, h3, h4, h5, h6 {
   resize: vertical;
 }
 
+/* Campos de solo lectura */
 .readonly-input {
   background-color: #f5f5f5;
   border: 1px solid #ddd;
@@ -847,6 +909,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: none;
 }
 
+/* Selectores */
 .select-field {
   padding: 8px 12px;
   border-radius: 4px;
@@ -862,7 +925,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* Checkboxes */
+/* Checkboxes personalizados */
 input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
@@ -893,6 +956,7 @@ input[type="checkbox"]:checked::after {
   opacity: 1;
 }
 
+/* Línea de consentimiento */
 .consent-line {
   display: flex;
   align-items: center;
@@ -910,6 +974,7 @@ input[type="checkbox"]:checked::after {
   color: var(--blue);
 }
 
+/* Errores de API */
 .api-error {
   text-align: center;
   color: var(--red);
@@ -917,7 +982,11 @@ input[type="checkbox"]:checked::after {
   font-family: 'Inter', sans-serif;
 }
 
-/* Botones */
+/* ========================================
+   BOTONES
+======================================== */
+
+/* Acciones del formulario */
 .actions {
   display: flex;
   flex-direction: column;
@@ -928,7 +997,7 @@ input[type="checkbox"]:checked::after {
 
 .actions .forgot {
   color: #4F4F4F;
-    text-decoration: underline;
+  text-decoration: underline;
   font-size: 0.875rem;
   font-family: 'Inter', sans-serif;
   background: none;
@@ -937,6 +1006,7 @@ input[type="checkbox"]:checked::after {
   cursor: pointer;
 }
 
+/* Botón de envío */
 .btn-submit {
   background: var(--green);
   color: var(--black);
@@ -953,6 +1023,7 @@ input[type="checkbox"]:checked::after {
   filter: brightness(0.9);
 }
 
+/* Botones de acción */
 .btn-action {
   background: var(--gray);
   color: var(--white);
@@ -970,6 +1041,7 @@ input[type="checkbox"]:checked::after {
   background: var(--red);
 }
 
+/* Botones primarios y secundarios */
 .btn-primary,
 .btn-secondary {
   padding: 8px 16px;
@@ -988,6 +1060,7 @@ input[type="checkbox"]:checked::after {
   color: var(--gray);
 }
 
+/* Botones del modal */
 .btn-cancel {
   background: var(--gray);
   color: var(--white);
@@ -1023,6 +1096,7 @@ input[type="checkbox"]:checked::after {
   background-color: #d32f2f;
 }
 
+/* Botón agregar */
 .btn-agregar {
   display: inline-block;
   font-family: 'Inter', sans-serif;
@@ -1039,6 +1113,7 @@ input[type="checkbox"]:checked::after {
   filter: brightness(0.9);
 }
 
+/* Botón buscar */
 .btn-buscar {
   padding: 0 1rem;
   background: var(--blue);
@@ -1051,6 +1126,7 @@ input[type="checkbox"]:checked::after {
   filter: brightness(0.9);
 }
 
+/* Botón ver archivo */
 .btn-view-file,
 .btn-ver-archivo {
   display: inline-block;
@@ -1070,24 +1146,17 @@ input[type="checkbox"]:checked::after {
   color: white;
 }
 
-/* Notificaciones */
-.toast-global {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 10001;
-}
+/* ========================================
+   NOTIFICACIONES Y TOASTS
+======================================== */
 
+/* Toast centrado */
 .centered-toast {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 10001;
-  pointer-events: auto;
+  z-index: 3000;
 }
 
 .toast-card {
@@ -1133,8 +1202,18 @@ input[type="checkbox"]:checked::after {
   margin: 0;
 }
 
-/* Administración */
-.usuarios-container,
+/* ========================================
+   PÁGINAS ESPECÍFICAS - ADMINISTRACIÓN
+======================================== */
+
+/* Contenedor principal de usuarios */
+.usuarios-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Contenedor con ancho máximo personalizado */
 .usuarios-container-wide {
   max-width: 900px;
   margin: 2rem auto;
@@ -1244,7 +1323,9 @@ input[type="checkbox"]:checked::after {
   color: var(--gray);
 }
 
-/* Action Elements and Dropdowns */
+/* ========================================
+   ELEMENTOS DE ACCIONES Y DROPDOWNS
+======================================== */
 
 /* Columna de acciones */
 .acciones-col {
@@ -1330,7 +1411,9 @@ input[type="checkbox"]:checked::after {
   font-weight: 600;
 }
 
-/* Calendar and Agenda */
+/* ========================================
+   AGENDA Y CALENDARIO
+======================================== */
 
 /* Agenda global del admin */
 .agenda-wrapper {
@@ -1392,7 +1475,73 @@ input[type="checkbox"]:checked::after {
   flex: 1;
 }
 
-/* Statistics and Reports */
+/* Estilos específicos para react-big-calendar */
+.rbc-calendar {
+  width: 100%;
+  height: 100% !important;
+  border: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.rbc-header {
+  padding: 10px;
+  font-weight: bold;
+  background: #f8f9fa;
+}
+
+.rbc-event {
+  padding: 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.rbc-today {
+  background-color: #f0f7ff;
+}
+
+.rbc-toolbar button {
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #333;
+  border: 1px solid #ddd;
+  background: white;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: var(--blue);
+  color: white;
+}
+
+.agenda-wrapper {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.agenda-header {
+  margin-bottom: 1rem;
+}
+
+.agenda-actions {
+  margin-bottom: 1rem;
+}
+
+.agenda-buscar {
+  margin-bottom: 1rem;
+}
+
+.cal-wrapper {
+  border-radius: 8px;
+  padding: 1rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: calc(100vh - 250px);
+  min-height: 500px;
+}
+
+/* ========================================
+   ESTADÍSTICAS E INFORMES
+======================================== */
 
 /* Grid de estadísticas */
 .stats-grid {
@@ -1460,7 +1609,9 @@ input[type="checkbox"]:checked::after {
   height: 70vh;
 }
 
-/* Specific Forms */
+/* ========================================
+   FORMULARIOS ESPECÍFICOS
+======================================== */
 
 /* Botones de selección */
 .choose-buttons {
@@ -1484,7 +1635,9 @@ input[type="checkbox"]:checked::after {
   gap: 1rem;
 }
 
-/* Create Password */
+/* ========================================
+   CREAR CONTRASEÑA
+======================================== */
 
 .crear-pass-container {
   max-width: 360px;
@@ -1553,7 +1706,9 @@ input[type="checkbox"]:checked::after {
   font-size: 1rem;
 }
 
-/* Create Password - Specific Styles */
+/* ========================================
+   CREAR CONTRASEÑA - ESTILOS ESPECÍFICOS
+======================================== */
 
 /* Enlace incorrecto mensaje */
 .enlace-incorrecto {
@@ -1621,7 +1776,9 @@ input[type="checkbox"]:checked::after {
   margin-top: 20px;
 }
 
-/* Modal Titles */
+/* ========================================
+   TÍTULOS Y ENCABEZADOS DE MODAL
+======================================== */
 
 .appt-title {
   font-family: 'Montserrat', sans-serif;
@@ -1632,7 +1789,9 @@ input[type="checkbox"]:checked::after {
   margin-bottom: 1rem;
 }
 
-/* Tabs and Navigation */
+/* ========================================
+   TABS Y NAVEGACIÓN
+======================================== */
 
 .tab-bar {
   display: flex;
@@ -1649,7 +1808,9 @@ input[type="checkbox"]:checked::after {
   font-weight: 600;
 }
 
-/* Tasks and Treatments */
+/* ========================================
+   TAREAS Y TRATAMIENTOS
+======================================== */
 
 /* Estilos para modal de ver tarea */
 .modal-ver-tarea {
@@ -1996,7 +2157,9 @@ input[type="checkbox"]:checked::after {
   padding: 8px;
 }
 
-/* Documents and Grids */
+/* ========================================
+   DOCUMENTOS Y GRIDS
+======================================== */
 
 .documentos-grid {
   display: grid;
@@ -2071,7 +2234,9 @@ input[type="checkbox"]:checked::after {
   display: inline-block;
 }
 
-/* Utility Styles */
+/* ========================================
+   ESTILOS UTILITARIOS
+======================================== */
 
 /* Espaciado y distribución */
 .flex-gap {
@@ -2126,125 +2291,10 @@ input[type="checkbox"]:checked::after {
   font-size: 1rem;
 }
 
-/* Legal Pages */
+/* ========================================
+   RESPONSIVE DESIGN - TABLETS Y DESKTOP
+======================================== */
 
-/* Contenedor principal de páginas legales */
-.legal-page-container {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 20px;
-  font-family: 'Inter', sans-serif;
-  line-height: 1.6;
-  color: var(--black);
-}
-
-/* Cabecera de páginas legales */
-.legal-header {
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--blue);
-}
-
-/* Título principal de páginas legales */
-.legal-header h1 {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 2rem;
-  margin: 0 0 0.5rem 0;
-  color: var(--blue);
-  font-weight: 700;
-}
-
-/* Fecha de última actualización */
-.last-updated {
-  color: var(--gray);
-  font-style: italic;
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
-}
-
-/* Contenido principal */
-.legal-content {
-  margin-top: 1.5rem;
-}
-
-.legal-content section {
-  margin-bottom: 2rem;
-}
-
-/* Títulos de sección */
-.legal-content h2 {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 1.3rem;
-  color: var(--blue);
-  margin-bottom: 1rem;
-  font-weight: 700;
-}
-
-/* Párrafos y texto */
-.legal-content p {
-  margin-bottom: 1rem;
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
-}
-
-.legal-content ul {
-  margin-bottom: 1rem;
-  padding-left: 1.5rem;
-  font-family: 'Inter', sans-serif;
-}
-
-.legal-content li {
-  margin-bottom: 0.5rem;
-}
-
-/* Información de contacto */
-.contact-info {
-  background-color: #f8f9fa;
-  padding: 1rem;
-  border-radius: 6px;
-  border-left: 4px solid var(--blue);
-  margin: 1rem 0;
-}
-
-.contact-info p {
-  margin-bottom: 0.5rem;
-  font-family: 'Inter', sans-serif;
-}
-
-.contact-info strong {
-  color: var(--blue);
-  font-weight: 600;
-}
-
-/* Tabla simple de cookies */
-.cookie-table {
-  overflow-x: auto;
-  margin: 1rem 0;
-}
-
-.cookie-table table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-  font-family: 'Inter', sans-serif;
-}
-
-.cookie-table th,
-.cookie-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.cookie-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: var(--blue);
-  font-family: 'Montserrat', sans-serif;
-}
-
-/* Media Queries */
 @media(min-width: 600px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -2252,7 +2302,7 @@ input[type="checkbox"]:checked::after {
 }
 
 @media(min-width: 768px) {
-  /* Header */
+  /* Cabecera para tablet y desktop */
   .icon.menu-icon {
     display: none;
   }
@@ -2284,7 +2334,7 @@ input[type="checkbox"]:checked::after {
     display: none;
   }
 
-  /* Sidebar */
+  /* Sidebar para tablet y desktop */
   .overlay.show {
     display: block;
     position: fixed;
@@ -2342,7 +2392,7 @@ input[type="checkbox"]:checked::after {
     color: var(--blue);
   }
 
-  /* Hero */
+  /* Hero para tablet y desktop */
   .hero {
     height: 75vh;
     max-height: 75vh;
@@ -2366,7 +2416,7 @@ input[type="checkbox"]:checked::after {
     bottom: 5%;
   }
 
-  /* Sections */
+  /* Sobre nosotros para tablet y desktop */
   .about {
     padding: 3rem 2rem;
   }
@@ -2386,6 +2436,7 @@ input[type="checkbox"]:checked::after {
     height: 160px;
   }
 
+  /* Servicios para tablet y desktop */
   .services__list {
     flex-direction: row;
     flex-wrap: wrap;
@@ -2399,6 +2450,7 @@ input[type="checkbox"]:checked::after {
     align-items: flex-start;
   }
 
+  /* Reseñas para tablet y desktop */
   .resenas__slider {
     gap: 32px;
     padding: 0 60px;
@@ -2409,7 +2461,7 @@ input[type="checkbox"]:checked::after {
     padding: 20px;
   }
 
-  /* Footer */
+  /* Footer para tablet y desktop */
   .footer h3 {
     color: var(--black);
   }
@@ -2427,7 +2479,7 @@ input[type="checkbox"]:checked::after {
     text-align: center;
   }
 
-  /* Other elements */
+  /* Banner de cookies para tablet y desktop */
   .cookie-banner {
     flex-wrap: nowrap;
   }
@@ -2442,41 +2494,23 @@ input[type="checkbox"]:checked::after {
     flex: 0;
   }
 
+  /* Formularios para tablet y desktop */
   .add-user-modal {
     width: 90% !important;
     max-width: 900px !important;
-    max-width: 600px !important;
   }
 
   .form-section {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* Acciones para tablet y desktop */
   .acciones-mobile {
     display: none;
   }
 
   .acciones-desktop {
     display: inline-flex;
-  }
-
-  .legal-page-container {
-    padding: 1rem;
-    margin: 1rem auto;
-  }
-
-  .legal-header h1 {
-    font-size: 1.5rem;
-  }
-
-  .legal-content h2 {
-    font-size: 1.2rem;
-  }
-
-  .cookie-table th,
-  .cookie-table td {
-    padding: 0.5rem;
-    font-size: 0.8rem;
   }
 }
 
@@ -2490,33 +2524,672 @@ input[type="checkbox"]:checked::after {
   }
 }
 
-/* Password Field with Toggle */
 
-/* Contenedor del campo de contraseña con toggle */
-.password-field {
-  position: relative;
+
+
+.perfil-paciente-container {
+  max-width: 900px;
+}
+
+.perfil-actions-flex {
+  display: flex;
+  gap: 1rem;
+}
+
+.modal-tareas-body {
+  margin-top: 2rem;
+}
+
+.modal-tareas-titulo {
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
 }
 
-.password-field input {
-  flex: 1;
-  padding-right: 2.5rem;
+.tareas-sin-asignar {
+  text-align: center;
+  padding: 2rem;
 }
 
-.password-toggle {
-  position: absolute;
-  right: 0.5rem;
-  background: none;
-  border: none;
+.tareas-sin-asignar-fondo {
+  text-align: center;
+  padding: 2rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.tareas-sin-asignar-texto {
+  color: #6c757d;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tareas-container {
+  position: relative;
+}
+
+.tarea-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
   cursor: pointer;
-  padding: 0.25rem;
-  color: var(--gray);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tarea-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--blue);
+}
+
+.tarea-titulo {
+  margin: 0 0 8px 0;
+  color: var(--blue);
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.tarea-meta {
+  color: #6c757d;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+}
+
+.tarea-descripcion-preview {
+  background-color: #f8f9fa;
+  padding: 10px 12px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  border-left: 3px solid var(--blue);
+  font-size: 0.9rem;
+  color: #495057;
+  line-height: 1.4;
+  max-height: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tarea-acciones-container {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.tarea-progreso-container {
+  background-color: #e9ecef;
+  border-radius: 10px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.tarea-progreso-barra {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green) 0%, #4caf50 100%);
+  transition: width 0.3s ease;
+}
+
+.tarea-progreso-texto {
+  font-size: 0.8rem;
+  color: #6c757d;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.tarea-navegacion-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0 1rem;
+}
+
+.tarea-nav-btn {
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-.password-toggle:hover {
-  color: var(--blue);
+.tarea-nav-btn:hover {
+  background: #1e6bb8;
+}
+
+.tarea-nav-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.tarea-indicators-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tarea-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ddd;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tarea-indicator.active {
+  background: var(--blue);
+}
+
+/* Clases adicionales específicas para PerfilPaciente.js */
+.tareas-slider-container {
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.tareas-slider {
+  display: flex;
+  transition: transform 0.3s ease-in-out;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.tarea-slide-item {
+  min-width: calc(33.333% - 0.667rem);
+  background-color: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 180px;
+}
+
+.tarea-slide-titulo {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.tarea-descripcion-preview-box {
+  background-color: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border-left: 3px solid var(--blue);
+  font-size: 0.9rem;
+  color: #495057;
+  line-height: 1.4;
+  max-height: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tarea-fecha-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.tarea-ver-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 500;
+}
+
+.tarea-ver-btn:hover {
+  background-color: #0056b3;
+}
+
+.tarea-nav-left {
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.tarea-nav-right {
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+/* Clases adicionales para ModalVerTarea.js */
+.tarea-documento-item {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.tarea-documento-titulo {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.tarea-imagen-preview {
+  max-width: 100%;
+  max-height: 300px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  display: block;
+  margin: 10px auto;
+}
+
+.tarea-imagen-error {
+  display: none;
+  border: 1px dashed #f44336;
+  padding: 15px;
+  border-radius: 4px;
+  background-color: #ffeaa7;
+}
+
+.tarea-file-link-container {
+  text-align: center;
+  margin: 15px 0;
+}
+
+.tarea-download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--blue);
+  color: white;
+  text-decoration: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.tarea-download-link:hover {
+  background-color: #0056b3;
+  color: white;
+  text-decoration: none;
+}
+
+.tarea-info-completa-container {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid var(--blue);
+}
+
+.tarea-info-completa-titulo {
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.tarea-info-completa-texto {
+  margin: 0;
+}
+
+/* Nueva clase para mensaje de sin archivos */
+.tarea-sin-archivos-container {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.tarea-sin-archivos-texto {
+  margin: 0;
+}
+
+/* Clases adicionales para PerfilPacienteProfesional.js */
+.cita-actual-container {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.cita-actual-titulo {
+  margin: 0 0 10px 0;
+  color: #495057;
+  font-size: 0.9em;
+}
+
+.cita-actual-fecha-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cita-actual-fecha-texto {
+  color: #6c757d;
+  font-size: 0.9em;
+}
+
+.cita-actual-motivo {
+  margin: 0;
+  font-size: 0.85em;
+  color: #6c757d;
+}
+
+/* Información de horario de atención */
+.horario-atencion-info {
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-size: 0.85em;
+  color: #0c5460;
+}
+
+/* Lista de horarios */
+.horario-atencion-lista {
+  margin: 5px 0 0 0;
+  padding-left: 15px;
+}
+
+/* Campo de selección de fecha con margen específico */
+.fecha-seleccion-field {
+  margin-bottom: 20px;
+}
+
+/* Label para selección de fecha */
+.fecha-seleccion-label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Contenedor de carga de horas */
+.cargando-horas-container {
+  padding: 10px;
+  text-align: center;
+  color: #666;
+  font-size: 0.9em;
+}
+
+/* Texto de ayuda para selección de fecha */
+.fecha-ayuda-texto {
+  color: #666;
+  font-size: 0.8em;
+  margin-top: 5px;
+  display: block;
+}
+
+/* Estado de carga general */
+.estado-carga-container {
+  padding: 15px;
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  color: #1565c0;
+  margin-bottom: 15px;
+}
+
+/* Mensaje de error específico */
+.mensaje-error-container {
+  background: #fee;
+  border: 1px solid #fcc;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  color: #c33;
+}
+
+/* Sección de debug info */
+.debug-info-details {
+  margin-bottom: 15px;
+  font-size: 0.8em;
+}
+
+/* Summary del debug info */
+.debug-info-summary {
+  cursor: pointer;
+  color: #666;
+}
+
+/* Contenido del debug info */
+.debug-info-contenido {
+  background: #f0f0f0;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 5px;
+}
+
+/* Botón de reprogramar con opacidad variable */
+.btn-reprogramar-disabled {
+  opacity: 0.6;
+}
+
+/* Celda de estado de cita en tabla */
+.cita-estado-celda {
+  color: #000;
+  text-align: center;
+}
+
+/* Icono dropdown con cursor pointer */
+.dropdown-icon-cita {
+  cursor: pointer;
+}
+
+/* ========================================
+   PERFIL PACIENTE PROFESIONAL - ESTILOS ESPECÍFICOS
+======================================== */
+
+/* Contenedor principal con ancho máximo específico */
+.perfil-paciente-profesional-container {
+  max-width: 950px;
+}
+
+/* Texto de fecha en cita actual */
+.cita-actual-fecha-texto {
+  color: #6c757d;
+  font-size: 0.9em;
+}
+
+/* Motivo de cita actual */
+.cita-actual-motivo {
+  margin: 0;
+  font-size: 0.85em;
+  color: #6c757d;
+}
+
+/* Información de horario de atención */
+.horario-atencion-info {
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-size: 0.85em;
+  color: #0c5460;
+}
+
+/* Lista de horarios */
+.horario-atencion-lista {
+  margin: 5px 0 0 0;
+  padding-left: 15px;
+}
+
+/* Campo de selección de fecha con margen específico */
+.fecha-seleccion-field {
+  margin-bottom: 20px;
+}
+
+/* Label para selección de fecha */
+.fecha-seleccion-label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Contenedor de carga de horas */
+.cargando-horas-container {
+  padding: 10px;
+  text-align: center;
+  color: #666;
+  font-size: 0.9em;
+}
+
+/* Texto de ayuda para selección de fecha */
+.fecha-ayuda-texto {
+  color: #666;
+  font-size: 0.8em;
+  margin-top: 5px;
+  display: block;
+}
+
+/* Estado de carga general */
+.estado-carga-container {
+  padding: 15px;
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  color: #1565c0;
+  margin-bottom: 15px;
+}
+
+/* Mensaje de error específico */
+.mensaje-error-container {
+  background: #fee;
+  border: 1px solid #fcc;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  color: #c33;
+}
+
+/* Sección de debug info */
+.debug-info-details {
+  margin-bottom: 15px;
+  font-size: 0.8em;
+}
+
+/* Summary del debug info */
+.debug-info-summary {
+  cursor: pointer;
+  color: #666;
+}
+
+/* Contenido del debug info */
+.debug-info-contenido {
+  background: #f0f0f0;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 5px;
+}
+
+/* Botón de reprogramar con opacidad variable */
+.btn-reprogramar-disabled {
+  opacity: 0.6;
+}
+
+/* Celda de estado de cita en tabla */
+.cita-estado-celda {
+  color: #000;
+  text-align: center;
+}
+
+/* Icono dropdown con cursor pointer */
+.dropdown-icon-cita {
+  cursor: pointer;
+}
+
+/* ========================================
+   ESTADOS DE CITAS
+======================================== */
+
+.estado-pendiente-validacion { 
+    background: #f2c94c !important;
+    color: #000000 !important;
+}
+
+.estado-solicitada { 
+    color: #000000 !important;
+}
+
+.estado-confirmada { 
+    background: #27ae60 !important;
+    color: #000000 !important;
+}
+
+.estado-atendida { 
+    background: #6fcf97 !important;
+    color: #000000 !important;
+}
+
+.estado-cancelada { 
+    background: #f04b4b !important;
+    color: #000000 !important;
+}
+
+.estado-no-presentada { 
+    color: #000000 !important;
+}
+
+.estado-cambiar { 
+    background: #2f80eb !important;
+    color: #000000 !important;
+}
+
+.estado-cancelar { 
+    background: #eb5757 !important;
+    color: #000000 !important;
+}
+
+.estado-no-atendida { 
+    background: #9b51e0 !important;
+    color: #000000 !important;
 }

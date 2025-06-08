@@ -826,21 +826,41 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
 
         /* Enviar email*/
         try {
-            if (!empty($fila['pacienteEmail']) && filter_var($fila['pacienteEmail'], FILTER_VALIDATE_EMAIL)) {
-                error_log("Intentando enviar email a {$fila['pacienteEmail']}");
-                $emailEnviado = enviarEmail(
-                    $fila['pacienteEmail'],
-                    $asuntoEmail,
-                    $mensaje
-                );
-                error_log("Resultado del envío de email: " . ($emailEnviado ? "Enviado" : "Falló"));
-            } else {
-                error_log("No se puede enviar email: paciente sin email válido. Email recibido: '" . ($fila['pacienteEmail'] ?? 'NULL') . "'");
-            }
-        } catch (Exception $e) {
-            error_log("Error enviando email para cita $idCita: " . $e->getMessage());
+    // Debug: mostrar todos los datos de la fila
+    error_log("=== DEBUG EMAIL ===");
+    error_log("Datos completos de la cita: " . json_encode($fila, JSON_PRETTY_PRINT));
+    error_log("pacienteEmail específicamente: '" . ($fila['pacienteEmail'] ?? 'NULL') . "'");
+    error_log("Tipo de pacienteEmail: " . gettype($fila['pacienteEmail'] ?? null));
+    
+    // Verificar que el paciente tenga email
+    if (!empty($fila['pacienteEmail']) && filter_var($fila['pacienteEmail'], FILTER_VALIDATE_EMAIL)) {
+        error_log("✓ Email válido encontrado: {$fila['pacienteEmail']}");
+        error_log("Asunto: $asuntoEmail");
+        error_log("Mensaje (primeros 200 chars): " . substr($mensaje, 0, 200) . "...");
+        
+        $emailEnviado = enviarEmail(
+            $fila['pacienteEmail'],
+            $asuntoEmail,
+            $mensaje
+        );
+        error_log("Resultado del envío de email: " . ($emailEnviado ? "✓ ENVIADO" : "✗ FALLÓ"));
+        
+        if (!$emailEnviado) {
+            error_log("La función enviarEmail() devolvió FALSE");
         }
-
+    } else {
+        if (empty($fila['pacienteEmail'])) {
+            error_log("✗ Email está vacío o es NULL");
+        } else {
+            error_log("✗ Email no es válido: '{$fila['pacienteEmail']}'");
+        }
+        error_log("No se puede enviar email al paciente ID: {$fila['id_paciente']}");
+    }
+    error_log("=== FIN DEBUG EMAIL ===");
+} catch (Exception $e) {           
+    error_log("EXCEPCIÓN enviando email para cita $idCita: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+}
         return true;
     } catch (Exception $e) {
         /* Rollback en caso de error */

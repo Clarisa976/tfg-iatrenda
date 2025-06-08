@@ -200,10 +200,8 @@ export default function AgendaGlobal() {
             eventPropGetter={eventStyleGetter}
             className="calendario-agenda"
             onSelectEvent={e => { setDetalle(e); setDetalleOpen(true); }}
-            style={{
-              height: '70vh',
-              minHeight: '500px'
-            }}
+            views={['month', 'week', 'day', 'agenda']}
+            defaultView="month"
             messages={{
               next: "Siguiente",
               previous: "Anterior",
