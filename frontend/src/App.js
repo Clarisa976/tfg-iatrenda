@@ -72,10 +72,10 @@ export default function App() {
     setToast({ show: true, ok: false, msg: message, type: 'unauthorized' });
   };
 
-  // Limpiar sesión solo en recarga forzada (Ctrl+F5)
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Detectar Ctrl+F5 o Ctrl+Shift+R (recarga forzada)
+
       if ((e.ctrlKey && e.key === 'F5') || (e.ctrlKey && e.shiftKey && e.key === 'R')) {
         console.log('Recarga forzada detectada - limpiando sesión');
         localStorage.removeItem('token');
