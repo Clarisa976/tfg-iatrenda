@@ -18,6 +18,12 @@ class DocumentController {
      */
     public function uploadDocument($request, $response) {
         try {
+
+            error_log('=== UPLOAD DEBUG START ===');
+        error_log('POST data: ' . json_encode($request->getParsedBody()));
+        error_log('Files: ' . json_encode(array_keys($request->getUploadedFiles())));
+
+
             $uploadedFiles = $request->getUploadedFiles();
             $data = $request->getParsedBody();
 
@@ -32,6 +38,11 @@ class DocumentController {
 
         } catch (\Exception $e) {
             error_log('Error in uploadDocument: ' . $e->getMessage());
+
+            error_log('=== ERROR EN UPLOAD ===');
+    error_log('Error message: ' . $e->getMessage());
+    error_log('Stack trace: ' . $e->getTraceAsString());
+    error_log('=== END ERROR ===');
             return $this->jsonResponse($response, [
                 'ok' => false,
                 'mensaje' => 'Error interno del servidor'
