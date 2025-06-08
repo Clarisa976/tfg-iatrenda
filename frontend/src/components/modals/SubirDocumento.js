@@ -3,12 +3,12 @@ import '../../styles.css';
 
 export default function SubirDocumento({ onDone, idPaciente }) {
   const tk = localStorage.getItem('token');
-  
+
   const [show, setShow] = useState(false);
   const [file, setFile] = useState(null);
   const [diagnosticoPreliminar, setDiagnosticoPreliminar] = useState('');
   const [diagnosticoFinal, setDiagnosticoFinal] = useState('');
-  
+
   // Errores específicos para cada campo
   const [fileError, setFileError] = useState('');
   const [diagnosticoPreliminarError, setDiagnosticoPreliminarError] = useState('');
@@ -60,8 +60,8 @@ export default function SubirDocumento({ onDone, idPaciente }) {
       formDataFile.append('tipo', 'historial');
       formDataFile.append('diagnostico_preliminar', diagnosticoPreliminar);
       formDataFile.append('diagnostico_final', diagnosticoFinal);
-      
-const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${tk}`
@@ -93,7 +93,7 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
   };
 
   if (!show) return <button className="btn-save" onClick={() => setShow(true)}>Añadir documento</button>;
-  
+
   return (
     <div className="modal-backdrop" onClick={() => setShow(false)}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px' }}>
@@ -113,7 +113,7 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
               {generalError}
             </div>
           )}
-          
+
           <div className="form-grid">
             <div className="field full">
               <label>Diagnóstico preliminar*</label>
@@ -164,7 +164,7 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
               </small>
             </div>
           </div>
-          
+
           <div className="field full">
             <label>Archivo*</label>
             <input

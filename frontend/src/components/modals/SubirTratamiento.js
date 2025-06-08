@@ -83,6 +83,7 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
       });
 
       const result = await response.json();
+      console.log('Respuesta del servidor:', result);
       if (!result.ok) {
         throw new Error(result.mensaje || 'Error al crear tratamiento');
       }
