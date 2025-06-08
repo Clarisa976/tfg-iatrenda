@@ -1678,6 +1678,10 @@ input[type="checkbox"]:checked::after {
   color: var(--gray);
 }
 
+.crear-pass-toggle:hover {
+  color: var(--blue);
+}
+
 .crear-pass-error {
   color: var(--red);
   font-size: 0.875rem;
@@ -2524,8 +2528,32 @@ input[type="checkbox"]:checked::after {
   }
 }
 
+/* Campo de contraseña con botón de mostrar/ocultar */
+.password-field {
+  position: relative;
+  width: 100%;
+}
 
+.password-field input {
+  width: 100%;
+  padding-right: 40px;
+}
 
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--gray);
+}
+
+.password-toggle:hover {
+  color: var(--blue);
+}
 
 .perfil-paciente-container {
   max-width: 900px;
