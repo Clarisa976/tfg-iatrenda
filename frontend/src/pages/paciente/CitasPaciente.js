@@ -16,7 +16,7 @@ export default function CitasPaciente() {
   const [datosUsuario, setDatosUsuario] = useState(null);
   const [toast, setToast] = useState({ show: false, ok: true, titulo: '', msg: '' });
 
-  // Configurar axios
+
   useEffect(() => {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
     const token = localStorage.getItem('token');
@@ -117,7 +117,7 @@ export default function CitasPaciente() {
     setMostrarCancelar(false);
     setMostrarNuevaCita(false);
     setCitaSeleccionada(null);
-    cargarCitas(); // Recargar las citas
+    cargarCitas(); 
     setToast({
       show: true,
       ok: true,
@@ -134,7 +134,7 @@ export default function CitasPaciente() {
     });
   };
 
-  // Filtrar y ordenar citas futuras
+  // Filtrar y ordenar citas
   const citasFuturas = citas
     .filter(cita => {
       const fechaCita = new Date(cita.fecha_hora);
@@ -197,7 +197,8 @@ export default function CitasPaciente() {
                   e.target.style.transform = 'translateY(0)';
                   e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
                 }}
-              >                <div style={{ 
+              >                
+              <div style={{ 
                   fontWeight: '600', 
                   fontSize: '1.1rem',
                   color: '#2c3e50'
@@ -237,7 +238,8 @@ export default function CitasPaciente() {
             }
           }}
         />
-      )}      {mostrarCambiar && citaSeleccionada && (
+      )}      
+      {mostrarCambiar && citaSeleccionada && (
         <ModalCitaUniversal
           modo="cambiar"
           cita={citaSeleccionada}
@@ -249,7 +251,8 @@ export default function CitasPaciente() {
           onSuccess={solicitudExitosa}
           onError={solicitudError}
         />
-      )}      {mostrarNuevaCita && (
+      )}      
+      {mostrarNuevaCita && (
         <ModalCitaUniversal
           modo="nueva"
           onClose={() => {

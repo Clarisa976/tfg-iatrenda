@@ -38,7 +38,6 @@ $app->options('/{routes:.+}', function (Request $request, Response $response) {
 });
 
 
-// helper JSON
 function jsonResponse(array $payload, int $code=200): Response {
     try {
         $jsonString = json_encode($payload, JSON_THROW_ON_ERROR);
@@ -76,7 +75,7 @@ $app->post('/login', function (Request $req): Response {
 
 
 
-/* POST /reservar-cita  */
+/* reservar-cita  */
 $app->post('/reservar-cita', function (Request $req): Response {
     try {
         $data = $req->getParsedBody() ?? [];
@@ -97,11 +96,11 @@ $app->post('/reservar-cita', function (Request $req): Response {
                 400
             );
         }        
-        // Llamamos a la función que hace TODO: persona-paciente + cita
+
         $res = pedirCitaNueva($nombre, $email, $tel, $motivo, $fecha);
         error_log('Resultado de pedirCitaNueva: ' . json_encode($res));
 
-        // Devuelve el mismo payload de la función, con el código adecuado
+
         return jsonResponse(
             ['ok'=>$res['ok'], 'mensaje'=>$res['mensaje']],
             $res['ok'] ? 200 : ($res['status'] ?? 400)
@@ -115,7 +114,7 @@ $app->post('/reservar-cita', function (Request $req): Response {
     }
 });
 
-/** GET /consentimiento — lee el último consentimiento del usuario */
+/* lee el último consentimiento del usuario */
 $app->get('/consentimiento', function (Request $req): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -131,7 +130,7 @@ $app->get('/consentimiento', function (Request $req): Response {
     ],200);
 });
 
-/** POST /consentimiento — crea un nuevo consentimiento */
+/* crea un nuevo consentimiento */
 $app->post('/consentimiento', function (Request $req): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -153,7 +152,7 @@ $app->post('/consentimiento', function (Request $req): Response {
       : jsonResponse(['ok'=>false,'mensaje'=>'Error al otorgar'],500);
 });
 
-/** POST /consentimiento/revocar — revoca el consentimiento activo */
+/* revoca el consentimiento activo */
 $app->post('/consentimiento/revocar', function (Request $req): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -175,7 +174,7 @@ $app->post('/consentimiento/revocar', function (Request $req): Response {
 
 
 
-// Listar usuarios 
+/* listar usuarios */
 $app->get('/admin/usuarios', function(Request $req) {
     // validar token y extraer usuario + nuevo token
     $val = verificarTokenUsuario();
@@ -199,16 +198,16 @@ $app->get('/admin/usuarios', function(Request $req) {
 });
 
 
-/**  GET /profesionales[?search=txt]  — selector & buscador  */
+/* lista profesionales */
 $app->get('/profesionales', function(Request $req) {
     $txt   = trim($req->getQueryParams()['search'] ?? '');
-    $items = getProfesionales($txt);              // ← función actualizada
+    $items = getProfesionales($txt);
     return jsonResponse(['ok'=>true,'data'=>$items]);
 });
 
-/**  GET /agenda/global[?profId=n&month=m&year=y]   */
+/* agenda/global*/
 $app->get('/agenda/global', function(Request $req) {
-    $val = verificarTokenUsuario();                       // protegido
+    $val = verificarTokenUsuario(); 
     if ($val === false)
         return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
 
@@ -229,47 +228,47 @@ $app->get('/agenda/global', function(Request $req) {
     return jsonResponse(['ok'=>true,'data'=>$eventos]);
 });
 
-/**  POST /agenda/global   — crear bloque */
+/* crear bloque */
 $app->post('/agenda/global', function(Request $req) {
     $val = verificarTokenUsuario();
     if ($val === false)
         return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
 
     $data = $req->getParsedBody() ?? [];
-    $prof = (int)($data['profId'] ?? 0);      // 0 = todos
-    $tipo = trim($data['tipo']   ?? '');
+    $prof = (int)($data['profId'] ?? 0);
+    $tipo = trim($data['tipo'] ?? '');
     $ini  = trim($data['inicio'] ?? '');
-    $fin  = trim($data['fin']    ?? '');
-    $nota = trim($data['nota']   ?? '');
-    $actor = (int)$val['usuario']['id_persona']; // Get the logged-in user ID
+    $fin  = trim($data['fin'] ?? '');
+    $nota = trim($data['nota'] ?? '');
+    $actor = (int)$val['usuario']['id_persona'];
 
     if (!$tipo || !$ini || !$fin)
         return jsonResponse(['ok'=>false,'mensaje'=>'Faltan datos requeridos'],400);
 
-    if (!crearBloqueAgenda($prof,$ini,$fin,$tipo,$nota,$actor)) // Pass the actor ID
+    if (!crearBloqueAgenda($prof,$ini,$fin,$tipo,$nota,$actor))
         return jsonResponse(['ok'=>false,'mensaje'=>'Error al crear evento'],500);
 
     return jsonResponse(['ok'=>true,'mensaje'=>'Evento creado']);
 });
 
-/**  DELETE /agenda/global/{id}  — elimina bloque **o** cita */
+/* elimina bloque o cita */
 $app->delete('/agenda/global/{id}', function(Request $req, Response $res, array $args){
     $val = verificarTokenUsuario();
     if ($val === false)
         return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
 
     $id = (int)$args['id'];
-    $actor = (int)$val['usuario']['id_persona']; // Get the logged-in user ID
+    $actor = (int)$val['usuario']['id_persona'];
     
-    if (!eliminarEvento($id, $actor))         // Pass the actor ID
+    if (!eliminarEvento($id, $actor))
         return jsonResponse(['ok'=>false,'mensaje'=>'No se pudo eliminar'],500);
 
     return jsonResponse(['ok'=>true]);
 });
 
-/* ----------  NOTIFICACIONES  ---------- */
 
-/* GET /notificaciones */
+
+/* notificaciones */
 $app->get('/notificaciones', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false)
@@ -282,7 +281,7 @@ $app->get('/notificaciones', function ($req) {
     return jsonResponse(['ok'=>true,'data'=>$datos]);
 });
 
-/* POST /notificaciones/{id}  body:{accion:'CONFIRMAR'|'RECHAZAR'} */
+/* notificaciones/{id}*/
 $app->post('/notificaciones/{id}', function ($req,$res,$args){
     $val = verificarTokenUsuario();
     if ($val === false)
@@ -296,8 +295,6 @@ $app->post('/notificaciones/{id}', function ($req,$res,$args){
     $uid = (int)$val['usuario']['id_persona'];
     $rol = strtolower($val['usuario']['rol']);
 
-    // Loguear para depuración
-    error_log("Procesando notificación: ID=$idCita, Acción=$acc, Usuario=$uid, Rol=$rol");
 
     $ok = procesarNotificacion($idCita,$acc,$uid,$rol);
     return $ok
@@ -327,7 +324,7 @@ $app->get('/', fn() => jsonResponse(['ok'=>true, 'mensaje'=>'API Slim funcionand
 
 
 
-/* GET /admin/usuarios/buscar?email=...&tel=...  */
+/* /admin/usuarios/buscar*/
 $app->get('/admin/usuarios/buscar', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
@@ -338,13 +335,12 @@ $app->get('/admin/usuarios/buscar', function ($req) {
     return jsonResponse(['ok'=>true,'data'=>$r]);
 });
 
-/* POST /admin/usuarios*/
+/* /admin/usuarios*/
 $app->post('/admin/usuarios', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
         return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
 
-    // Obtener el ID del usuario logueado
     $actorId = $val['usuario']['id_persona'];
     
     $body = $req->getParsedBody() ?? [];
@@ -355,19 +351,18 @@ $app->post('/admin/usuarios', function ($req) {
     if (!in_array($tipo,['PROFESIONAL','PACIENTE'],true))
         return jsonResponse(['ok'=>false,'mensaje'=>'Tipo inválido'],400);
 
-    // Pasar el ID del actor a la función upsertPersona
     $idPersona = actualizarOInsertarPersona($pdat, $tipo, $actorId);
 
     $ok = ($tipo==='PROFESIONAL')
-        ? upsertProfesional($idPersona,$xdat)
-        : upsertPaciente($idPersona,$xdat);
+        ? actualizarOInsertarProfesional($idPersona,$xdat)
+        : actualizarOInsertarPaciente($idPersona,$xdat);
 
     return $ok
       ? jsonResponse(['ok'=>true,'id'=>$idPersona])
       : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo guardar'],500);
 });
 
-/* POST /crear-contrasena { uid, password } */
+/* crear-contrasena*/
 $app->post('/crear-contrasena', function ($req) {
     $b = $req->getParsedBody() ?? [];
     $uid = $b['uid'] ?? '';
@@ -389,11 +384,10 @@ $app->post('/crear-contrasena', function ($req) {
         return jsonResponse(['ok'=>false,'msg'=>'Usuario no encontrado'],400);
     }
     
-    /* Para usuarios con contraseña existente, permitir sobrescribir (reset password) */
-    /* Para usuarios sin contraseña (null), permitir crear primera contraseña */
-    
+    /* si existe el usuario y tiene contraseña se la resescribe sino la crea */    
     $consulta = $baseDatos->prepare("
-      UPDATE persona         SET password_hash = ENCODE(DIGEST(:p, 'sha256'), 'hex'),
+      UPDATE persona         
+      SET password_hash = ENCODE(DIGEST(:p, 'sha256'), 'hex'),
              password_hash_creado = CURRENT_TIMESTAMP
        WHERE id_persona = :id");
     $consulta->execute([':p'=>$pass, ':id'=>$id]);
@@ -401,7 +395,7 @@ $app->post('/crear-contrasena', function ($req) {
     return jsonResponse(['ok'=>true]);
 });
 
-/* POST /forgot-password { email } */
+/* forgot-password */
 $app->post('/forgot-password', function ($req) {
     $b = $req->getParsedBody() ?? [];
     $email = trim($b['email'] ?? '');
@@ -461,12 +455,11 @@ $app->post('/forgot-password', function ($req) {
     }
 });
 
-/* ---------- RUTAS PACIENTE ---------- */
 
-/* GET /pac/perfil — obtiene perfil del paciente logueado */
+/* obtiene perfil del paciente logueado */
 $app->get('/pac/perfil', function(Request $req): Response {
   try {
-    // Validación de token y rol
+  
     $val = verificarTokenUsuario();
     if ($val === false) {
       return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
@@ -474,23 +467,19 @@ $app->get('/pac/perfil', function(Request $req): Response {
     if ($val['usuario']['rol'] !== 'PACIENTE') {
       return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
     }
-    
-    // Obtener ID del paciente logueado
+
     $idPaciente = (int)$val['usuario']['id_persona'];
     if ($idPaciente <= 0) {
       error_log("ID de paciente inválido: " . $idPaciente);
       return jsonResponse(['ok'=>false,'mensaje'=>'ID de paciente no válido'], 400);
     }
-    
-    // Obtener datos completos
+
     $data = getUsuarioDetalle($idPaciente);
     if (!$data) {
       error_log("No se encontraron datos para el paciente ID: " . $idPaciente);
       return jsonResponse(['ok'=>false,'mensaje'=>'No se encontraron datos del paciente'], 404);
     }
-    
-    // Debug
-    /*error_log("Datos del paciente ID " . $idPaciente . ": " . json_encode($data));*/
+
     
 
     if (isset($data['persona']['fecha_nacimiento'])) {
@@ -512,7 +501,7 @@ $app->get('/pac/perfil', function(Request $req): Response {
   }
 });
 
-/* PUT /pac/perfil — actualiza perfil del paciente actual */
+/*  actualiza perfil del paciente actual */
 $app->put('/pac/perfil', function(Request $req): Response {
   $val = verificarTokenUsuario();
   if ($val === false) {
@@ -551,10 +540,10 @@ $app->put('/pac/perfil', function(Request $req): Response {
   }
 });
 
-/* GET /pac/tareas — obtiene tareas asignadas al paciente actual */
+/* obtiene tareas asignadas al paciente actual */
 $app->get('/pac/tareas', function(Request $req): Response {
     try {
-        // Validar token y rol
+
         $val = verificarTokenUsuario();
         if ($val === false) {
             return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
@@ -563,20 +552,15 @@ $app->get('/pac/tareas', function(Request $req): Response {
         if ($val['usuario']['rol'] !== 'PACIENTE') {
             return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
         }
-        
-        // Obtener ID del paciente logueado
+
         $idPaciente = (int)$val['usuario']['id_persona'];
         if ($idPaciente <= 0) {
             error_log("ID de paciente inválido: " . $idPaciente);
             return jsonResponse(['ok'=>false,'mensaje'=>'ID de paciente no válido'], 400);
         }
-        
-        // Obtener tareas del paciente
+
         $tareas = getTareasPaciente($idPaciente);
-        
-        // Debug
-      /*  error_log("Obtenidas " . count($tareas) . " tareas para paciente ID: $idPaciente");*/
-        
+
         return jsonResponse([
             'ok' => true,
             'tareas' => $tareas,
@@ -593,10 +577,10 @@ $app->get('/pac/tareas', function(Request $req): Response {
     }
 });
 
-/* GET /pac/historial — obtiene documentos del historial clínico del paciente actual */
+/* obtiene documentos del historial clínico del paciente actual */
 $app->get('/pac/historial', function(Request $req): Response {
     try {
-        // Validar token y rol
+
         $val = verificarTokenUsuario();
         if ($val === false) {
             return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
@@ -605,19 +589,15 @@ $app->get('/pac/historial', function(Request $req): Response {
         if ($val['usuario']['rol'] !== 'PACIENTE') {
             return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
         }
-        
-        // Obtener ID del paciente logueado
+
         $idPaciente = (int)$val['usuario']['id_persona'];
         if ($idPaciente <= 0) {
             error_log("ID de paciente inválido: " . $idPaciente);
             return jsonResponse(['ok'=>false,'mensaje'=>'ID de paciente no válido'], 400);
         }
-        
-        // Obtener documentos del historial clínico
+
         $documentos = getHistorialPaciente($idPaciente);
-        
-        // Debug
-       /* error_log("Obtenidos " . count($documentos) . " documentos del historial para paciente ID: $idPaciente");*/
+
         
         return jsonResponse([
             'ok' => true,
@@ -635,10 +615,10 @@ $app->get('/pac/historial', function(Request $req): Response {
     }
 });
 
-/* GET /pac/citas — obtiene citas del paciente actual */
+/* obtiene citas del paciente actual */
 $app->get('/pac/citas', function(Request $req): Response {
     try {
-        // Validar token y rol
+
         $val = verificarTokenUsuario();
         if ($val === false) {
             return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
@@ -647,8 +627,7 @@ $app->get('/pac/citas', function(Request $req): Response {
         if ($val['usuario']['rol'] !== 'PACIENTE') {
             return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
         }
-        
-        // Obtener ID del paciente logueado
+
         $idPaciente = (int)$val['usuario']['id_persona'];
         if ($idPaciente <= 0) {
             error_log("ID de paciente inválido: " . $idPaciente);
@@ -657,9 +636,7 @@ $app->get('/pac/citas', function(Request $req): Response {
         
         // Obtener citas del paciente sin filtrar por profesional
         $citas = getCitasPaciente($idPaciente);
-        
-        // Debug
-        error_log("Obtenidas " . count($citas) . " citas para paciente ID: $idPaciente");
+
         
         return jsonResponse([
             'ok' => true,
@@ -677,10 +654,10 @@ $app->get('/pac/citas', function(Request $req): Response {
     }
 });
 
-/* POST /pac/citas/{id}/solicitud — procesa solicitudes de cambio/cancelación */
+/* procesa solicitudes de cambio/cancelación */
 $app->post('/pac/citas/{id}/solicitud', function(Request $req, Response $res, array $args): Response {
     try {
-        // Validar token y rol
+
         $val = verificarTokenUsuario();
         if ($val === false) {
             return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
@@ -753,7 +730,7 @@ $app->get('/pac/profesional/{id}/dias-bloqueados', function(Request $req, Respon
     }
 });
 
-/* GET /pac/profesional/{id}/horas-disponibles — obtener horas disponibles para pacientes */
+/* obtener horas disponibles para pacientes */
 $app->get('/pac/profesional/{id}/horas-disponibles', function(Request $req, Response $res, array $args) {
     $val = verificarTokenUsuario();
     if ($val === false || $val['usuario']['rol'] !== 'PACIENTE') {
@@ -779,7 +756,7 @@ $app->get('/pac/profesional/{id}/horas-disponibles', function(Request $req, Resp
     }
 });
 
-/* GET /prof/buscar-por-nombre - buscar profesional por nombre para pacientes */
+/* buscar profesional por nombre para pacientes */
 $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -801,7 +778,8 @@ $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
                 (pe.nombre || ' ' || pe.apellido1 || 
                        CASE WHEN pe.apellido2 IS NOT NULL THEN (' ' || pe.apellido2) ELSE '' END) as nombre_completo,
                 pr.especialidad
-            FROM profesional p            JOIN persona pe ON pe.id_persona = p.id_profesional
+            FROM profesional p 
+                JOIN persona pe ON pe.id_persona = p.id_profesional
             LEFT JOIN profesional pr ON pr.id_profesional = p.id_profesional
             WHERE pe.activo = true
             AND (
@@ -848,10 +826,10 @@ $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
     }
 });
 
-/* POST /pac/solicitar-cita — solicitar nueva cita para paciente autenticado */
+/* solicitar nueva cita para paciente autenticado */
 $app->post('/pac/solicitar-cita', function(Request $req): Response {
     try {
-        // Validar token y rol
+
         $val = verificarTokenUsuario();
         if ($val === false) {
             return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
@@ -860,8 +838,7 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
         if ($val['usuario']['rol'] !== 'PACIENTE') {
             return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
         }
-        
-        // Obtener datos del paciente autenticado
+
         $idPaciente = (int)$val['usuario']['id_persona'];
         $data = $req->getParsedBody();
         
@@ -870,8 +847,7 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
         $fecha = trim($data['fecha'] ?? '');
         
         error_log("Solicitud de cita autenticada - Paciente ID: $idPaciente, Profesional ID: $profesionalId, Motivo: $motivo, Fecha: $fecha");
-        
-        // Validación
+
         if (!$profesionalId || !$motivo || !$fecha) {
             return jsonResponse(['ok'=>false,'mensaje'=>'Faltan campos obligatorios'], 400);
         }
@@ -967,15 +943,7 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
             $idCita = $baseDatos->lastInsertId();
             
             // Registrar actividad
-            registrarActividad(
-                $idPaciente,
-                $idPaciente, 
-                'cita',
-                'crear',
-                null,
-                $idCita,
-                'INSERT'
-            );
+            registrarActividad($idPaciente, $idPaciente,  'cita', 'crear', null, $idCita, 'INSERT');
             
             $baseDatos->commit();
             
@@ -1008,13 +976,5 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
 });
 
 
-
-
-
-
-
-
-
-/* ---- */
 /* corre la aplicación */
 $app->run();

@@ -34,7 +34,7 @@ export default function SubirDocumento({ onDone }) {
       return;
     }
 
-    // Validar tamaño del archivo (máximo 10MB)
+    // Validar tamaño del archivo 
     if (file.size > 10 * 1024 * 1024) {
       setFileError('El archivo no puede superar los 10MB');
       return;

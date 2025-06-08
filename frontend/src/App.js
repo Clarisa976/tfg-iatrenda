@@ -57,11 +57,7 @@ export default function App() {
           axios.get(`${process.env.REACT_APP_API_URL}/status`)
             .then(response => {
               if (response.data.ok) {
-                setUser({
-                  id: payload.sub,
-                  rol: payload.rol,
-                  role: payload.rol 
-                });
+                setUser({id: payload.sub,rol: payload.rol,role: payload.rol });
               } else {
                 localStorage.removeItem('token');
               }

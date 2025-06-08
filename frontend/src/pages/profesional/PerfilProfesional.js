@@ -1,4 +1,3 @@
-// src/pages/profesional/PerfilProfesional.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle, XCircle } from 'lucide-react';
@@ -7,10 +6,10 @@ import '../../styles.css';
 export default function PerfilProfesional() {
   const hoy = new Date().toISOString().split('T')[0];
 
-  // Modo edición / solo lectura
+  // Modo edición /lectura
   const [editMode, setEditMode] = useState(false);
 
-  // Datos de persona (editable)
+  // Datos de persona editables
   const [form, setForm] = useState({
     nombre: '',
     apellido1: '',
@@ -30,31 +29,30 @@ export default function PerfilProfesional() {
     pais: 'España'
   });
 
-  // Datos de profesional (solo lectura)
+  // Datos de profesional
   const [profData, setProfData] = useState({
     num_colegiado: '',
     especialidad: '',
     fecha_alta: ''
   });
 
-  // Estado de consentimiento
+  //consentimiento
   const [consent, setConsent] = useState(false);
 
   const [toast, setToast] = useState({ show:false, ok:true, titulo:'', msg:'' });
   const [errors, setErrors] = useState({});
 
-  // Configuración global axios
   useEffect(() => {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
     const token = localStorage.getItem('token');
     if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }, []);
 
-  // Carga inicial del perfil + consentimiento
+  // Carga inicial del perfil y consentimiento
   useEffect(() => {
     async function cargar() {
       try {
-        // 1) perfil
+
         const { data } = await axios.get('/prof/perfil');
         if (!data.ok) throw new Error(data.mensaje);
         const { persona, profesional } = data.data;
@@ -69,11 +67,11 @@ export default function PerfilProfesional() {
         setToast({ show:true, ok:false, titulo:'Error', msg:'No se pudo cargar el perfil' });
       }
       try {
-        // 2) consentimiento
+
         const { data } = await axios.get('/consentimiento');
         if (data.ok) setConsent(data.consentimiento && !data.revocado);
       } catch {
-        // ignorar
+        setToast({ show:true, ok:false, titulo:'Error', msg:'No se pudo cargar el consentimiento' });
       }
     }
     cargar();
@@ -86,7 +84,7 @@ export default function PerfilProfesional() {
     return () => clearTimeout(id);
   }, [toast.show]);
 
-  // Validación básica antes de enviar
+  // Validación antes de enviar
   const validar = () => {
     const errs = {};
     ['nombre','apellido1','email','fecha_nacimiento'].forEach(k => {
@@ -102,7 +100,7 @@ export default function PerfilProfesional() {
     setForm(f => ({ ...f, [name]: value }));
   };
 
-  // Cancelar edición (recarga datos originales)
+  // Cancelar edición
   const handleCancel = () => {
     setEditMode(false);
     setErrors({});
@@ -110,20 +108,22 @@ export default function PerfilProfesional() {
       .then(({ data }) => {
         if (data.ok) setForm(data.data.persona);
       })
-      .catch(()=>{/* silently */});
+      .catch(()=>{
+        setToast({ show:true, ok:false, titulo:'Error', msg:'No se pudo cargar el perfil' });
+      });
   };
 
-  // Enviar cambios + consentimientos
+  // Enviar cambios y consentimientos
   const handleSubmit = async e => {
     e.preventDefault();
     if (!validar()) return;
     try {
-      // 1) actualizar persona
+      // actualizar persona
       const { data } = await axios.put('/prof/perfil', { persona: form });
       if (!data.ok) throw new Error();
       if (data.token) localStorage.setItem('token', data.token);
 
-      // 2) si el consentimiento cambió, llamar a la ruta correspondiente
+      // si el consentimiento cambió
       if (consent) {
         await axios.post('/consentimiento', { canal:'WEB' });
       } else {
@@ -137,7 +137,6 @@ export default function PerfilProfesional() {
     }
   };
 
-  // Render de un campo editable
   const input = (key, label, type='text', full=false) => (
     <div className={`field${full?' full':''}`} key={key}>
       <label>{label}</label>
@@ -153,7 +152,6 @@ export default function PerfilProfesional() {
     </div>
   );
 
-  // Render de un campo solo lectura
   const readOnlyField = (key, label, type='text') => (
     <div className="field" key={key}>
       <label>{label}</label>
@@ -203,7 +201,8 @@ export default function PerfilProfesional() {
             {input('ciudad','Ciudad')}
             {input('provincia','Provincia')}
             {input('pais','País')}
-          </div>          {/* Consentimiento */}
+          </div>          
+          {/* Consentimiento */}
           <h4>Consentimiento de datos</h4>
           <div className="field checkbox-field">
             <label>
@@ -212,15 +211,13 @@ export default function PerfilProfesional() {
                 checked={consent}
                 onChange={e=>setConsent(e.target.checked)}
                 disabled={!editMode}
-              />{' '}
-              Acepto el uso y tratamiento de mis datos personales según la{' '}
+              />{' '}Acepto el uso y tratamiento de mis datos personales según la{' '}
               <a 
                 href="/politica-privacidad" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 style={{ color: 'var(--blue)', textDecoration: 'underline' }}
-              >
-                Política de Privacidad
+              >Política de Privacidad
               </a>
             </label>
           </div>
@@ -249,7 +246,7 @@ export default function PerfilProfesional() {
     <div className={`toast-card ${toast.ok ? 'success' : 'error'}`}>
       {toast.ok
         ? <CheckCircle size={48} className="toast-icon success" />
-        : <XCircle      size={48} className="toast-icon error" />
+        : <XCircle size={48} className="toast-icon error" />
       }
       <h3 className="toast-title">{toast.titulo}</h3>
       <p className="toast-text">{toast.msg}</p>

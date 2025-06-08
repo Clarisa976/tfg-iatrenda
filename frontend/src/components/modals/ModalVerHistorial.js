@@ -1,14 +1,14 @@
 import React from 'react';
 import { X, Download } from 'lucide-react';
 
-// Detecta si la ruta es una imagen
+
 const isImage = (path) => {
   if (!path) return false;
   const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
   return extensions.some(ext => path.toLowerCase().endsWith(ext));
 };
 
-// Construye la URL correcta para el archivo
+
 const getFileUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
@@ -22,7 +22,7 @@ const getFileUrl = (path) => {
     baseUrl = window.location.origin;
   }
 
-  // Usar la ruta completa tal como viene de la BD
+
   const finalUrl = `${baseUrl}/${path}?t=${Date.now()}`;
   return finalUrl;
 };
@@ -32,14 +32,12 @@ export default function ModalVerHistorial({ documentos, onClose }) {
     try {
       const url = getFileUrl(documento.ruta);
       
-      // Fetch del archivo
+
       const response = await fetch(url);
       if (!response.ok) throw new Error('Error al descargar el archivo');
       
-      // Convertir a blob
       const blob = await response.blob();
       
-      // Crear URL temporal y descargar
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -48,18 +46,17 @@ export default function ModalVerHistorial({ documentos, onClose }) {
       document.body.appendChild(link);
       link.click();
       
-      // Limpiar
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
       
     } catch (error) {
       console.error('Error al descargar:', error);
-      // Fallback: abrir en nueva pestaña
       window.open(getFileUrl(documento.ruta), '_blank');
     }
   };
 
-  return (    <div className="modal-backdrop" onClick={onClose}>
+  return (
+  <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-ver-historial-wide" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Mi Historial Clínico</h3>
@@ -67,8 +64,7 @@ export default function ModalVerHistorial({ documentos, onClose }) {
         </div>
         
         <div className="modal-body">
-          {documentos && documentos.length > 0 ? (
-            <div>
+          {documentos && documentos.length > 0 ? (<div>
               <p><strong>Total de documentos:</strong> {documentos.length}</p>
               
               <div className="ver-historial-documentos-info">
@@ -76,17 +72,18 @@ export default function ModalVerHistorial({ documentos, onClose }) {
                   const docFileUrl = getFileUrl(documento.ruta);
                   const isDocImage = isImage(documento.ruta);
 
-                  return (                    <div 
+                  return (
+                  <div 
                       key={documento.id_documento || index} 
                       className="ver-historial-documento-item"
                     >
                       <div className="ver-historial-documento-info">
                         <p><strong>Fecha:</strong> {new Date(documento.fecha_subida).toLocaleDateString('es-ES')}</p>
                         <p><strong>Profesional:</strong> {documento.profesional_nombre}</p>
-                        {documento.diagnostico_preliminar && (
-                          <p><strong>Diagnóstico:</strong> {documento.diagnostico_preliminar}</p>
+                        {documento.diagnostico_preliminar && (<p><strong>Diagnóstico:</strong> {documento.diagnostico_preliminar}</p>
                         )}
-                      </div>                      {isDocImage ? (
+                      </div>                      
+                      {isDocImage ? (
                         <div className="ver-historial-imagen-container">
                           <img
                             src={docFileUrl}
@@ -98,13 +95,12 @@ export default function ModalVerHistorial({ documentos, onClose }) {
                             }}
                           />
                         </div>
-                      ) : null}                      <div className="ver-historial-descarga-container">
+                      ) : null}                      
+                      <div className="ver-historial-descarga-container">
                         <button
                           onClick={() => descargarDocumento(documento)}
                           className="ver-historial-descarga-btn"
-                        >
-                          <Download size={16} />
-                          Descargar
+                        >Descargar
                         </button>
                       </div>
                     </div>

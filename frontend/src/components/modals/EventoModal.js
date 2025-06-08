@@ -11,7 +11,7 @@ export default function EventoModal({
 }) {
   const [form, setForm] = useState({
     tipo: 'EVENTO',
-    profId: profSeleccionado || '', // Usar el profesional pre-seleccionado
+    profId: profSeleccionado || '', 
     inicio: '',
     fin: '',
     nota: ''

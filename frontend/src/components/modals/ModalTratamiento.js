@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { X } from 'lucide-react';
 
-// Detecta si la ruta es una imagen
+
 const isImage = (path) => {
   if (!path) return false;
   const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
   return extensions.some(ext => path.toLowerCase().endsWith(ext));
 };
 
-// Construye la URL correcta para el archivo
 const getFileUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
@@ -84,7 +83,8 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
                       </h5>
 
                       {isDocImage ? (
-                        <div className="image-container image-container-centered">                          <img
+                        <div className="image-container image-container-centered">                          
+                        <img
                             src={docFileUrl}
                             alt={`Adjunto ${index + 1} de la tarea`}
                             className="documento-imagen"
@@ -99,7 +99,8 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
                             <p><small>Ruta: {documento.ruta}</small></p>
                           </div>
                         </div>
-                      ) : (                        <div className="file-link file-link-container">
+                      ) : (                        
+                      <div className="file-link file-link-container">
                           <a
                             href={docFileUrl}
                             target="_blank"
@@ -124,8 +125,9 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
         </div>
       </div>
 
-      {/* Modal de confirmación de eliminación - renderizado por separado con z-index mayor */}
-      {showDeleteModal && (        <div className="modal-backdrop modal-delete-confirmation" onClick={() => setShowDeleteModal(false)}>
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && (        
+        <div className="modal-backdrop modal-delete-confirmation" onClick={() => setShowDeleteModal(false)}>
           <div className="modal modal-delete-small" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Confirmar eliminación</h3>

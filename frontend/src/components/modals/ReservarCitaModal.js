@@ -12,7 +12,6 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
     nombre: '', email: '', tel: '', motivo: '', fecha: null, acepto: false,
   });
   const [errs, setErrs] = useState({});
-// eslint-disable-next-line no-unused-vars
   const [loading, setLoading] = useState(false);
   const nombreRef = useRef(null);
 
@@ -28,9 +27,9 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
       e.email = 'Introduce un email válido';
     }
     
-    // Validación de teléfono (opcional pero debe ser válido si se proporciona)
+    // Validación de teléfono
     if (form.tel && form.tel.trim() && !/^[0-9]{9}$/.test(form.tel.trim())) {
-      e.tel = 'Introduce un número de teléfono válido (9 dígitos)';
+      e.tel = 'Introduce un número de teléfono';
     }
     
     if (!form.motivo.trim()) e.motivo = 'Este campo no puede quedar vacío';
@@ -58,7 +57,8 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
     
     setLoading(true);
     
-    try {      const fechaStr = format(form.fecha, 'yyyy-MM-dd HH:mm:ss');
+    try {      
+      const fechaStr = format(form.fecha, 'yyyy-MM-dd HH:mm:ss');
       console.log("Enviando datos de cita:", {
         nombre: form.nombre,
         email: form.email,
@@ -83,7 +83,7 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
         body: JSON.stringify({
           nombre: form.nombre,
           email: form.email,
-          tel: form.tel ? form.tel.trim() : '', // Enviar cadena vacía en lugar de null si no hay teléfono
+          tel: form.tel ? form.tel.trim() : '', 
           motivo: form.motivo,
           fecha: fechaStr
         })
@@ -95,7 +95,7 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
       } else {
-        // Si no es JSON, tratar como texto y luego intentar parsearlo
+
         const text = await response.text();
         console.log("Respuesta en texto plano:", text);
         try {
@@ -153,14 +153,14 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
               className={errs.email ? 'invalid' : ''}
             />
             {errs.email && <span className="field-error">{errs.email}</span>}
-          </div>          {/* Teléfono */}
+          </div>          
+          {/* Teléfono */}
           <div className="field">
             <label>Teléfono</label>
             <input
               value={form.tel}
               onChange={e => set('tel', e.target.value)}
               className={errs.tel ? 'invalid' : ''}
-              placeholder="(Opcional) 9 dígitos"
               type="tel"
               pattern="[0-9]{9}"
             />
@@ -212,7 +212,8 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
             <span>
               He leído y acepto los <a href="/terminos">Términos y condiciones de uso</a>
             </span>
-          </div>          {errs.acepto && <span className="field-error">{errs.acepto}</span>}
+          </div>          
+          {errs.acepto && <span className="field-error">{errs.acepto}</span>}
 
           <button 
             type="submit" 

@@ -8,7 +8,6 @@ import es from 'date-fns/locale/es';
 
 import '../../styles.css';
 
-// Importar componentes modales separados
 import ModalDocumento from '../../components/modals/ModalDocumento';
 import SubirTratamiento from '../../components/modals/SubirTratamiento';
 import SubirDocumento from '../../components/modals/SubirDocumento';
@@ -18,7 +17,6 @@ import ModalTratamiento from '../../components/modals/ModalTratamiento';
 registerLocale('es', es);
 
 
-/* ----------  helpers ---------- */
 const TabBtn = ({ label, sel, onClick }) => (
   <button className={`tab-btn ${sel ? 'tab-button-selected' : 'tab-button-unselected'}`}
     onClick={onClick}>{label}</button>
@@ -40,7 +38,6 @@ const getEstadoClass = (estado) => {
   return clases[estado] || '';
 };
 
-/* ================= COMPONENTES SEPARADOS ================= */
 
 // Componente Input memoizado
 const InputField = memo(({ obj, onChange, fieldKey, label, type = 'text', full = false, edit }) => {
@@ -178,11 +175,9 @@ const BloqueContacto = memo(({ pPer, hPer, edit }) => (
   </>
 ));
 
-/* ================= COMPONENTE PRINCIPAL ================= */
+
 export default function PerfilPacienteProfesional() {
   const { id } = useParams();
-
-  /* ---------------- estado ---------------- */
   const [data, setData] = useState(null);
   const [tab, setTab] = useState('perfil');
   const [edit, setEdit] = useState(false);
@@ -192,13 +187,11 @@ export default function PerfilPacienteProfesional() {
   const [selT, setSelT] = useState(null);
   const [toast, setToast] = useState({ show: false, ok: true, t: '', m: '' });
 
-  /* formularios perfil */
   const [pPer, setPPer] = useState({});
   const [pPac, setPPac] = useState({});
   const [pTut, setPTut] = useState({});
   const [rgpd, setRgpd] = useState(false);
 
-  /* ---------- axios base ---------- */
   useEffect(() => {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
     const tk = localStorage.getItem('token');
@@ -225,12 +218,11 @@ export default function PerfilPacienteProfesional() {
     }
   }, [id]);
 
-  /* ---------- carga paciente ---------- */
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  /* ---------- toast auto-hide ---------- */
   useEffect(() => {
     if (toast.show) {
       const t = setTimeout(() => setToast(s => ({ ...s, show: false })), 2500);
@@ -238,7 +230,7 @@ export default function PerfilPacienteProfesional() {
     }
   }, [toast.show]);
 
-  /* ---------- click fuera dropdown ---------- */
+
   useEffect(() => {
     if (drop !== null) {
       const h = e => {
@@ -252,12 +244,12 @@ export default function PerfilPacienteProfesional() {
 
   const msg = (ok, t, m) => setToast({ show: true, ok, t, m });
 
-  // Handlers estables con useCallback
+
   const hPer = useCallback((k, v) => setPPer(s => ({ ...s, [k]: v })), []);
   const hPac = useCallback((k, v) => setPPac(s => ({ ...s, [k]: v })), []);
   const hTut = useCallback((k, v) => setPTut(s => ({ ...s, [k]: v })), []);
 
-  /* ---------- guardar perfil ---------- */
+ 
   const savePerfil = async () => {
     try {
       await axios.put(`/prof/pacientes/${id}`, {
@@ -270,7 +262,7 @@ export default function PerfilPacienteProfesional() {
     } catch (e) { msg(false, 'Error', e.response?.data?.mensaje || 'El paciente no se ha podido actualizar'); }
   };
 
-  /* ---------- acciones citas ---------- */  const doAccion = async (idCita, accion, fecha = null) => {
+const doAccion = async (idCita, accion, fecha = null) => {
     try {
       const response = await axios.post(`/prof/citas/${idCita}/accion`, { accion, ...(fecha ? { fecha } : {}) });
       if (response.data?.token) {
@@ -287,7 +279,7 @@ export default function PerfilPacienteProfesional() {
 
   if (data === null) return <div className="loading-estado">Cargando…</div>;
 
-  /* ------------------- TABS ------------------- */
+
   const Perfil = (
     <>
       <BloquePaciente pPac={pPac} hPac={hPac} edit={edit} />
@@ -327,7 +319,8 @@ export default function PerfilPacienteProfesional() {
               className="tratamiento-item"
               onClick={() => setSelT(t)}>
               <h5>{t.titulo || 'Sin título'}</h5>
-              <p>{t.notas?.substring(0, 120) || 'Sin descripción'}</p>              {t.documentos && t.documentos.length > 0 && (
+              <p>{t.notas?.substring(0, 120) || 'Sin descripción'}</p>
+              {t.documentos && t.documentos.length > 0 && (
                 <span className="badge-archivo">
                   <Paperclip size={14} style={{ marginRight: '4px' }} /> {t.documentos.length} archivo{t.documentos.length > 1 ? 's' : ''}
                 </span>
@@ -391,7 +384,7 @@ export default function PerfilPacienteProfesional() {
     const [profesionalId, setProfesionalId] = useState(null);
 
     const HORA_INICIO = 10;
-    const HORA_FIN = 17;    // Reset del modal cuando se abre
+    const HORA_FIN = 17;
     useEffect(() => {
       if (repro.show) {
         setFechaNueva(null);
@@ -399,7 +392,6 @@ export default function PerfilPacienteProfesional() {
         setError('');
         obtenerProfesionalId();
       }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [repro.show]);
 
     // Obtener ID del profesional desde el token
@@ -494,8 +486,7 @@ export default function PerfilPacienteProfesional() {
           // Las horas ocupadas son las que NO están disponibles
           const ocupadas = todasLasHoras.filter(hora => !horasDisponibles.includes(hora));
           
-          // Si la fecha seleccionada es la misma que la cita actual, no bloquear la hora de la cita actual
-          // ya que esa misma hora debe estar disponible para reprogramación
+          // Si la fecha seleccionada es la misma que la cita actual, no bloquear la hora de la cita actual ya que esa misma hora debe estar disponible para reprogramación
           if (repro.citaActual?.fecha_hora) {
             const fechaCitaActual = new Date(repro.citaActual.fecha_hora);
             const fechaCitaActualStr = fechaCitaActual.toISOString().split('T')[0];
@@ -563,8 +554,7 @@ export default function PerfilPacienteProfesional() {
       // No está en días bloqueados
       const noEstaBloqueado = !diasBloqueados.includes(fechaStr);
 
-      // A diferencia de la versión anterior, NO excluimos la fecha de la cita actual
-      // porque sí queremos permitir reprogramar para el mismo día, quizás a otra hora
+      // A diferencia de la versión anterior, NO excluimos la fecha de la cita actual  porque sí queremos permitir reprogramar para el mismo día, quizás a otra hora
 
       console.log('Validando fecha:', fechaStr, {
         esLaborable,
@@ -659,7 +649,8 @@ export default function PerfilPacienteProfesional() {
           </div>
 
           <div className="modal-body">
-            {/* Información de la cita actual */}            {repro.citaActual && (
+            {/* Información de la cita actual */}            
+            {repro.citaActual && (
               <div className="cita-actual-container">
                 <h4 className="cita-actual-titulo">
                   Cita actual
@@ -675,7 +666,8 @@ export default function PerfilPacienteProfesional() {
                   </p>
                 )}
               </div>
-            )}            {/* Información importante */}
+            )}            
+            {/* Información importante */}
             <div className="horario-atencion-info">
               <strong>Horario de atención:</strong>
               <ul className="horario-atencion-lista">
@@ -683,14 +675,15 @@ export default function PerfilPacienteProfesional() {
                 <li>Solo se muestran horas realmente disponibles</li>
                 <li>Las horas ocupadas aparecen deshabilitadas</li>
               </ul>
-            </div>            {/* Selección de nueva fecha y hora con DatePicker */}
+            </div>            
+            {/* Selección de nueva fecha y hora con DatePicker */}
             <div className="field fecha-seleccion-field">
               <label className="fecha-seleccion-label">
                 Nueva fecha y hora *
               </label>
               {cargandoHoras && (
                 <div className="cargando-horas-container">
-                  🔄 Cargando disponibilidad...
+                  Cargando disponibilidad...
                 </div>
               )}
               <DatePicker
@@ -713,30 +706,17 @@ export default function PerfilPacienteProfesional() {
             </div>            {/* Estado de carga */}
             {cargandoHoras && (
               <div className="estado-carga-container">
-                🕒 Verificando disponibilidad horaria...
+                Verificando disponibilidad horaria...
               </div>
             )}
 
             {/* Mensaje de error */}
             {error && (
               <div className="mensaje-error-container">
-                ⚠️ {error}
+                {error}
               </div>
-            )}            {/* Debug info */}
-            <details className="debug-info-details">
-              <summary className="debug-info-summary">
-                🔧 Debug Info
-              </summary>
-              <div className="debug-info-contenido">
-                <div><strong>Cita ID:</strong> {repro.citaId || 'N/A'}</div>
-                <div><strong>Profesional ID:</strong> {profesionalId || 'NO DETECTADO'}</div>
-                <div><strong>Fecha seleccionada:</strong> {fechaNueva ? fechaNueva.toLocaleString('es-ES') : 'Ninguna'}</div>
-                <div><strong>Horas ocupadas:</strong> [{horasOcupadas.join(', ') || 'Ninguna'}]</div>
-                <div><strong>Cargando:</strong> {cargandoHoras ? 'Sí' : 'No'}</div>
-                <div><strong>Fecha cita actual:</strong> {repro.citaActual?.fecha_hora ? new Date(repro.citaActual.fecha_hora).toISOString().split('T')[0] : 'N/A'}</div>
-                <div><strong>Hora cita actual:</strong> {repro.citaActual?.fecha_hora ? new Date(repro.citaActual.fecha_hora).getHours().toString().padStart(2, '0') + ':00' : 'N/A'}</div>
-              </div>
-            </details>
+            )}            
+
           </div>
 
           <div className="modal-footer">
@@ -744,9 +724,9 @@ export default function PerfilPacienteProfesional() {
               className="btn-cancel"
               onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}
               disabled={isLoading}
-            >
-              Cancelar
-            </button>            <button
+            >Cancelar
+            </button>            
+            <button
               className={`btn-save ${(isLoading || !fechaNueva || cargandoHoras) ? 'btn-reprogramar-disabled' : ''}`}
               onClick={reprogramar}
               disabled={isLoading || !fechaNueva || cargandoHoras}
@@ -765,7 +745,7 @@ export default function PerfilPacienteProfesional() {
       <table className="usuarios-table">
         <thead><tr><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
-          {(data.citas || []).map(c => (            <tr key={c.id_cita}>
+          {(data.citas || []).map(c => (<tr key={c.id_cita}>
               <td>{new Date(c.fecha_hora).toLocaleString('es-ES')}</td>
               <td className={`cita-estado-celda ${getEstadoClass(c.estado)}`}>{c.estado}</td>
               <td className="acciones-col">
@@ -805,7 +785,8 @@ export default function PerfilPacienteProfesional() {
       </table>
       <ReprogramarCitaModal />
     </>
-  );  /* ---------------- render ---------------- */
+  );
+  
   return (
     <div className="usuarios-container perfil-paciente-profesional-container">
       <h2 className="usuarios-title">{pPer.nombre} {pPer.apellido1}</h2>

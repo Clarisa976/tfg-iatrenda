@@ -18,13 +18,12 @@ export default function AgendaProfesional() {
   const [perfilProf, setPerfilProf] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [detalle, setDetalle] = useState(null);
-  const [detalleOpen, setDetalleOpen] = useState(false);  /* cargar datos */
+  const [detalleOpen, setDetalleOpen] = useState(false);  
   useEffect(() => { 
     cargar(); 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Función para cargar eventos de un mes específico
+  // Función para cargar eventos de un mes
   const cargarEventosMes = async (year, month, idProf) => {
     try {
       console.log(`Cargando eventos para ${year}-${month} (Profesional ID: ${idProf})`);
@@ -53,18 +52,18 @@ export default function AgendaProfesional() {
       const token = localStorage.getItem('token');
       if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // 1. Obtener el perfil del profesional logueado
+      // perfil del profesional logueado
       const perfilRes = await axios.get('/prof/perfil');
       
       if (perfilRes.data.ok) {
         const perfil = perfilRes.data.data;
         setPerfilProf(perfil);
         
-        // 2. Obtener eventos solo de este profesional
+        // eventos solo de este profesional
         const idProf = perfil.persona.id_persona;
         console.log(`Obteniendo eventos para el profesional ID: ${idProf}`);
         
-        // Obtener mes actual
+        // mes actual
         const today = new Date();
         const currentYear = today.getFullYear();
         const currentMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
@@ -119,7 +118,7 @@ export default function AgendaProfesional() {
         // Obtener el mes y año del evento creado para cargar los eventos correctos
         const fechaEvento = new Date(datos.inicio);
         const yearEvento = fechaEvento.getFullYear();
-        const monthEvento = fechaEvento.getMonth() + 1; // +1 porque en JS los meses van de 0-11
+        const monthEvento = fechaEvento.getMonth() + 1; 
         
         // Cargar eventos para el mes del evento creado
         if (perfilProf) {
@@ -161,7 +160,6 @@ export default function AgendaProfesional() {
       AUSENCIA: '#FF6464', 
       BAJA: '#A259FF',
       EVENTO: '#56CCF2', 
-      OTROS: '#7AD6A0', 
       cita: '#2F80ED' 
     };
     return { style: { backgroundColor: c[event.tipo] || '#2F80ED' } };
@@ -178,7 +176,8 @@ export default function AgendaProfesional() {
            onClick={e => { e.preventDefault(); setOpenModal(true); }}>
           Añadir evento
         </a>
-      </div>      <div className="cal-wrapper">
+      </div>      
+      <div className="cal-wrapper">
         <Calendar
           localizer={localizer}
           events={eventos}
@@ -191,7 +190,7 @@ export default function AgendaProfesional() {
           onNavigate={(date) => {
             // Cuando el usuario navega a un mes diferente
             const year = date.getFullYear();
-            const month = date.getMonth() + 1; // +1 porque en JS los meses van de 0-11
+            const month = date.getMonth() + 1; 
             
             if (perfilProf) {
               // Cargar eventos para el nuevo mes

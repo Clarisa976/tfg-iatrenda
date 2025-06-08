@@ -39,10 +39,9 @@ export default function AgendaGlobal() {
   };
 
   const map = arr => arr.map(x => {
-    // Usar directamente el nombre del profesional que viene del backend
+    // Usar directamente el nombre del profesional 
     let profNombre = x.nombre_profesional || '';
-    
-    // Si no hay nombre, mostrar el ID como fallback
+
     if (!profNombre && x.recurso) {
       profNombre = `ID: ${x.recurso}`;
     }

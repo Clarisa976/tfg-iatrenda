@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import axios       from 'axios';
+import axios from 'axios';
 import { EllipsisVertical } from 'lucide-react';
 import { useNavigate }      from 'react-router-dom';
 import '../../styles.css';
 
 export default function PacientesProfesional () {
-  /* ------------- estado interno ---------------------------------------- */
+
   const [pacientes,setPacientes]=useState([]);
   const [busqueda ,setBusqueda ]=useState('');
   const navigate=useNavigate();
 
-  /* ------------- carga inicial ----------------------------------------- */
   const cargar = ()=>{
     const tk=localStorage.getItem('token');
     axios.get('/prof/pacientes',{headers:{Authorization:`Bearer ${tk}`}})
@@ -23,16 +22,15 @@ export default function PacientesProfesional () {
   };
   useEffect(cargar,[]);
 
-  /* ------------- filtrado por texto ------------------------------------ */
   const filtrados = pacientes.filter(p=>{
     const nom=`${p.nombre} ${p.apellido1} ${p.apellido2||''}`.toLowerCase();
     return nom.includes(busqueda.toLowerCase());
   });
 
-  /* ------------- helpers UI ------------------------------------------- */
+
   const verPerfil = p => navigate(`/profesional/paciente/${p.id}`);
 
-  /* ------------- render ------------------------------------------------ */
+
   return(
     <div className="usuarios-container">
       {/* encabezado */}

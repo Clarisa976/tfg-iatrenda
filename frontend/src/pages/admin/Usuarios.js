@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { EllipsisVertical, CheckCircle, XCircle } from 'lucide-react';
-import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import AddUserModal from '../../components/modals/AddUserModal';
@@ -9,7 +8,7 @@ import ConfirmacionEliminacionModal from '../../components/modals/ConfirmacionEl
 import '../../styles.css';
 
 export default function Usuarios() {
-  /* ───────────────────────── estado ───────────────────────── */
+
   const [usuarios,      setUsuarios]      = useState([]);
   const [busqueda,      setBusqueda]      = useState('');
   const [filtro,        setFiltro]        = useState('TODOS');
@@ -22,7 +21,7 @@ export default function Usuarios() {
 
   const [toast, setToast] = useState({show: false, ok: true, titulo: '', mensaje: ''});
 
-  /* ──────────────────── carga inicial ─────────────────────── */
+
   const cargar = () => {
     const tk = localStorage.getItem('token');
     axios.get(`${process.env.REACT_APP_API_URL}/admin/usuarios`, {
@@ -33,7 +32,6 @@ export default function Usuarios() {
   };
   useEffect(cargar, []);
 
-  /* ───────────────────── filtrado tabla ───────────────────── */
   const mostrados = usuarios.filter(u => {
     const nombre = `${u.nombre} ${u.apellido1} ${u.apellido2||''}`.toLowerCase();
     const okTxt  = nombre.includes(busqueda.toLowerCase());
@@ -44,27 +42,21 @@ export default function Usuarios() {
     return okTxt && okRol;
   });
 
-  /* ──────────────────── helpers UI ────────────────────────── */
   const agregar = () => { setSelectedUser(null); setOpenModal(true); };
   const editar  =  u  => { setSelectedUser(u);   setOpenModal(true); };
   const borrar  =  u  => { setUserToDel(u);      setDelOpen(true);  };
 
-  /* ──────────────────── helper para mostrar toast ────────────────────── */
   const mostrarToast = (config) => {
-    // Mostrar el toast con la configuración proporcionada
+
     setToast({...config, show: true});
-    
-    // Configurar temporizador para ocultarlo
     setTimeout(() => {
       setToast(prev => ({...prev, show: false}));
-    }, 5000); // 5 segundos
+    }, 5000); 
   };
 
-  /* ───────────────────── delete ──────────────────────── */
 const confirmarDelete = async () => {
   const tk = localStorage.getItem('token');
   try {
-    // Configuración de Axios mejorada
     const response = await axios.post(
       `/admin/borrar-usuario/${userToDel.id}`,
       {},
@@ -92,7 +84,7 @@ const confirmarDelete = async () => {
   } catch (err) {
     console.error('Error al eliminar:', err);
     
-    // Si hay datos en la respuesta de error, úsalos
+    // Si hay datos en la respuesta de error
     if (err.response && err.response.data) {
       console.log('Datos de error:', err.response.data);
       
@@ -116,7 +108,6 @@ const confirmarDelete = async () => {
         });
       }
     } else {
-      // Error genérico
       mostrarToast({
         ok: false,
         titulo: 'Error',
@@ -127,14 +118,10 @@ const confirmarDelete = async () => {
 };
 
 
-  /* ─────────── tras guardar (alta o edición) ──────────────── */
-
   const afterSave = (nombre, toastConfig) => {
-    // Si se proporciona una configuración de toast específica, usarla
     if (toastConfig) {
       mostrarToast(toastConfig);
     } else if (nombre) {
-      // Si no hay configuración pero hay nombre, mostrar mensaje de éxito estándar
       mostrarToast({
         ok: true,
         titulo: selectedUser ? 'Usuario actualizado' : 'Usuario creado',
@@ -149,7 +136,6 @@ const confirmarDelete = async () => {
     cargar();
   };
 
-  /* ───────────────────────── JSX ──────────────────────────── */
   return (
     <div className="usuarios-container">
       {/* cabecera */}

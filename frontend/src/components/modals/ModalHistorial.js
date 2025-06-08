@@ -1,14 +1,13 @@
 import React from 'react';
 import { X, Download } from 'lucide-react';
 
-// Detecta si la ruta es una imagen
 const isImage = (path) => {
   if (!path) return false;
   const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
   return extensions.some(ext => path.toLowerCase().endsWith(ext));
 };
 
-// Construye la URL correcta para el archivo
+
 const getFileUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
@@ -40,7 +39,8 @@ export default function ModalHistorial({ documentos, onClose }) {
     document.body.removeChild(link);
   };
 
-  return (    <div className="modal-backdrop" onClick={onClose}>
+  return (    
+  <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-historial-wide" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Mi Historial Clínico</h3>
@@ -67,7 +67,8 @@ export default function ModalHistorial({ documentos, onClose }) {
                         {documento.diagnostico_preliminar && (
                           <p><strong>Diagnóstico:</strong> {documento.diagnostico_preliminar}</p>
                         )}
-                      </div>                      {isDocImage ? (
+                      </div>                      
+                      {isDocImage ? (
                         <div className="historial-imagen-container">
                           <img
                             src={docFileUrl}
@@ -85,9 +86,7 @@ export default function ModalHistorial({ documentos, onClose }) {
                         <button
                           onClick={() => descargarDocumento(documento)}
                           className="historial-download-btn"
-                        >
-                          <Download size={16} />
-                          Descargar
+                        >Descargar
                         </button>
                       </div>
                     </div>

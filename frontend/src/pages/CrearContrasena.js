@@ -7,19 +7,19 @@ import '../styles.css';
 
 export default function CrearContrasena() {
   const [sp] = useSearchParams();
-  const uid  = sp.get('uid') || '';      // siempre string
+  const uid = sp.get('uid') || '';
 
-  const [pass, setPass]       = useState('');
-  const [show, setShow]       = useState(false);    // mostrar / ocultar
-  const [ok,   setOk]         = useState(null);     // null | true | false
-  const [err,  setErr]        = useState('');       // mensaje local
+  const [pass, setPass] = useState('');
+  const [show, setShow] = useState(false);
+  const [ok, setOk] = useState(null);
+  const [err, setErr] = useState('');
 
-  /* envía al backend sólo si cumple longitud */
+
   const enviar = async () => {
     if (pass.length < 8) {
       setErr('La contraseña debe tener al menos 8 caracteres');
       return;
-    }    try {
+    } try {
       await axios.post(
         `${process.env.REACT_APP_API_URL}/crear-contrasena`,
         { uid, password: pass }
@@ -31,47 +31,47 @@ export default function CrearContrasena() {
   };
   if (!uid) return <p className="enlace-incorrecto">Enlace incorrecto</p>;
 
-  /* JSX ----------------------------------------------------------- */
+
   return (
     <div className="crear-contrasena-container">
       <h2>Crea tu contraseña</h2>
 
-      { ok === null && (        <>
-          <div className="password-input-container">
-            <input
-              type={show ? 'text' : 'password'}
-              value={pass}
-              onChange={e => { setPass(e.target.value); setErr(''); }}
-              placeholder="Mínimo 8 caracteres"
-              className={`password-input ${err ? 'invalid' : ''}`}
-            />            {/* botón mostrar/ocultar */}
-            <button
-              type="button"
-              className="password-toggle-btn"
-              onClick={()=>setShow(s=>!s)}
-              aria-label={show?'Ocultar':'Mostrar'}
-            >
-              {show ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>          {/* error local */}
-          {err && <p className="error-message">{err}</p>}
-
-          {/* respuesta del backend */}
-          {ok === false && (
-            <p className="backend-error-message">
-              El enlace ha caducado o ya fue usado.
-            </p>
-          )}
-
+      {ok === null && (<>
+        <div className="password-input-container">
+          <input
+            type={show ? 'text' : 'password'}
+            value={pass}
+            onChange={e => { setPass(e.target.value); setErr(''); }}
+            placeholder="Mínimo 8 caracteres"
+            className={`password-input ${err ? 'invalid' : ''}`}
+          />
           <button
-            className={`btn-reserva btn-guardar-password ${pass.length<8 ? 'btn-disabled' : ''}`}
-            disabled={pass.length < 8}
-            onClick={enviar}
+            type="button"
+            className="password-toggle-btn"
+            onClick={() => setShow(s => !s)}
+            aria-label={show ? 'Ocultar' : 'Mostrar'}
           >
-            Guardar
+            {show ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
-        </>
-      )}      { ok === true && (
+        </div>
+        {err && <p className="error-message">{err}</p>}
+
+        {/* respuesta del backend */}
+        {ok === false && (
+          <p className="backend-error-message">
+            El enlace ha caducado o ya fue usado.
+          </p>
+        )}
+
+        <button
+          className={`btn-reserva btn-guardar-password ${pass.length < 8 ? 'btn-disabled' : ''}`}
+          disabled={pass.length < 8}
+          onClick={enviar}
+        >
+          Guardar
+        </button>
+      </>
+      )}      {ok === true && (
         <p className="success-message">
           Contraseña guardada correctamente. Ya puedes iniciar sesión.
         </p>

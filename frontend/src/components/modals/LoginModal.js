@@ -180,7 +180,8 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
               className={errors.email ? 'invalid' : ''}
             />
             {errors.email && <span className="field-error">{errors.email}</span>}
-          </div>          {/* Password */}
+          </div>          
+          {/* Password */}
           <div className="field">
             <label>Contraseña*:</label>
             <div className="password-field">
@@ -199,7 +200,8 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
               </button>
             </div>
             {errors.pass && <span className="field-error">{errors.pass}</span>}
-          </div>{/* Acciones */}
+          </div>
+          {/* Acciones */}
           <div className="actions">
             <button
               type="button"
@@ -211,7 +213,8 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
 
             <button type="submit" className="btn-submit btn-full">
               Entrar
-            </button>          </div>
+            </button>          
+            </div>
         </form>
       </div>
     </div>

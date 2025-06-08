@@ -1,14 +1,14 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-// Detecta si la ruta es una imagen
+
 const isImage = (path) => {
   if (!path) return false;
   const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
   return extensions.some(ext => path.toLowerCase().endsWith(ext));
 };
 
-// Construye la URL correcta para el archivo
+
 const getFileUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
@@ -60,7 +60,7 @@ export default function ModalVerTarea({ tarea, onClose }) {
           <p>{tarea.descripcion || 'Sin descripción disponible'}</p>
 
           {/* Archivos adjuntos */}
-          {tarea.documentos && tarea.documentos.length > 0 && (            <div className="tratamiento-attachment tarea-info-section">
+          {tarea.documentos && tarea.documentos.length > 0 && (<div className="tratamiento-attachment tarea-info-section">
               <h4>Archivos adjuntos</h4>
               
               {tarea.documentos.map((documento, index) => {
@@ -72,7 +72,8 @@ export default function ModalVerTarea({ tarea, onClose }) {
                     
 
                     {isDocImage ? (
-                      <div className="imagen-container-center">                        <img
+                      <div className="imagen-container-center">                       
+                       <img
                           src={docFileUrl}
                           alt={`Adjunto ${index + 1} de la tarea`}
                           className="tarea-imagen-preview"
@@ -87,7 +88,8 @@ export default function ModalVerTarea({ tarea, onClose }) {
                           <p><small>Ruta: {documento.ruta}</small></p>
                         </div>
                       </div>
-                    ) : (                      <div className="tarea-file-link-container">                        <a
+                    ) : ( <div className="tarea-file-link-container">                        
+                    <a
                           href={docFileUrl}
                           target="_blank"
                           rel="noreferrer"
@@ -101,7 +103,8 @@ export default function ModalVerTarea({ tarea, onClose }) {
                 );
               })}
             </div>
-          )}          {/* Mensaje si no hay archivos */}
+          )}         
+          {/* Mensaje si no hay archivos */}
           {(!tarea.documentos || tarea.documentos.length === 0) && (
             <div className="tarea-sin-archivos-container">
               <p className="tarea-sin-archivos-texto">

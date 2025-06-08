@@ -1,21 +1,20 @@
-// src/components/modals/AddUserModal.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../../styles.css';
 
-/* ────── validadores básicos ────── */
+
 const reEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const reNum   = /^\d+$/;
 const reDni   = /^[0-9]{7,8}[A-Z]$/i;
 
 export default function AddUserModal({ open, toggle, onSuccess, initialUser })
 {
-  /* ────── estado base ────── */
+
   const hoy  = new Date().toISOString().split('T')[0];
   const isEdit = !!initialUser;
 
-  const [step, setStep] = useState(isEdit ? 1 : 0);   // 0-elegir | 1-form
-  const [tipo, setTipo] = useState('PACIENTE');       // PACIENTE | PROFESIONAL
+  const [step, setStep] = useState(isEdit ? 1 : 0);
+  const [tipo, setTipo] = useState('PACIENTE'); 
 
   /* plantillas */
   const blankP  = { nombre:'', apellido1:'', apellido2:'', fecha_nacimiento:'',
@@ -28,7 +27,7 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
   const blankTu = { nombre:'', apellido1:'', apellido2:'', fecha_nacimiento:'',
                     nif:'', email:'', telefono:'', tel:true, emailM:true };
 
-  /* estados reactivos */
+
   const [p , setP ] = useState({...blankP});
   const [pr, setPr] = useState({...blankPr});
   const [pa, setPa] = useState({...blankPa});
@@ -37,12 +36,12 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
   const [rgpd, setRgpd] = useState(false);
   const [err , setErr ] = useState({});
 
-  /* util de mutación */
+
   const mut = (obj, setter, k, v) => setter({ ...obj, [k]:v });
 
   const esMenor = tipo === 'PACIENTE' && pa.tipo_paciente !== 'ADULTO';
 
-  /* ────── reset local ────── */
+
   const reset = () => {
     setStep(isEdit ? 1 : 0);
     setTipo('PACIENTE');
@@ -54,11 +53,10 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
     setErr({});
   };
 
-  /* ────── carga del detalle cuando se edita ────── */
   useEffect(() => {
     if (!open) { reset(); return; }
 
-    if (!isEdit) return;                 /* alta → paso 0 */
+    if (!isEdit) return; 
 
     const { id } = initialUser;
     const tk = localStorage.getItem('token');
@@ -99,21 +97,20 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
       setStep(1);
     })
     .catch(e => console.error('Error cargando usuario', e));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialUser]);
 
-  /* ────── validación ────── */
+
   const validar = () => {
     const e = {};
 
-    /* profesional */
+
     if (tipo === 'PROFESIONAL') {
       if (!pr.num_colegiado.trim()) e.num_colegiado = true;
       if (!pr.especialidad.trim())  e.especialidad  = true;
       if (!pr.fecha_alta)           e.fecha_alta    = true;
     }
 
-    /* personales */
+ 
     if (!p.nombre.trim())     e.nombre = true;
     if (!p.apellido1.trim())  e.apellido1 = true;
     if (!p.fecha_nacimiento)  e.fecha_nacimiento = true;
@@ -125,7 +122,7 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
       if (!reNum.test(p.telefono))                   e.telefono = true;
     }
 
-    /* tutor de menor */
+
     if (esMenor) {
       if (!tu.nombre.trim())        e.tu_nombre = true;
       if (!tu.apellido1.trim())     e.tu_apellido1 = true;
@@ -141,14 +138,13 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
     return Object.keys(e).length === 0;
   };
 
-  /* ────── GUARDAR ────── */
+
   const guardar = async () => {
     if (!validar()) return;
 
     const tk = localStorage.getItem('token');
 
-    /* aseguramos que TODOS los campos existen (vacío == '')                *
-     * esto permite borrar datos → backend los convertirá en NULL           */
+
     const fill = (base, tmpl) => {
       const out = {};
       Object.keys(tmpl).forEach(k => { out[k] = base[k] ?? ''; });
@@ -181,7 +177,7 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
 
       if (res.data.ok) {
         onSuccess(p.nombre);
-        toggle();                    // cerrar modal
+        toggle(); 
       } else {
         onSuccess(null, {
           ok:false, titulo:'Error', mensaje: res.data.mensaje || 'Fallo al guardar'
@@ -194,7 +190,6 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
     }
   };
 
-  /* ────── input helper ────── */
   const input = (obj, setter, k, label, type='text', full=false) => (
     <div className={`field${full ? ' full' : ''}`}>
       <label>{label}</label>
@@ -208,7 +203,6 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
     </div>
   );
 
-  /* ────── bloques UI ────── */
   const bloqueDatosProfesional = () => (
     <>
       <h4>Datos del profesional</h4>
@@ -308,18 +302,17 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
     </>
   );
 
-  /* ────── render ────── */
   if (!open) return null;
 
-  /* backdrop: sólo cierra si estamos en el primer paso de alta */
   const handleBackdrop = () => { if (!isEdit && step === 0) toggle(); };
 
   return (
-    <div className="modal-backdrop" onClick={handleBackdrop}>      <div
+    <div className="modal-backdrop" onClick={handleBackdrop}>      
+    <div
         className="modal add-user-modal add-user-modal-wide"
         onClick={e => e.stopPropagation()}
       >
-        {/* PASO 0: elegir tipo */}
+        {/*elegir tipo */}
         {step === 0 && (
           <>
             <div className="modal-header">
@@ -342,7 +335,7 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
           </>
         )}
 
-        {/* PASO 1: formulario */}
+        {/*formulario */}
         {step === 1 && (
           <>
             <div className="modal-header">

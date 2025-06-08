@@ -93,7 +93,6 @@ export default function ModalCitaUniversal({
         return;
       }
 
-      // Obtener desde API de citas
       if (cita?.id_cita) {
         const token = localStorage.getItem('token');
         
@@ -115,7 +114,6 @@ export default function ModalCitaUniversal({
         }
       }
 
-      // Fallback si no se encuentra el ID del profesional
       const idFallback = 1;
       setProfesionalId(idFallback);
       cargarDiasBloqueados(idFallback);
@@ -191,7 +189,7 @@ export default function ModalCitaUniversal({
 
         const ocupadas = todasLasHoras.filter(hora => !horasDisponibles.includes(hora));
         
-        // En modo cambiar, no bloquear la hora actual de la cita
+
         if (esModoCambiar && cita?.fecha_hora) {
           const fechaCitaActual = new Date(cita.fecha_hora);
           const fechaCitaActualStr = fechaCitaActual.toISOString().split('T')[0];
@@ -342,11 +340,12 @@ export default function ModalCitaUniversal({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>        <div className="modal-header">
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>       
+         <div className="modal-header">
           <h5>{getTitulo()}</h5>
           <button className="modal-close" onClick={onClose}><X /></button>
         </div><div className="modal-body">
-          {/* Selección de profesional (solo en modo nueva) */}
+          {/* Selección de profesional*/}
           {esModoNueva && (
             <div className="field" style={{ marginBottom: '1.5rem' }}>
               <label style={{ color: 'var(--black)', fontWeight: '500' }}>Profesional*</label>
@@ -376,7 +375,7 @@ export default function ModalCitaUniversal({
             </div>
           )}
 
-          {/* Motivo (solo en modo nueva) */}
+          {/* Motivo*/}
           {esModoNueva && (
             <div className="field" style={{ marginBottom: '1.5rem' }}>
               <label style={{ color: 'var(--black)', fontWeight: '500' }}>Motivo de la consulta*</label>
@@ -397,7 +396,8 @@ export default function ModalCitaUniversal({
               />
               {errs.motivo && <span className="field-error">{errs.motivo}</span>}
             </div>
-          )}          {/* Selección de fecha y hora */}
+          )}          
+          {/* Selección de fecha y hora */}
           {mostrarDatePicker && (
             <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <label style={{ color: 'var(--black)', fontWeight: '500', marginBottom: '1rem' }}>
@@ -451,7 +451,8 @@ export default function ModalCitaUniversal({
               {error}
             </div>
           )}
-        </div>        <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+        </div>        
+        <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
           <button 
             className="btn-cancel"
             onClick={onClose}

@@ -7,12 +7,10 @@ export default function Notificaciones() {
   const [items, setItems] = useState([]);
   const [loading, setLoad] = useState(true);
 
-  // Configurar axios una sola vez al montar el componente
   useEffect(() => {
     const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
     axios.defaults.baseURL = baseURL;
     axios.defaults.withCredentials = true;
-    
     cargar();
   }, []);
 
@@ -51,8 +49,8 @@ export default function Notificaciones() {
       const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
       
       console.log(`Enviando solicitud a ${baseURL}/notificaciones/${id} con acción ${tipoAcc}`);
-      
-      // Usar fetch en lugar de axios para seguir el mismo patrón que cargar()
+
+
       const response = await fetch(`${baseURL}/notificaciones/${id}`, {
         method: 'POST',
         headers: {
@@ -120,14 +118,12 @@ export default function Notificaciones() {
                   <button 
                     className="btn-primary"
                     onClick={() => accion(n.id, 'CONFIRMAR')}
-                  >
-                    Confirmar
+                  >Confirmar
                   </button>{' '}
                   <button 
                     className="btn-secondary"
                     onClick={() => accion(n.id, 'RECHAZAR')}
-                  >
-                    Rechazar
+                  > Rechazar
                   </button>
                 </td>
               </tr>

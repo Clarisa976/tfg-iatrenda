@@ -24,7 +24,7 @@ export default function PerfilPaciente() {
     // Modo edición / solo lectura
     const [editMode, setEditMode] = useState(false);
 
-    // Datos de persona (editable)
+    // Datos de persona editables
     const [form, setForm] = useState({
         nombre: '',
         apellido1: '',
@@ -62,31 +62,30 @@ export default function PerfilPaciente() {
         metodo_contacto_preferido: []
     });
     
-    // Estado de consentimiento
+
     const [consent, setConsent] = useState(false);
 
     const [toast, setToast] = useState({ show: false, ok: true, titulo: '', msg: '' });
     const [errors, setErrors] = useState({});
 
-    // Configuración global axios
+
     useEffect(() => {
         axios.defaults.baseURL = process.env.REACT_APP_API_URL;
         const token = localStorage.getItem('token');
         if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }, []);
 
-    // Carga inicial del perfil + consentimiento
+    // Carga inicial 
     useEffect(() => {
         async function cargar() {
             try {
-                // perfil
+
                 const { data } = await axios.get('/pac/perfil');
                 if (!data.ok) throw new Error(data.mensaje || 'Error al cargar el perfil');
 
                 if (data.data) {
                     const { persona = {}, paciente = {}, tutor = null } = data.data;
 
-                    // Establecer datos de persona
                     setForm({
                         nombre: persona.nombre || '',
                         apellido1: persona.apellido1 || '',
@@ -107,13 +106,12 @@ export default function PerfilPaciente() {
                         pais: persona.pais || 'España'
                     });
 
-                    // Establecer datos de paciente
+
                     setPacData({
                         tipo_paciente: paciente.tipo_paciente || 'ADULTO',
                         observaciones_generales: paciente.observaciones_generales || ''
                     });
 
-                    // Establecer datos del tutor si existe
                     if (tutor) {
                         setTutorData({
                             nombre: tutor.nombre || '',
@@ -142,7 +140,7 @@ export default function PerfilPaciente() {
             }
 
             try {
-                // consentimiento
+
                 const { data } = await axios.get('/consentimiento');
                 if (data.ok) {
                     setConsent(data.consentimiento && !data.revocado);
@@ -151,7 +149,7 @@ export default function PerfilPaciente() {
                 console.error('Error al cargar consentimiento:', error);
             }
 
-            // 3) Cargar tareas para casa
+            // Cargar tareas para casa
             try {
                 setLoadingTareas(true);
                 const { data } = await axios.get('/pac/tareas');
@@ -167,11 +165,10 @@ export default function PerfilPaciente() {
         cargar();
     }, [hoy]);
 
-    // Efecto para scroll automático a sección específica
+
     useEffect(() => {
         const section = searchParams.get('section');
         if (section) {
-            // Esperar un poco para que el DOM esté renderizado
             setTimeout(() => {
                 const element = document.getElementById(`section-${section}`);
                 if (element) {
@@ -188,14 +185,14 @@ export default function PerfilPaciente() {
         return () => clearTimeout(id);
     }, [toast.show]);
 
-    // Validación básica antes de enviar
+    // Validación antes de enviar
     const validar = () => {
         const errs = {};
         ['nombre', 'apellido1', 'email', 'fecha_nacimiento'].forEach(k => {
             if (!form[k]?.toString().trim()) errs[k] = true;
         });
 
-        // Si tiene tutor, validar campos del tutor
+        // Si tiene tutor validar campos del tutor
         if (pacData.tipo_paciente !== 'ADULTO') {
             ['nombre', 'apellido1', 'email', 'telefono'].forEach(k => {
                 if (!tutorData[k]?.toString().trim()) errs[`tutor_${k}`] = true;
@@ -206,25 +203,21 @@ export default function PerfilPaciente() {
         return Object.keys(errs).length === 0;
     };
 
-    // Manejador de cambios para datos personales
     const handleChange = e => {
         const { name, value } = e.target;
         setForm(f => ({ ...f, [name]: value }));
     };
 
-    // Manejador de cambios para datos de paciente
     const handlePacienteChange = e => {
         const { name, value } = e.target;
         setPacData(p => ({ ...p, [name]: value }));
     };
 
-    // Manejador de cambios para datos de tutor
     const handleTutorChange = e => {
         const { name, value } = e.target;
         setTutorData(t => ({ ...t, [name]: value }));
     };
 
-    // Manejador especial para checkboxes de método de contacto del tutor
     const handleTutorContactoChange = (metodo) => {
         setTutorData(t => {
             const metodosActuales = t.metodo_contacto_preferido || [];
@@ -236,7 +229,7 @@ export default function PerfilPaciente() {
         });
     };
 
-    // Cancelar edición (recarga datos originales)
+    // Cancelar edición
     const handleCancel = () => {
         setEditMode(false);
         setErrors({});
@@ -291,7 +284,7 @@ export default function PerfilPaciente() {
             });
     };
 
-    // Enviar cambios + consentimientos
+    // Enviar cambios y consentimientos
     const handleSubmit = async e => {
         e.preventDefault();
         if (!validar()) return;
@@ -383,7 +376,7 @@ export default function PerfilPaciente() {
         }
     };
 
-    // Función para formatear fechas
+    // Formatear fechas
     const formatDate = (dateString) => {
         if (!dateString) return 'Sin fecha';
         const date = new Date(dateString);
@@ -394,7 +387,7 @@ export default function PerfilPaciente() {
         });
     };
 
-    // Render de un campo editable
+
     const input = (key, label, type = 'text', full = false, disabled = false) => (
         <div className={`field${full ? ' full' : ''}`} key={key}>
             <label>{label}</label>
@@ -410,7 +403,7 @@ export default function PerfilPaciente() {
         </div>
     );
 
-    // Render de un campo de paciente
+
     const pacienteInput = (key, label, type = 'text', full = false) => (
         <div className={`field${full ? ' full' : ''}`} key={key}>
             <label>{label}</label>
@@ -426,7 +419,6 @@ export default function PerfilPaciente() {
         </div>
     );
 
-    // Render de un campo de tutor
     const tutorInput = (key, label, type = 'text', full = false) => (
         <div className={`field${full ? ' full' : ''}`} key={key}>
             <label>{label}</label>
@@ -466,7 +458,7 @@ export default function PerfilPaciente() {
                         {pacienteInput('observaciones_generales', 'Observaciones', 'text', true)}
                     </div>
 
-                    {/* Datos del tutor (si aplica) */}
+                    {/* Datos del tutor*/}
                     {pacData.tipo_paciente !== 'ADULTO' && (
                         <>
                             <h4>Datos del tutor</h4>
@@ -531,7 +523,8 @@ export default function PerfilPaciente() {
                         {input('ciudad', 'Ciudad')}
                         {input('provincia', 'Provincia')}
                         {input('pais', 'País')}
-                    </div>                    {/* Consentimiento */}
+                    </div>                    
+                    {/* Consentimiento */}
                     <h4>Consentimiento de datos</h4>
                     <div className="field checkbox-field">
                         <label>
@@ -540,15 +533,13 @@ export default function PerfilPaciente() {
                                 checked={consent}
                                 onChange={e => setConsent(e.target.checked)}
                                 disabled={!editMode}
-                            />{' '}
-                            Acepto el uso y tratamiento de mis datos personales según la{' '}
+                            />{' '}Acepto el uso y tratamiento de mis datos personales según la{' '}
                             <a 
                                 href="/politica-privacidad" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 style={{ color: 'var(--blue)', textDecoration: 'underline' }}
-                            >
-                                Política de Privacidad
+                            > Política de Privacidad
                             </a>
                         </label>
                     </div>

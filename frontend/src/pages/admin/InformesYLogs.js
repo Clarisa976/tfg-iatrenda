@@ -8,15 +8,15 @@ import '../../styles.css';
 
 const now = new Date();
 const year = now.getFullYear();
-const month = now.getMonth() + 1;                       // 1-12
+const month = now.getMonth() + 1; 
 
-// Array de meses en español 
+
 const meses = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-// Años disponibles para el selector (desde 2023 hasta el año actual)
+// Años desde 2023 hasta el año actual
 const años = Array.from({ length: year - 2022 }, (_, i) => 2023 + i);
 
 export default function InformesYLogs() {
@@ -134,7 +134,8 @@ export default function InformesYLogs() {
             </div>
           </div>
         </div>
-      ) : <p>Cargando…</p>}      {/* logs */}
+      ) : <p>Cargando…</p>}      
+      {/* logs */}
       <h3 className="informes-logs-title">Logs</h3>
       <p>Descarga el histórico de eventos registrados para {fechaSeleccionada}:</p>
       <button className="btn-reserva blue" onClick={descargarLogs}>

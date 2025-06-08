@@ -3,7 +3,7 @@ import { X, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import '../../styles.css';
 
-// Helper function to determine if file is an image
+
 const isImage = (filePath) => {
   const imageExtensions = ['.jpg', '.jpeg', '.png','.webp'];
   return imageExtensions.some(ext => 
@@ -39,7 +39,7 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
   };
 
   const updateDiagnostico = async () => {
-    // Realizar validación sin cambiar el estado global de error
+
     if (!diagnosticoFinal.trim()) {
       setDiagnosticoFinalError('El diagnóstico final no puede estar vacío');
       return;
@@ -59,15 +59,13 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
       console.log('Update response:', response.data);
 
       if (response.data && response.data.ok) {
-        // Update the document in the current state with the new diagnosis
+
         doc.diagnostico_final = diagnosticoFinal;
         setEditMode(false);
 
-        // Refresh the data to show updated information
         console.log('Refreshing data after successful update');
         onChange();
 
-        // Show success message
         setError('');
         setDiagnosticoFinalError('');
       } else {
@@ -82,7 +80,6 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
     }
   };
 
-  // Determinar si es una imagen para mostrarla directamente
   const docFileUrl = `${process.env.REACT_APP_API_URL}/${doc.ruta}`;
   const isDocImage = isImage(doc.ruta);
 
@@ -97,7 +94,8 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
           
           <div className="modal-body">
             <p><strong>Fecha de subida:</strong>{' '}
-              {new Date(doc.fecha_subida || Date.now()).toLocaleDateString()}</p>            {doc.diagnostico_preliminar && (
+              {new Date(doc.fecha_subida || Date.now()).toLocaleDateString()}</p>            
+              {doc.diagnostico_preliminar && (
               <div className="documento-info-section">
                 <h4>Diagnóstico preliminar</h4>
                 <p className="documento-info-destacado">
@@ -108,7 +106,8 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
 
             <div className="documento-archivo-container">
               <div className="documento-header-container">
-                <h4>Diagnóstico final</h4>                {!editMode && (
+                <h4>Diagnóstico final</h4>                
+                {!editMode && (
                   <button
                     onClick={() => setEditMode(true)}
                     className="btn-edit-diagnostico"
@@ -129,11 +128,13 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
                     placeholder="Introduce el diagnóstico final..."
                     rows="4"
                     className={`diagnostico-textarea ${diagnosticoFinalError ? 'error' : ''}`}
-                  />                  {diagnosticoFinalError && (
+                  />                 
+                   {diagnosticoFinalError && (
                     <span className="diagnostico-error-message">
                       {diagnosticoFinalError}
                     </span>
-                  )}                  <div className="diagnostico-botones-container">
+                  )}                 
+                   <div className="diagnostico-botones-container">
                     <button
                       onClick={() => setEditMode(false)}
                       className="btn-cancelar-diagnostico"
@@ -160,7 +161,8 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
                   </p>
                 )
               )}
-            </div>            <div className="documento-preview">
+            </div>            
+            <div className="documento-preview">
               <h4>Vista previa</h4>
 
               {isDocImage ? (
@@ -176,7 +178,7 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
                     }}
                   />
                   <div className="documento-imagen-error">
-                    <p>⚠️ No se pudo visualizar la imagen</p>
+                    <p>No se pudo visualizar la imagen</p>
                     <p><small>Ruta: {doc.ruta}</small></p>
                   </div>
                 </div>
@@ -187,8 +189,7 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
                     target="_blank"
                     rel="noreferrer"
                     className="documento-enlace-archivo"
-                  >
-                    📄 Ver archivo
+                  >Ver archivo
                   </a>
                 </div>
               )}
@@ -196,19 +197,21 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
           </div>
           <div className="modal-footer">
             <button className="btn-delete" onClick={() => setShowDeleteModal(true)}>
-              <Trash2 size={18} /> Eliminar
+            Eliminar
             </button>
             <button className="btn-cancel" onClick={onClose}>Cerrar</button>
           </div>
         </div>
-      </div>      {/* Modal de confirmación de eliminación */}
+      </div>      
+      {/* Modal de confirmación de eliminación */}
       {showDeleteModal && (
         <div className="modal-backdrop modal-backdrop-confirmacion" onClick={() => setShowDeleteModal(false)}>
           <div className="modal modal-confirmacion-eliminar" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Confirmar eliminación</h3>
             </div>
-            <div className="modal-body">              <p>¿Estás seguro de que quieres eliminar este documento?</p>
+            <div className="modal-body">             
+               <p>¿Estás seguro de que quieres eliminar este documento?</p>
               <p><strong>{doc.diagnostico_preliminar || 'Documento sin diagnóstico'}</strong></p>
               <p className="texto-advertencia-pequeno">Esta acción no se puede deshacer.</p>
               {error && (
@@ -222,8 +225,7 @@ export default function ModalDocumento({ idPac, doc, onClose, onChange }) {
                 className="btn-cancel"
                 onClick={() => setShowDeleteModal(false)}
                 disabled={isDeleting}
-              >
-                Cancelar
+              >Cancelar
               </button>
               <button
                 className={`btn-delete ${isDeleting ? 'loading' : ''}`}

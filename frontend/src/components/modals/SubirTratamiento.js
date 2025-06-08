@@ -15,7 +15,7 @@ export default function SubirTratamiento({ onDone }) {
   const [fechaFin, setFechaFin] = useState('');
   const [frecuencia, setFrecuencia] = useState('');
 
-  // Errores específicos para cada campo
+  // Errores
   const [tituloError, setTituloError] = useState('');
   const [descripcionError, setDescripcionError] = useState('');
   const [fileError, setFileError] = useState('');
@@ -24,7 +24,6 @@ export default function SubirTratamiento({ onDone }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const subir = async () => {
-    // Limpiar todos los errores al inicio
     setTituloError('');
     setDescripcionError('');
     setFileError('');
