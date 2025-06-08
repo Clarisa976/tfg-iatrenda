@@ -5,9 +5,17 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
 
+// Capturar cualquier output buffering early
+ob_start();
+
+error_log("=== API INICIANDO ===");
+error_log("REQUEST_METHOD: " . ($_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN'));
+error_log("REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'UNKNOWN'));
+
 require __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/funciones_CTES_servicios.php';
 
+error_log("=== ARCHIVOS CARGADOS ===");
 
 /*error_log('DB_USER: ' . getenv('DB_USER'));
 error_log('DB_PASS: ' . getenv('DB_PASS'));*/
@@ -20,10 +28,19 @@ header('Access-Control-Allow-Credentials: true');
 
 /* Si es una solicitud OPTIONS, terminar aquí */
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    // Limpiar cualquier output previo
+    if (ob_get_level()) {
+        ob_clean();
+    }
     header('Content-Type: application/json');
     http_response_code(200);
     echo json_encode(['ok' => true]);
     exit;
+}
+
+// Limpiar el output buffer antes de procesamiento normal
+if (ob_get_level()) {
+    ob_clean();
 }
 /* .env */
 if (file_exists(__DIR__ . '/../.env')) {
@@ -89,17 +106,35 @@ $app->get('/status', fn() => jsonResponse(['ok'=>true]));
 
 
 $app->post('/login', function (Request $req): Response {
-    $data = $req->getParsedBody() ?? [];
-    $email = trim($data['email'] ?? '');
-    $pass  = trim($data['password'] ?? '');
-
-    if ($email === '' || $pass === '') {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Email y contraseña requeridos']);
+    // Limpiar cualquier output previo que pueda estar interfiriendo
+    if (ob_get_level()) {
+        ob_clean();
     }
+    
+    error_log("=== INICIO LOGIN ENDPOINT ===");
+    
+    try {
+        $data = $req->getParsedBody() ?? [];
+        $email = trim($data['email'] ?? '');
+        $pass  = trim($data['password'] ?? '');
+        
+        error_log("Login attempt for email: " . $email);
 
-    $resultado = iniciarSesionConEmail($email, $pass);
+        if ($email === '' || $pass === '') {
+            error_log("Login failed: missing credentials");
+            return jsonResponse(['ok'=>false,'mensaje'=>'Email y contraseña requeridos']);
+        }
 
-    return jsonResponse($resultado);
+        error_log("Calling iniciarSesionConEmail...");
+        $resultado = iniciarSesionConEmail($email, $pass);
+        error_log("Login result: " . json_encode($resultado));
+
+        return jsonResponse($resultado);
+    } catch (\Exception $e) {
+        error_log("Login endpoint error: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error interno'], 500);
+    }
 });
 
 
@@ -224,6 +259,17 @@ $app->get('/admin/usuarios', function(Request $req) {
         'usuarios' => $lista,
         'token'    => $val['token']
     ], 200);
+});
+
+/* /admin/usuarios/buscar - DEBE IR ANTES QUE {id} */
+$app->get('/admin/usuarios/buscar', function ($req) {
+    $val = verificarTokenUsuario();
+    if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
+
+    $q = $req->getQueryParams();
+    $r = buscarPersona($q['email']??'', $q['tel']??'');
+    return jsonResponse(['ok'=>true,'data'=>$r]);
 });
 
 /* obtener usuario individual por ID */
@@ -379,17 +425,6 @@ $app->options('/notificaciones/{id}', function ($request, $response, $args) {
 $app->get('/', fn() => jsonResponse(['ok'=>true, 'mensaje'=>'API Slim funcionando']));
 
 
-
-/* /admin/usuarios/buscar*/
-$app->get('/admin/usuarios/buscar', function ($req) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
-
-    $q = $req->getQueryParams();
-    $r = buscarPersona($q['email']??'', $q['tel']??'');
-    return jsonResponse(['ok'=>true,'data'=>$r]);
-});
 
 /* /admin/usuarios*/
 $app->post('/admin/usuarios', function ($req) {

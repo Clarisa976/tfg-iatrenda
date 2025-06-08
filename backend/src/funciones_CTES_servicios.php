@@ -150,7 +150,14 @@ function execLogged(string $consultaSql, array $parametros, int $actor = 0, ?str
 /* Función para iniciar sesión */
 function iniciarSesionConEmail(string $email, string $contraseña): array
 {
+    error_log("=== iniciarSesionConEmail START ===");
+    error_log("Email: " . $email);
+    
     try {
+        error_log("Attempting database connection...");
+        $pdo = conectar();
+        error_log("Database connection successful");
+        
         $consulta = "SELECT id_persona id,
                        (nombre || ' ' || apellido1) nombre,
                        email,
@@ -160,29 +167,48 @@ function iniciarSesionConEmail(string $email, string $contraseña): array
                   AND  password_hash = ENCODE(DIGEST(:p, 'sha256'), 'hex')
                   AND  activo = true
                 LIMIT  1";
-        $busqueda = conectar()->prepare($consulta);
+        
+        error_log("Preparing query...");
+        $busqueda = $pdo->prepare($consulta);
+        
+        error_log("Executing query...");
         $busqueda->execute(['e' => $email, 'p' => $contraseña]);
-
+        
+        error_log("Fetching results...");
         if ($datosUsuario = $busqueda->fetch()) {
+            error_log("User found: " . json_encode($datosUsuario));
+            
             // Crear el token de sesión para que el usuario pueda navegar
             $contenidoToken = [
                 'sub' => (int)$datosUsuario['id'],
                 'rol' => $datosUsuario['rol'],
                 'exp' => time() + intval(getenv('JWT_EXPIRACION') ?: 3600)
             ];
+            
+            error_log("Creating JWT token...");
             $tokenSesion = \Firebase\JWT\JWT::encode($contenidoToken, getenv('JWT_SECRETO') ?: 'CAMBIAR_POR_SECRETO', 'HS256');
+            error_log("JWT token created successfully");
 
-            return [
+            $result = [
                 'ok' => true,
                 'token' => $tokenSesion,
                 'usuario' => $datosUsuario
             ];
+            error_log("Login success result: " . json_encode($result));
+            return $result;
         }
+        
+        error_log("No user found with provided credentials");
         return [
             'ok' => false,
             'mensaje' => 'Email o contraseña incorrectos'
         ];
     } catch (PDOException $error) {
+        error_log("PDO Error in iniciarSesionConEmail: " . $error->getMessage());
+        return ['ok' => false, 'error' => $error->getMessage()];
+    } catch (\Exception $error) {
+        error_log("General Error in iniciarSesionConEmail: " . $error->getMessage());
+        error_log("Stack trace: " . $error->getTraceAsString());
         return ['ok' => false, 'error' => $error->getMessage()];
     }
 }
