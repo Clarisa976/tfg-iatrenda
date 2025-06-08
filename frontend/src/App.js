@@ -32,29 +32,21 @@ import PoliticaPrivacidad from './components/secciones/PoliticaPrivacidad';
 import TerminosCondiciones from './components/secciones/TerminosCondiciones';
 import PoliticaCookies from './components/secciones/PoliticaCookies';
 
-// Componente para rutas protegidas
+// Componente para rutas protegidas - VERSIÓN MEJORADA
 function ProtectedRoute({ children, requiredRole, user, onUnauthorized }) {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  useEffect(() => {
-    if (!user) {
-      onUnauthorized('Debes iniciar sesión para acceder a esta página');
-      navigate('/', { replace: true });
-      return;
-    }
+  // Verificar inmediatamente sin useEffect
+  if (!user) {
+    onUnauthorized('Debes iniciar sesión para acceder a esta página');
+    navigate('/', { replace: true });
+    return null;
+  }
 
-    const userRole = user?.rol?.toLowerCase() || user?.role?.toLowerCase();
-    if (userRole !== requiredRole.toLowerCase()) {
-      onUnauthorized(`No tienes permisos para acceder a la sección de ${requiredRole}`);
-      navigate('/', { replace: true });
-      return;
-    }
-  }, [user, requiredRole, navigate, location, onUnauthorized]);
-
-  // Si no cumple los requisitos, no renderizar nada (ya se redirigió)
   const userRole = user?.rol?.toLowerCase() || user?.role?.toLowerCase();
-  if (!user || userRole !== requiredRole.toLowerCase()) {
+  if (userRole !== requiredRole.toLowerCase()) {
+    onUnauthorized(`No tienes permisos para acceder a la sección de ${requiredRole}`);
+    navigate('/', { replace: true });
     return null;
   }
 
@@ -72,10 +64,10 @@ export default function App() {
     setToast({ show: true, ok: false, msg: message, type: 'unauthorized' });
   };
 
-
+  // Limpiar sesión solo en recarga forzada (Ctrl+F5)
   useEffect(() => {
     const handleKeyDown = (e) => {
-
+      // Detectar Ctrl+F5 o Ctrl+Shift+R (recarga forzada)
       if ((e.ctrlKey && e.key === 'F5') || (e.ctrlKey && e.shiftKey && e.key === 'R')) {
         console.log('Recarga forzada detectada - limpiando sesión');
         localStorage.removeItem('token');
@@ -136,12 +128,13 @@ export default function App() {
     };
   }, []);
 
-  // Oculta el toast tras 5s
+  // Oculta el toast tras 3s para errores de permisos, 5s para otros
   useEffect(() => {
     if (!toast.show) return;
-    const id = setTimeout(() => setToast(t => ({ ...t, show: false })), 5000);
+    const timeout = toast.type === 'unauthorized' ? 3000 : 5000;
+    const id = setTimeout(() => setToast(t => ({ ...t, show: false })), timeout);
     return () => clearTimeout(id);
-  }, [toast.show]);
+  }, [toast.show, toast.type]);
 
   const handleLoginSuccess = userData => {
     setUser(userData);

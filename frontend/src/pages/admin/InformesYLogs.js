@@ -32,12 +32,9 @@ export default function InformesYLogs() {
     async function fetchStats() {
       setLoading(true);
       try {
-        const url = `${process.env.REACT_APP_API_URL}/admin/informes?year=${selectedYear}&month=${selectedMonth}`;
-        const { data } = await axios.get(url, {
+        const url = `${process.env.REACT_APP_API_URL}/admin/informes?year=${selectedYear}&month=${selectedMonth}`;        const { data } = await axios.get(url, {
           headers: { 
-            Authorization: `Bearer ${token}`,
-            'Access-Control-Request-Method': 'GET',
-            'Access-Control-Request-Headers': 'Authorization'
+            Authorization: `Bearer ${token}`
           }
         });
         if (data.ok) {
@@ -60,12 +57,9 @@ export default function InformesYLogs() {
     setLoadingDownload(true);
     try {
       const url = `${process.env.REACT_APP_API_URL}/admin/logs?year=${selectedYear}&month=${selectedMonth}`;
-      
-      const res = await axios.get(url, {
+        const res = await axios.get(url, {
         headers: { 
-          Authorization: `Bearer ${token}`,
-          'Access-Control-Request-Method': 'GET',
-          'Access-Control-Request-Headers': 'Authorization'
+          Authorization: `Bearer ${token}`
         },
         responseType: 'blob'
       });
