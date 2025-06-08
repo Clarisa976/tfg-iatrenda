@@ -43,15 +43,15 @@ export default function Notificaciones() {
     } finally {
       setLoad(false);
     }
-  };  // Función para procesar acciones de confirmación/cancelación de citas
-  // Fix: Ahora muestra el mensaje específico del servidor en lugar de un mensaje genérico
+  };
+
+  // Función procesar acciones de confirmación/cancelación de citas
   const accion = async (id, tipoAcc) => {
     try {
       const token = localStorage.getItem('token');
       const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
       
       console.log(`Enviando solicitud a ${baseURL}/notificaciones/${id} con acción ${tipoAcc}`);
-
 
       const response = await fetch(`${baseURL}/notificaciones/${id}`, {
         method: 'POST',
@@ -65,26 +65,53 @@ export default function Notificaciones() {
       });
       
       if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.mensaje || `Error HTTP: ${response.status}`);
       }
-        const data = await response.json();
+      
+      const data = await response.json();
       console.log('Respuesta del servidor:', data);
       
-      if (data.ok) {
-        // Usar el mensaje específico del servidor o un mensaje por defecto
-        const mensaje = data.mensaje || `Cita ${tipoAcc === 'CONFIRMAR' ? 'confirmada' : 'cancelada'}`;
-        toast.success(mensaje);
+      if (data.ok || data.success) {
+        let mensaje = '';
+        if (tipoAcc === 'CONFIRMAR') {
+          mensaje = data.mensaje || 'Cita confirmada exitosamente. Se ha enviado una notificación al paciente.';
+        } else if (tipoAcc === 'CANCELAR') {
+          mensaje = data.mensaje || 'Cita rechazada exitosamente. Se ha enviado una notificación al paciente.';
+        } else {
+          mensaje = data.mensaje || `Acción ${tipoAcc} procesada correctamente`;
+        }
+        
+        toast.success(mensaje, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        
+        // Actualizar la lista de notificaciones
         setItems(lst => {
           const nuevo = lst.filter(x => x.id !== id);
           window.dispatchEvent(new CustomEvent('noti-count', {detail: nuevo.length}));
           return nuevo;
         });
+        
+        // Recargar las notificaciones
+        setTimeout(() => {
+          cargar();
+        }, 1000);
+        
       } else {
-        throw new Error(data.mensaje || 'Error desconocido');
+        throw new Error(data.mensaje || data.error || 'Error desconocido del servidor');
       }
     } catch (error) {
       console.error('Error procesando acción:', error);
-      toast.error(error.message || 'No se pudo procesar la acción');
+      toast.error(`Error al procesar la acción: ${error.message}`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
     }
   };
 
@@ -98,7 +125,7 @@ export default function Notificaciones() {
       {loading ? (
         <p>Cargando…</p>
       ) : items.length === 0 ? (
-        <p>No hay notificaciones.</p>
+        <p>No hay notificaciones pendientes.</p>
       ) : (
         <table className="usuarios-table">
           <thead>
@@ -107,7 +134,7 @@ export default function Notificaciones() {
               <th>Paciente</th>
               <th>Profesional</th>
               <th>Tipo</th>
-              <th></th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -121,11 +148,15 @@ export default function Notificaciones() {
                   <button 
                     className="btn-primary"
                     onClick={() => accion(n.id, 'CONFIRMAR')}
-                  >Confirmar
-                  </button>{' '}                  <button 
+                    style={{ marginRight: '8px' }}
+                  >
+                  Confirmar
+                  </button>
+                  <button 
                     className="btn-secondary"
                     onClick={() => accion(n.id, 'CANCELAR')}
-                  > Rechazar
+                  >
+                    Rechazar
                   </button>
                 </td>
               </tr>
