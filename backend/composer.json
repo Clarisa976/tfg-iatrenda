@@ -6,7 +6,8 @@
     "slim/psr7": "^1.7",
     "firebase/php-jwt": "^6.11",
     "phpmailer/phpmailer": "^6.10",
-    "aws/aws-sdk-php": "^3.344"
+    "aws/aws-sdk-php": "^3.344",
+    "ralouphie/getallheaders": "^3.0"
   },
   "autoload": {
     "files": [
