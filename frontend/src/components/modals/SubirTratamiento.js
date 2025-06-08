@@ -57,52 +57,34 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
     setIsLoading(true);
 
     try {
-      // 1. Crear tratamiento primero
-      const tratamientoData = {
-        titulo: tit,
-        notas: desc,
-        fecha_inicio: fechaInicio || null,
-        fecha_fin: fechaFin || null,
-        frecuencia_sesiones: frecuencia || 1,
-        id_paciente: idPaciente
-      };
+      // Subir todo directamente a AWS S3 incluyendo datos del tratamiento
+      const formDataFile = new FormData();
+      
+      // Datos del tratamiento
+      formDataFile.append('titulo', tit);
+      formDataFile.append('notas', desc);
+      formDataFile.append('fecha_inicio', fechaInicio || '');
+      formDataFile.append('fecha_fin', fechaFin || '');
+      formDataFile.append('frecuencia_sesiones', frecuencia || '1');
+      formDataFile.append('id_paciente', idPaciente);
+      formDataFile.append('tipo', 'tratamiento');
+      
+      // Archivo si existe
+      if (file) {
+        formDataFile.append('file', file);
+      }
 
-      const response = await fetch('/prof/tratamientos', {
+      const response = await fetch('/api/s3/upload', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${tk}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${tk}`
         },
-        body: JSON.stringify(tratamientoData)
+        body: formDataFile
       });
 
       const result = await response.json();
       if (!result.ok) {
         throw new Error(result.mensaje || 'Error al crear tratamiento');
-      }
-
-      const tratamientoId = result.id_tratamiento;
-
-      // 2. Subir archivo a AWS S3 si existe
-      if (file) {
-        const formDataFile = new FormData();
-        formDataFile.append('file', file);
-        formDataFile.append('id_paciente', idPaciente);
-        formDataFile.append('id_tratamiento', tratamientoId);
-        formDataFile.append('tipo', 'tratamiento');
-
-        const uploadResponse = await fetch('/api/s3/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${tk}`
-          },
-          body: formDataFile
-        });
-
-        const uploadResult = await uploadResponse.json();
-        if (!uploadResult.ok) {
-          throw new Error(uploadResult.mensaje || 'Error al subir archivo');
-        }
       }
 
       // Limpiar formulario y cerrar modal
