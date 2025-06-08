@@ -119,10 +119,9 @@ export default function Notificaciones() {
                     className="btn-primary"
                     onClick={() => accion(n.id, 'CONFIRMAR')}
                   >Confirmar
-                  </button>{' '}
-                  <button 
+                  </button>{' '}                  <button 
                     className="btn-secondary"
-                    onClick={() => accion(n.id, 'RECHAZAR')}
+                    onClick={() => accion(n.id, 'CANCELAR')}
                   > Rechazar
                   </button>
                 </td>

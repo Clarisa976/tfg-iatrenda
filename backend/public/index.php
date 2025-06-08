@@ -5,20 +5,17 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
 
-// Capturar cualquier output buffering early
+
 ob_start();
 
-error_log("=== API INICIANDO ===");
+
 error_log("REQUEST_METHOD: " . ($_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN'));
 error_log("REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'UNKNOWN'));
 
 require __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/funciones_CTES_servicios.php';
 
-error_log("=== ARCHIVOS CARGADOS ===");
 
-/*error_log('DB_USER: ' . getenv('DB_USER'));
-error_log('DB_PASS: ' . getenv('DB_PASS'));*/
 
 /* Permitir CORS */
 header('Access-Control-Allow-Origin: https://clinica-petaka.netlify.app');
@@ -42,11 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 if (ob_get_level()) {
     ob_clean();
 }
+
 /* .env */
 if (file_exists(__DIR__ . '/../.env')) {
     $dotenv = Dotenv\Dotenv::createUnsafeImmutable(__DIR__ . '/../');
     $dotenv->load();
 }
+
 /* Slim */
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
@@ -66,8 +65,6 @@ $app->add(function (Request $request, $handler) {
         ->withHeader('Access-Control-Allow-Credentials', 'true');
 });
 
-
-
 // Middleware para manejar las solicitudes OPTIONS de CORS
 $app->options('/{routes:.+}', function (Request $request, Response $response) {
     $origin = $request->getHeaderLine('Origin');
@@ -82,7 +79,6 @@ $app->options('/{routes:.+}', function (Request $request, Response $response) {
         ->withHeader('Content-Type', 'application/json')
         ->withStatus(200);
 });
-
 
 function jsonResponse(array $payload, int $code=200): Response {
     try {
@@ -99,12 +95,13 @@ function jsonResponse(array $payload, int $code=200): Response {
         return $r->withHeader('Content-Type', 'application/json; charset=utf-8');
     }
 }
+
 /* ---------- RUTAS ---------- */
 
 /* Health-check */
 $app->get('/status', fn() => jsonResponse(['ok'=>true]));
 
-
+/* LOGIN */
 $app->post('/login', function (Request $req): Response {
     // Limpiar cualquier output previo que pueda estar interfiriendo
     if (ob_get_level()) {
@@ -137,9 +134,7 @@ $app->post('/login', function (Request $req): Response {
     }
 });
 
-
-
-/* reservar-cita  */
+/* RESERVAR CITA */
 $app->post('/reservar-cita', function (Request $req): Response {
     try {
         $data = $req->getParsedBody() ?? [];
@@ -164,7 +159,6 @@ $app->post('/reservar-cita', function (Request $req): Response {
         $res = pedirCitaNueva($nombre, $email, $tel, $motivo, $fecha);
         error_log('Resultado de pedirCitaNueva: ' . json_encode($res));
 
-
         return jsonResponse(
             ['ok'=>$res['ok'], 'mensaje'=>$res['mensaje']],
             $res['ok'] ? 200 : ($res['status'] ?? 400)
@@ -178,7 +172,7 @@ $app->post('/reservar-cita', function (Request $req): Response {
     }
 });
 
-/* lee el último consentimiento del usuario */
+/* CONSENTIMIENTO GET */
 $app->get('/consentimiento', function (Request $req): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -194,7 +188,7 @@ $app->get('/consentimiento', function (Request $req): Response {
     ],200);
 });
 
-/* crea un nuevo consentimiento */
+/* CONSENTIMIENTO POST */
 $app->post('/consentimiento', function (Request $req): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -207,8 +201,8 @@ $app->post('/consentimiento', function (Request $req): Response {
     }
     $ok = execLogged(
         "INSERT INTO consentimiento (id_persona, fecha_otorgado, canal)
-         VALUES (:id, CURRENT_TIMESTAMP, :canal)",
-        [':id'=>$id,':canal'=>$canal],
+         VALUES (?, CURRENT_TIMESTAMP, ?)",
+        [$id, $canal],
         $id, 'consentimiento', $id
     );
     return $ok
@@ -216,7 +210,7 @@ $app->post('/consentimiento', function (Request $req): Response {
       : jsonResponse(['ok'=>false,'mensaje'=>'Error al otorgar'],500);
 });
 
-/* revoca el consentimiento activo */
+/* REVOCAR CONSENTIMIENTO */
 $app->post('/consentimiento/revocar', function (Request $req): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -226,9 +220,9 @@ $app->post('/consentimiento/revocar', function (Request $req): Response {
     $ok = execLogged(
         "UPDATE consentimiento
             SET fecha_revocado = CURRENT_TIMESTAMP
-          WHERE id_persona = :id
+          WHERE id_persona = ?
             AND fecha_revocado IS NULL",
-        [':id'=>$id],
+        [$id],
         $id, 'consentimiento', $id
     );
     return $ok
@@ -236,9 +230,7 @@ $app->post('/consentimiento/revocar', function (Request $req): Response {
       : jsonResponse(['ok'=>false,'mensaje'=>'Error al revocar'],500);
 });
 
-
-
-/* listar usuarios */
+/* LISTAR USUARIOS */
 $app->get('/admin/usuarios', function(Request $req) {
     // validar token y extraer usuario + nuevo token
     $val = verificarTokenUsuario();
@@ -261,7 +253,7 @@ $app->get('/admin/usuarios', function(Request $req) {
     ], 200);
 });
 
-/* /admin/usuarios/buscar - DEBE IR ANTES QUE {id} */
+/* BUSCAR USUARIOS */
 $app->get('/admin/usuarios/buscar', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
@@ -272,7 +264,7 @@ $app->get('/admin/usuarios/buscar', function ($req) {
     return jsonResponse(['ok'=>true,'data'=>$r]);
 });
 
-/* obtener usuario individual por ID */
+/* OBTENER USUARIO INDIVIDUAL POR ID */
 $app->get('/admin/usuarios/{id}', function(Request $req, Response $res, array $args) {
     // validar token y extraer usuario + nuevo token
     $val = verificarTokenUsuario();
@@ -284,7 +276,7 @@ $app->get('/admin/usuarios/{id}', function(Request $req, Response $res, array $a
     if (!in_array($rol, ['admin','profesional'], true)) {
         return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
     }
-      $id = (int)$args['id'];
+    $id = (int)$args['id'];
     $usuario = getUsuarioDetalle($id);
     
     if (!$usuario) {
@@ -299,15 +291,14 @@ $app->get('/admin/usuarios/{id}', function(Request $req, Response $res, array $a
     ], 200);
 });
 
-
-/* lista profesionales */
+/* PROFESIONALES */
 $app->get('/profesionales', function(Request $req) {
     $txt   = trim($req->getQueryParams()['search'] ?? '');
     $items = getProfesionales($txt);
     return jsonResponse(['ok'=>true,'data'=>$items]);
 });
 
-/* agenda/global*/
+/* AGENDA GLOBAL GET */
 $app->get('/agenda/global', function(Request $req) {
     $val = verificarTokenUsuario(); 
     if ($val === false)
@@ -326,11 +317,11 @@ $app->get('/agenda/global', function(Request $req) {
     
     error_log("Obteniendo eventos desde $inicioMes hasta $finMes para profesional ID: " . ($profId ?: 'todos'));
 
-    $eventos = obtenerEventosAgenda($inicioMes, $finMes, $profId); // ← nuevo arg
+    $eventos = obtenerEventosAgenda($inicioMes, $finMes, $profId);
     return jsonResponse(['ok'=>true,'data'=>$eventos]);
 });
 
-/* crear bloque */
+/* CREAR BLOQUE AGENDA */
 $app->post('/agenda/global', function(Request $req) {
     $val = verificarTokenUsuario();
     if ($val === false)
@@ -353,7 +344,7 @@ $app->post('/agenda/global', function(Request $req) {
     return jsonResponse(['ok'=>true,'mensaje'=>'Evento creado']);
 });
 
-/* elimina bloque o cita */
+/* ELIMINAR BLOQUE O CITA */
 $app->delete('/agenda/global/{id}', function(Request $req, Response $res, array $args){
     $val = verificarTokenUsuario();
     if ($val === false)
@@ -368,9 +359,7 @@ $app->delete('/agenda/global/{id}', function(Request $req, Response $res, array 
     return jsonResponse(['ok'=>true]);
 });
 
-
-
-/* notificaciones */
+/* NOTIFICACIONES GET */
 $app->get('/notificaciones', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false)
@@ -383,7 +372,7 @@ $app->get('/notificaciones', function ($req) {
     return jsonResponse(['ok'=>true,'data'=>$datos]);
 });
 
-/* notificaciones/{id}*/
+/* NOTIFICACIONES POST */
 $app->post('/notificaciones/{id}', function ($req,$res,$args){
     $val = verificarTokenUsuario();
     if ($val === false)
@@ -396,7 +385,6 @@ $app->post('/notificaciones/{id}', function ($req,$res,$args){
 
     $uid = (int)$val['usuario']['id_persona'];
     $rol = strtolower($val['usuario']['rol']);
-
 
     $ok = procesarNotificacion($idCita,$acc,$uid,$rol);
     return $ok
@@ -421,12 +409,9 @@ $app->options('/notificaciones/{id}', function ($request, $response, $args) {
         ->withStatus(204);
 });
 
-
 $app->get('/', fn() => jsonResponse(['ok'=>true, 'mensaje'=>'API Slim funcionando']));
 
-
-
-/* /admin/usuarios*/
+/* ADMIN USUARIOS POST */
 $app->post('/admin/usuarios', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
@@ -442,18 +427,22 @@ $app->post('/admin/usuarios', function ($req) {
     if (!in_array($tipo,['PROFESIONAL','PACIENTE'],true))
         return jsonResponse(['ok'=>false,'mensaje'=>'Tipo inválido'],400);
 
-    $idPersona = actualizarOInsertarPersona($pdat, $tipo, $actorId);
+    try {
+        $idPersona = actualizarOInsertarPersona($pdat, $tipo, $actorId);
 
-    $ok = ($tipo==='PROFESIONAL')
-        ? actualizarOInsertarProfesional($idPersona,$xdat)
-        : actualizarOInsertarPaciente($idPersona,$xdat);
+        $ok = ($tipo==='PROFESIONAL')
+            ? actualizarOInsertarProfesional($idPersona,$xdat, $actorId)
+            : actualizarOInsertarPaciente($idPersona,$xdat);
 
-    return $ok
-      ? jsonResponse(['ok'=>true,'id'=>$idPersona])
-      : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo guardar'],500);
+        return $ok
+          ? jsonResponse(['ok'=>true,'id'=>$idPersona])
+          : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo guardar'],500);
+    } catch (Exception $e) {
+        return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()],400);
+    }
 });
 
-/* /admin/borrar-usuario/{id} */
+/* BORRAR USUARIO */
 $app->delete('/admin/borrar-usuario/{id}', function ($req, $res, $args) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
@@ -472,63 +461,7 @@ $app->delete('/admin/borrar-usuario/{id}', function ($req, $res, $args) {
     return jsonResponse(['ok'=>true,'mensaje'=>'Usuario marcado como inactivo']);
 });
 
-/* /admin/usuario/{id} - PUT para editar usuario existente */
-$app->put('/admin/usuario/{id}', function ($req, $res, $args) {
-    $val = verificarTokenUsuario();
-    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-
-    $id = (int)$args['id'];
-    $actorId = $val['usuario']['id_persona'];
-    
-    $body = $req->getParsedBody() ?? [];
-    error_log("PUT /admin/usuario/{$id} - Body recibido: " . json_encode($body));
-    
-    // Determinar el tipo basado en el rol actual o el nuevo rol
-    $baseDatos = conectar();
-    $consulta = $baseDatos->prepare("SELECT rol FROM persona WHERE id_persona = ?");
-    $consulta->execute([$id]);
-    $usuarioActual = $consulta->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$usuarioActual) {
-        error_log("Usuario ID {$id} no encontrado");
-        return jsonResponse(['ok'=>false,'mensaje'=>'Usuario no encontrado'], 404);
-    }
-    
-    $rolFinal = strtoupper($body['rol'] ?? $usuarioActual['rol']);
-    error_log("Rol final determinado: {$rolFinal}");
-    
-    if (!in_array($rolFinal, ['PROFESIONAL','PACIENTE','ADMIN'], true))
-        return jsonResponse(['ok'=>false,'mensaje'=>'Rol inválido'], 400);
-
-    try {
-        // Usar actualizarOInsertarPersona con el ID forzado para actualización
-        error_log("Llamando actualizarOInsertarPersona con ID: {$id}");
-        $idPersona = actualizarOInsertarPersona($body, $rolFinal, $actorId, $id);
-        error_log("actualizarOInsertarPersona exitoso, ID: {$idPersona}");
-        
-        // Actualizar datos específicos según el rol
-        if ($rolFinal === 'PROFESIONAL') {
-            $xdat = $body['datosprofesional'] ?? [];
-            $ok = actualizarOInsertarProfesional($idPersona, $xdat, $actorId);
-        } else if ($rolFinal === 'PACIENTE') {
-            $xdat = $body['datospaciente'] ?? [];
-            $ok = actualizarOInsertarPaciente($idPersona, $xdat);
-        } else {
-            $ok = true; // Para ADMIN no hay datos extra
-        }
-        
-        error_log("Resultado final ok: " . ($ok ? 'true' : 'false'));
-        return $ok
-            ? jsonResponse(['ok'=>true,'id'=>$idPersona,'mensaje'=>'Usuario actualizado correctamente'])
-            : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo actualizar el usuario'],500);
-    } catch (Exception $e) {
-        error_log("Error en PUT /admin/usuario/{$id}: " . $e->getMessage());
-        return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()], 400);
-    }
-});
-
-/* crear-contrasena*/
+/* CREAR CONTRASEÑA */
 $app->post('/crear-contrasena', function ($req) {
     $b = $req->getParsedBody() ?? [];
     $uid = $b['uid'] ?? '';
@@ -550,18 +483,18 @@ $app->post('/crear-contrasena', function ($req) {
         return jsonResponse(['ok'=>false,'msg'=>'Usuario no encontrado'],400);
     }
     
-    /* si existe el usuario y tiene contraseña se la resescribe sino la crea */    
+    /* Actualizar contraseña */    
     $consulta = $baseDatos->prepare("
       UPDATE persona         
-      SET password_hash = ENCODE(DIGEST(:p, 'sha256'), 'hex'),
+      SET password_hash = encode(sha256(?::bytea), 'hex'),
              password_hash_creado = CURRENT_TIMESTAMP
-       WHERE id_persona = :id");
-    $consulta->execute([':p'=>$pass, ':id'=>$id]);
+       WHERE id_persona = ?");
+    $consulta->execute([$pass, $id]);
 
     return jsonResponse(['ok'=>true]);
 });
 
-/* forgot-password */
+/* FORGOT PASSWORD */
 $app->post('/forgot-password', function ($req) {
     $b = $req->getParsedBody() ?? [];
     $email = trim($b['email'] ?? '');
@@ -577,11 +510,11 @@ $app->post('/forgot-password', function ($req) {
         $consulta = $baseDatos->prepare("
             SELECT id_persona, nombre, email, activo 
             FROM persona 
-            WHERE email = :email 
+            WHERE email = ?
             AND rol IN ('PACIENTE', 'PROFESIONAL', 'ADMIN')
             LIMIT 1
         ");
-        $consulta->execute([':email' => $email]);
+        $consulta->execute([$email]);
         $usuario = $consulta->fetch(PDO::FETCH_ASSOC);
 
         if (!$usuario) {
@@ -621,8 +554,7 @@ $app->post('/forgot-password', function ($req) {
     }
 });
 
-
-/* obtiene perfil del paciente logueado */
+/* PERFIL PACIENTE GET */
 $app->get('/pac/perfil', function(Request $req): Response {
   try {
   
@@ -646,8 +578,6 @@ $app->get('/pac/perfil', function(Request $req): Response {
       return jsonResponse(['ok'=>false,'mensaje'=>'No se encontraron datos del paciente'], 404);
     }
 
-    
-
     if (isset($data['persona']['fecha_nacimiento'])) {
       $data['persona']['fecha_nacimiento'] = date('Y-m-d', strtotime($data['persona']['fecha_nacimiento']));
     }
@@ -667,7 +597,7 @@ $app->get('/pac/perfil', function(Request $req): Response {
   }
 });
 
-/*  actualiza perfil del paciente actual */
+/* ACTUALIZAR PERFIL PACIENTE */
 $app->put('/pac/perfil', function(Request $req): Response {
   $val = verificarTokenUsuario();
   if ($val === false) {
@@ -693,7 +623,6 @@ $app->put('/pac/perfil', function(Request $req): Response {
       error_log("Paciente ID $idPaciente actualizando datos de contacto: " . json_encode($personaData));
       actualizarOInsertarPersona($personaData, 'PACIENTE', $idPaciente, $idPaciente);
     }
-    
 
     return jsonResponse([
       'ok' => true,
@@ -706,7 +635,7 @@ $app->put('/pac/perfil', function(Request $req): Response {
   }
 });
 
-/* obtiene tareas asignadas al paciente actual */
+/* TAREAS PACIENTE */
 $app->get('/pac/tareas', function(Request $req): Response {
     try {
 
@@ -743,7 +672,7 @@ $app->get('/pac/tareas', function(Request $req): Response {
     }
 });
 
-/* obtiene documentos del historial clínico del paciente actual */
+/* HISTORIAL PACIENTE */
 $app->get('/pac/historial', function(Request $req): Response {
     try {
 
@@ -763,7 +692,6 @@ $app->get('/pac/historial', function(Request $req): Response {
         }
 
         $documentos = getHistorialPaciente($idPaciente);
-
         
         return jsonResponse([
             'ok' => true,
@@ -781,7 +709,7 @@ $app->get('/pac/historial', function(Request $req): Response {
     }
 });
 
-/* obtiene citas del paciente actual */
+/* CITAS PACIENTE */
 $app->get('/pac/citas', function(Request $req): Response {
     try {
 
@@ -802,7 +730,6 @@ $app->get('/pac/citas', function(Request $req): Response {
         
         // Obtener citas del paciente sin filtrar por profesional
         $citas = getCitasPaciente($idPaciente);
-
         
         return jsonResponse([
             'ok' => true,
@@ -820,7 +747,7 @@ $app->get('/pac/citas', function(Request $req): Response {
     }
 });
 
-/* procesa solicitudes de cambio/cancelación */
+/* SOLICITUDES CAMBIO/CANCELACIÓN */
 $app->post('/pac/citas/{id}/solicitud', function(Request $req, Response $res, array $args): Response {
     try {
 
@@ -869,7 +796,7 @@ $app->post('/pac/citas/{id}/solicitud', function(Request $req, Response $res, ar
     }
 });
 
-/* GET /pac/profesional/{id}/dias-bloqueados — obtener días bloqueados para pacientes */
+/* DÍAS BLOQUEADOS PROFESIONAL */
 $app->get('/pac/profesional/{id}/dias-bloqueados', function(Request $req, Response $res, array $args) {
     $val = verificarTokenUsuario();
     if ($val === false || $val['usuario']['rol'] !== 'PACIENTE') {
@@ -896,7 +823,7 @@ $app->get('/pac/profesional/{id}/dias-bloqueados', function(Request $req, Respon
     }
 });
 
-/* obtener horas disponibles para pacientes */
+/* HORAS DISPONIBLES PROFESIONAL */
 $app->get('/pac/profesional/{id}/horas-disponibles', function(Request $req, Response $res, array $args) {
     $val = verificarTokenUsuario();
     if ($val === false || $val['usuario']['rol'] !== 'PACIENTE') {
@@ -922,7 +849,7 @@ $app->get('/pac/profesional/{id}/horas-disponibles', function(Request $req, Resp
     }
 });
 
-/* buscar profesional por nombre para pacientes */
+/* BUSCAR PROFESIONAL POR NOMBRE */
 $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -949,14 +876,14 @@ $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
             LEFT JOIN profesional pr ON pr.id_profesional = p.id_profesional
             WHERE pe.activo = true
             AND (
-                (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) ILIKE :nombre
-                OR pe.nombre ILIKE :nombre
-                OR pe.apellido1 ILIKE :nombre
+                (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) ILIKE ?
+                OR pe.nombre ILIKE ?
+                OR pe.apellido1 ILIKE ?
             )
             ORDER BY 
                 CASE 
-                    WHEN (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) = :nombre_exacto THEN 1
-                    WHEN (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) ILIKE :nombre_inicio THEN 2
+                    WHEN (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) = ? THEN 1
+                    WHEN (pe.nombre || ' ' || pe.apellido1 || COALESCE(' ' || pe.apellido2, '')) ILIKE ? THEN 2
                     ELSE 3
                 END
             LIMIT 1
@@ -966,9 +893,8 @@ $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
         $nombreInicio = $nombre . '%';
         
         $consulta->execute([
-            ':nombre' => $nombrePattern,
-            ':nombre_exacto' => $nombre,
-            ':nombre_inicio' => $nombreInicio
+            $nombrePattern, $nombrePattern, $nombrePattern,
+            $nombre, $nombreInicio
         ]);
         
         $profesional = $consulta->fetch(PDO::FETCH_ASSOC);
@@ -986,13 +912,13 @@ $app->get('/prof/buscar-por-nombre', function(Request $req): Response {
                 'token' => $val['token']
             ]);
         }
-          } catch (Exception $e) {
+    } catch (Exception $e) {
         error_log("Error buscando profesional por nombre: " . $e->getMessage());
         return jsonResponse(['ok'=>false,'mensaje'=>'Error interno del servidor'], 500);
     }
 });
 
-/* solicitar nueva cita para paciente autenticado */
+/* SOLICITAR NUEVA CITA AUTENTICADA */
 $app->post('/pac/solicitar-cita', function(Request $req): Response {
     try {
 
@@ -1026,7 +952,8 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
             // Verificar que el profesional existe
             $consultaProf = $baseDatos->prepare("
                 SELECT p.id_profesional, pe.nombre, pe.apellido1
-                FROM profesional p                JOIN persona pe ON pe.id_persona = p.id_profesional
+                FROM profesional p                
+                JOIN persona pe ON pe.id_persona = p.id_profesional
                 WHERE p.id_profesional = ? AND pe.activo = true
             ");
             $consultaProf->execute([$profesionalId]);
@@ -1048,7 +975,7 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
             $consultaDisponibilidad = $baseDatos->prepare("
                 SELECT COUNT(*) as ocupado FROM cita 
                 WHERE id_profesional = ? 
-                AND fecha_hora = ? 
+                AND fecha_hora = ?::timestamptz 
                 AND estado IN ('CONFIRMADA', 'PENDIENTE_VALIDACION', 'SOLICITADA')
             ");
             $consultaDisponibilidad->execute([$profesionalId, $fecha]);
@@ -1063,7 +990,7 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
                 SELECT COUNT(*) as bloqueado FROM bloque_agenda
                 WHERE id_profesional = ?
                 AND tipo_bloque IN ('AUSENCIA', 'VACACIONES', 'BAJA', 'EVENTO')
-                AND ? BETWEEN fecha_inicio AND (fecha_fin - INTERVAL '1 second')
+                AND ?::timestamptz BETWEEN fecha_inicio AND (fecha_fin - INTERVAL '1 second')
             ");
             $consultaBloqueos->execute([$profesionalId, $fecha]);
             $bloqueo = $consultaBloqueos->fetch(PDO::FETCH_ASSOC);
@@ -1084,13 +1011,14 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
             if (!$paciente) {
                 throw new Exception('Datos del paciente no encontrados');
             }
-              // Crear la cita
+            
+            // Crear la cita
             $insertarCita = $baseDatos->prepare("
                 INSERT INTO cita (
                     id_paciente, id_profesional, fecha_hora, estado, 
                     nombre_contacto, email_contacto, telefono_contacto,
                     motivo, origen
-                ) VALUES (?, ?, ?, 'SOLICITADA', ?, ?, ?, ?, 'WEB')
+                ) VALUES (?, ?, ?::timestamptz, 'SOLICITADA', ?, ?, ?, ?, 'WEB')
                 RETURNING id_cita
             ");
             
@@ -1143,60 +1071,101 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
 
 /* ---------- RUTAS S3 DOCUMENTOS ---------- */
 
-// Health check S3
-$app->get('/api/s3/health', function (Request $request, Response $response) {
-    $controller = new App\Controllers\DocumentController();
-    return $controller->healthCheck($request, $response);
-});
+// Incluir S3 controller solo si existe
+try {
+    if (file_exists(__DIR__ . '/../src/Controllers/DocumentController.php')) {
+        require_once __DIR__ . '/../src/Controllers/DocumentController.php';
 
-// Subir documento a S3
-$app->post('/api/s3/upload', function (Request $request, Response $response) {
-    $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-    }
-    
-    // Solo profesionales y admins pueden subir documentos
-    if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
-    }
-    
-    $controller = new App\Controllers\DocumentController();
-    return $controller->uploadDocument($request, $response);
-});
+        // Health check S3
+        $app->get('/api/s3/health', function (Request $request, Response $response) {
+            try {
+                $controller = new App\Controllers\DocumentController();
+                return $controller->healthCheck($request, $response);
+            } catch (Exception $e) {
+                return jsonResponse(['ok' => false, 'mensaje' => 'S3 no disponible'], 503);
+            }
+        });
 
-// Descargar documento desde S3
-$app->get('/api/s3/download/{id}', function (Request $request, Response $response, array $args) {
-    $controller = new App\Controllers\DocumentController();
-    return $controller->downloadDocument($request, $response, $args);
-});
+        // Subir documento a S3
+        $app->post('/api/s3/upload', function (Request $request, Response $response) {
+            $val = verificarTokenUsuario();
+            if ($val === false) {
+                return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+            }
+            
+            // Solo profesionales y admins pueden subir documentos
+            if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
+                return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+            }
+            
+            try {
+                $controller = new App\Controllers\DocumentController();
+                return $controller->uploadDocument($request, $response);
+            } catch (Exception $e) {
+                return jsonResponse(['ok' => false, 'mensaje' => 'Error al subir documento'], 500);
+            }
+        });
 
-// Listar documentos S3
-$app->get('/api/s3/documentos', function (Request $request, Response $response) {
-    $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-    }
-    
-    $controller = new App\Controllers\DocumentController();
-    return $controller->listDocuments($request, $response);
-});
+        // Descargar documento desde S3
+        $app->get('/api/s3/download/{id}', function (Request $request, Response $response, array $args) {
+            try {
+                $controller = new App\Controllers\DocumentController();
+                return $controller->downloadDocument($request, $response, $args);
+            } catch (Exception $e) {
+                return jsonResponse(['ok' => false, 'mensaje' => 'Error al descargar documento'], 500);
+            }
+        });
 
-// Eliminar documento S3
-$app->delete('/api/s3/documentos/{id}', function (Request $request, Response $response, array $args) {
-    $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        // Listar documentos S3
+        $app->get('/api/s3/documentos', function (Request $request, Response $response) {
+            $val = verificarTokenUsuario();
+            if ($val === false) {
+                return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+            }
+            
+            try {
+                $controller = new App\Controllers\DocumentController();
+                return $controller->listDocuments($request, $response);
+            } catch (Exception $e) {
+                return jsonResponse(['ok' => false, 'mensaje' => 'Error al listar documentos'], 500);
+            }
+        });
+
+        // Eliminar documento S3
+        $app->delete('/api/s3/documentos/{id}', function (Request $request, Response $response, array $args) {
+            $val = verificarTokenUsuario();
+            if ($val === false) {
+                return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+            }
+            
+            // Solo profesionales y admins pueden eliminar documentos
+            if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
+                return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+            }
+            
+            try {
+                $controller = new App\Controllers\DocumentController();
+                return $controller->deleteDocument($request, $response, $args);
+            } catch (Exception $e) {
+                return jsonResponse(['ok' => false, 'mensaje' => 'Error al eliminar documento'], 500);
+            }
+        });
     }
-    
-    // Solo profesionales y admins pueden eliminar documentos
-    if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
-    }
-    
-    $controller = new App\Controllers\DocumentController();
-    return $controller->deleteDocument($request, $response, $args);
-});
+} catch (Exception $e) {
+    error_log("S3 DocumentController no disponible: " . $e->getMessage());
+    // Continuar sin S3 si no está disponible
+}
 
 /* corre la aplicación */
-$app->run();
+try {
+    $app->run();
+} catch (Exception $e) {
+    error_log("Error crítico ejecutando la aplicación: " . $e->getMessage());
+    if (ob_get_level()) {
+        ob_clean();
+    }
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => false, 'mensaje' => 'Error interno del servidor']);
+}
+?>
