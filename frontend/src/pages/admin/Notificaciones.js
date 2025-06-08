@@ -45,7 +45,6 @@ export default function Notificaciones() {
     }
   };
 
-  // Función procesar acciones de confirmación/cancelación de citas
   const accion = async (id, tipoAcc) => {
     try {
       const token = localStorage.getItem('token');
@@ -64,22 +63,36 @@ export default function Notificaciones() {
         credentials: 'include'
       });
       
+      console.log('Status de respuesta:', response.status);
+      console.log('Headers de respuesta:', Object.fromEntries(response.headers.entries()));
+      
+
+      const responseText = await response.text();
+      console.log('Respuesta del servidor (texto):', responseText);
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.mensaje || `Error HTTP: ${response.status}`);
+
+        throw new Error(`Error HTTP ${response.status}: ${responseText.substring(0, 200)}...`);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log('Respuesta del servidor (JSON):', data);
+      } catch (parseError) {
+        console.error('Error parseando JSON:', parseError);
+        throw new Error(`El servidor devolvió una respuesta no válida: ${responseText.substring(0, 200)}...`);
       }
       
-      const data = await response.json();
-      console.log('Respuesta del servidor:', data);
-      
-      if (data.ok || data.success) {
+      if (data.ok || data.success || data.status === 'success') {
+
         let mensaje = '';
         if (tipoAcc === 'CONFIRMAR') {
-          mensaje = data.mensaje || 'Cita confirmada exitosamente. Se ha enviado una notificación al paciente.';
+          mensaje = data.mensaje || data.message || 'Cita confirmada exitosamente. Se ha enviado una notificación al paciente.';
         } else if (tipoAcc === 'CANCELAR') {
-          mensaje = data.mensaje || 'Cita rechazada exitosamente. Se ha enviado una notificación al paciente.';
+          mensaje = data.mensaje || data.message || 'Cita rechazada exitosamente. Se ha enviado una notificación al paciente.';
         } else {
-          mensaje = data.mensaje || `Acción ${tipoAcc} procesada correctamente`;
+          mensaje = data.mensaje || data.message || `Acción ${tipoAcc} procesada correctamente`;
         }
         
         toast.success(mensaje, {
@@ -97,14 +110,13 @@ export default function Notificaciones() {
           window.dispatchEvent(new CustomEvent('noti-count', {detail: nuevo.length}));
           return nuevo;
         });
-        
-        // Recargar las notificaciones
+
         setTimeout(() => {
           cargar();
         }, 1000);
         
       } else {
-        throw new Error(data.mensaje || data.error || 'Error desconocido del servidor');
+        throw new Error(data.mensaje || data.message || data.error || 'Error desconocido del servidor');
       }
     } catch (error) {
       console.error('Error procesando acción:', error);
@@ -150,13 +162,13 @@ export default function Notificaciones() {
                     onClick={() => accion(n.id, 'CONFIRMAR')}
                     style={{ marginRight: '8px' }}
                   >
-                  Confirmar
+                    ✓ Confirmar
                   </button>
                   <button 
                     className="btn-secondary"
                     onClick={() => accion(n.id, 'CANCELAR')}
                   >
-                    Rechazar
+                    ✗ Rechazar
                   </button>
                 </td>
               </tr>
