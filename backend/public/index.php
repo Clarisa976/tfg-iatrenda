@@ -385,76 +385,35 @@ $app->get('/notificaciones', function ($req) {
 
 /* notificaciones/{id}*/
 $app->post('/notificaciones/{id}', function ($req, $res, $args) {
-    try {
-        error_log("=== Inicio procesamiento notificación ===");
-        error_log("Args recibidos: " . json_encode($args));
-        error_log("Body recibido: " . $req->getBody()->getContents());
+    $val = verificarTokenUsuario();
+    if ($val === false)
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+    
+    $idCita = (int)$args['id'];
+    $acc = strtoupper(trim(($req->getParsedBody()['accion'] ?? '')));
+    
+    if (!in_array($acc, ['CONFIRMAR', 'RECHAZAR', 'CANCELAR'], true)) {
+        return jsonResponse(['ok' => false, 'mensaje' => 'Acción inválida'], 400);
+    }
 
-        $req->getBody()->rewind();
-        
-        $val = verificarTokenUsuario();
-        if ($val === false) {
-            error_log("Token no válido");
-            return $res->withJson(['ok' => false, 'mensaje' => 'No autorizado'], 401);
-        }
-        
-        $idCita = (int)$args['id'];
-        $bodyData = $req->getParsedBody();
-        
-        error_log("Body parseado: " . json_encode($bodyData));
-        
-        if (!$bodyData || !isset($bodyData['accion'])) {
-            error_log("No se encontró el campo 'accion' en el body");
-            return $res->withJson(['ok' => false, 'mensaje' => 'Falta el campo accion'], 400);
-        }
-        
-        $acc = strtoupper(trim($bodyData['accion']));
-        
-        error_log("Acción recibida: '$acc'");
-        
-        if (!in_array($acc, ['CONFIRMAR', 'RECHAZAR', 'CANCELAR'], true)) {
-            error_log("Acción inválida: '$acc'");
-            return $res->withJson(['ok' => false, 'mensaje' => 'Acción inválida: ' . $acc], 400);
-        }
+    // Si llega 'CANCELAR' lo convertimos a 'RECHAZAR' para compatibilidad
+    if ($acc === 'CANCELAR') {
+        $acc = 'RECHAZAR';
+        error_log("Convirtiendo acción CANCELAR a RECHAZAR para compatibilidad");
+    }
 
-        // Si llega 'CANCELAR' lo convertimos a 'RECHAZAR' para compatibilidad
-        if ($acc === 'CANCELAR') {
-            $acc = 'RECHAZAR';
-            error_log("Convirtiendo acción CANCELAR a RECHAZAR para compatibilidad");
-        }
+    $uid = (int)$val['usuario']['id_persona'];
+    $rol = strtolower($val['usuario']['rol']);
 
-        $uid = (int)$val['usuario']['id_persona'];
-        $rol = strtolower($val['usuario']['rol']);
+    error_log("Procesando notificación - Cita ID: $idCita, Acción: $acc, Usuario: $uid, Rol: $rol");
 
-        error_log("Procesando notificación - Cita ID: $idCita, Acción: $acc, Usuario: $uid, Rol: $rol");
-
-        // Verificar que la función procesarNotificacion existe
-        if (!function_exists('procesarNotificacion')) {
-            error_log("ERROR: La función procesarNotificacion no existe");
-            return $res->withJson(['ok' => false, 'mensaje' => 'Error interno: función no encontrada'], 500);
-        }
-
-        $ok = procesarNotificacion($idCita, $acc, $uid, $rol);
-        
-        error_log("Resultado de procesarNotificacion: " . ($ok ? 'true' : 'false'));
-        
-        if ($ok) {
-            $mensaje = ($acc === 'CONFIRMAR') ? 'Cita confirmada correctamente' : 'Cita rechazada correctamente';
-            error_log("Éxito: $mensaje");
-            return $res->withJson(['ok' => true, 'mensaje' => $mensaje]);
-        } else {
-            error_log("Error: No se pudo procesar la acción");
-            return $res->withJson(['ok' => false, 'mensaje' => 'No se pudo procesar la acción'], 500);
-        }
-        
-    } catch (Exception $e) {
-        error_log("EXCEPCIÓN en endpoint notificaciones: " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
-        return $res->withJson(['ok' => false, 'mensaje' => 'Error interno del servidor: ' . $e->getMessage()], 500);
-    } catch (Error $e) {
-        error_log("ERROR FATAL en endpoint notificaciones: " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
-        return $res->withJson(['ok' => false, 'mensaje' => 'Error fatal del servidor'], 500);
+    $ok = procesarNotificacion($idCita, $acc, $uid, $rol);
+    
+    if ($ok) {
+        $mensaje = ($acc === 'CONFIRMAR') ? 'Cita confirmada correctamente' : 'Cita rechazada correctamente';
+        return jsonResponse(['ok' => true, 'mensaje' => $mensaje]);
+    } else {
+        return jsonResponse(['ok' => false, 'mensaje' => 'No se pudo procesar la acción'], 500);
     }
 });
 
