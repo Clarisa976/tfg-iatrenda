@@ -762,17 +762,23 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
                 $fechaInicio = $fila['fecha_hora'];
                 
                 try {
-                    $dt = new DateTime($fechaInicio);
-                    $dt->add(new DateInterval('PT1H'));
-                    $fechaFin = $dt->format('Y-m-d H:i:s');
+                    // Forzar zona horaria de Madrid
+                    $dt = new DateTime($fechaInicio, new DateTimeZone('Europe/Madrid'));
+                    $dtFin = clone $dt;
+                    $dtFin->add(new DateInterval('PT1H')); // +1 hora
                     
-                    // Mantener zona horaria si existe
-                    if (strpos($fechaInicio, '+') !== false) {
-                        $fechaFin .= '+00';
+
+                    $fechaFin = $dtFin->format('Y-m-d H:i:s');
+                    
+                    if (strpos($fechaInicio, '+') !== false || strpos($fechaInicio, 'Z') !== false) {
+                        $fechaFin = $dtFin->format('Y-m-d H:i:sP');
                     }
+                    
+                    error_log("FECHAS CORREGIDAS - Inicio: $fechaInicio, Fin: $fechaFin");
+                    
                 } catch (Exception $e) {
                     error_log("Error procesando fecha: " . $e->getMessage());
-                    // Metodo alternativo sin zona horaria
+
                     $fechaInicioLimpia = preg_replace('/\+\d{2}$/', '', $fechaInicio);
                     $fechaFin = date('Y-m-d H:i:s', strtotime($fechaInicioLimpia . ' +1 hour'));
                 }
@@ -832,9 +838,17 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             error_log("Bloque de agenda {$fila['id_bloque']} eliminado por cancelacion de cita");
         }
 
-        // Registrar notificacion en la base de datos
-        $fechaFormateada = date('d/m/Y', strtotime($fila['fecha_hora']));
-        $horaFormateada = date('H:i', strtotime($fila['fecha_hora']));
+        // Formatear fecha y hora con zona horaria de Madrid
+        try {
+            $dtEmail = new DateTime($fila['fecha_hora'], new DateTimeZone('Europe/Madrid'));
+            $fechaFormateada = $dtEmail->format('d/m/Y');
+            $horaFormateada = $dtEmail->format('H:i');
+            error_log("Email - Fecha formateada: $fechaFormateada, Hora: $horaFormateada");
+        } catch (Exception $e) {
+            // Fallback
+            $fechaFormateada = date('d/m/Y', strtotime($fila['fecha_hora']));
+            $horaFormateada = date('H:i', strtotime($fila['fecha_hora']));
+        }
 
         $asuntoEmail = $accion === 'CONFIRMAR' ? 'Confirmacion de su cita' : 'Cancelacion de su cita';
 
