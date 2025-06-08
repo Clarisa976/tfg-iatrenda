@@ -32,23 +32,28 @@ import PoliticaPrivacidad from './components/secciones/PoliticaPrivacidad';
 import TerminosCondiciones from './components/secciones/TerminosCondiciones';
 import PoliticaCookies from './components/secciones/PoliticaCookies';
 
-// Componente para rutas protegidas - VERSIÓN MEJORADA
+// Componente para rutas protegidas
 function ProtectedRoute({ children, requiredRole, user, onUnauthorized }) {
   const navigate = useNavigate();
 
-  // Verificar inmediatamente sin useEffect
-  if (!user) {
-    onUnauthorized('Debes iniciar sesión para acceder a esta página');
-    navigate('/', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      onUnauthorized('Debes iniciar sesión para acceder a esta página');
+      navigate('/', { replace: true });
+      return;
+    }
+
+    const userRole = user?.rol?.toLowerCase() || user?.role?.toLowerCase();
+    if (userRole !== requiredRole.toLowerCase()) {
+      onUnauthorized(`No tienes permisos para acceder a la sección de ${requiredRole}`);
+      navigate('/', { replace: true });
+    }
+  }, [user, requiredRole, navigate, onUnauthorized]);
+
+  if (!user) return null;
 
   const userRole = user?.rol?.toLowerCase() || user?.role?.toLowerCase();
-  if (userRole !== requiredRole.toLowerCase()) {
-    onUnauthorized(`No tienes permisos para acceder a la sección de ${requiredRole}`);
-    navigate('/', { replace: true });
-    return null;
-  }
+  if (userRole !== requiredRole.toLowerCase()) return null;
 
   return children;
 }

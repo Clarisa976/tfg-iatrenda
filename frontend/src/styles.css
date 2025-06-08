@@ -49,7 +49,8 @@ main {
   flex: 1 0 auto;
   width: 100%;
   padding-bottom: 2rem; /* Espacio para evitar que el contenido toque el footer */
-  padding-top: 100px; /* Espacio fijo para el header */
+  padding-top: 140px; /* Espacio aumentado para el header */
+  min-height: calc(100vh - 140px); /* Asegurar que el contenido ocupe al menos toda la altura visible */
 }
 
 a {
