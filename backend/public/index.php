@@ -442,7 +442,9 @@ $app->get('/', fn() => jsonResponse(['ok'=>true, 'mensaje'=>'API Slim funcionand
 $app->post('/admin/usuarios', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol'])!=='admin')
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);    $actorId = $val['usuario']['id_persona'];
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
+
+    $actorId = $val['usuario']['id_persona'];
     
     $body = $req->getParsedBody() ?? [];
     error_log("POST /admin/usuarios - Body recibido: " . json_encode($body));
@@ -454,23 +456,70 @@ $app->post('/admin/usuarios', function ($req) {
     if (!in_array($tipo,['PROFESIONAL','PACIENTE'],true))
         return jsonResponse(['ok'=>false,'mensaje'=>'Tipo inválido'],400);
 
-    $idPersona = actualizarOInsertarPersona($pdat, $tipo, $actorId);
+    try {
+        // BUSCAR SI YA EXISTE UNA PERSONA CON ESTE EMAIL
+        $personaExistente = null;
+        if (!empty($pdat['email'])) {
+            $baseDatos = conectar();
+            $consulta = $baseDatos->prepare("SELECT id_persona, rol, activo FROM persona WHERE email = ?");
+            $consulta->execute([$pdat['email']]);
+            $personaExistente = $consulta->fetch(PDO::FETCH_ASSOC);
+            
+            if ($personaExistente) {
+                error_log("Persona existente encontrada: ID={$personaExistente['id_persona']}, Rol={$personaExistente['rol']}, Activo={$personaExistente['activo']}");
+            }
+        }
 
-    // Si $xdat contiene tutor, extraer y procesar por separado
-    $tutor = null;
-    if ($tipo === 'PACIENTE' && isset($xdat['tutor']) && $xdat['tutor']) {
-        $tutor = $xdat['tutor'];
-        unset($xdat['tutor']);
+        $idPersona = null;
+        
+        if ($personaExistente) {
+            // ACTUALIZAR persona existente
+            $idPersona = actualizarOInsertarPersona($pdat, $tipo, $actorId, (int)$personaExistente['id_persona']);
+            error_log("Persona existente actualizada con ID: $idPersona");
+        } else {
+            // CREAR nueva persona
+            $idPersona = actualizarOInsertarPersona($pdat, $tipo, $actorId);
+            error_log("Nueva persona creada con ID: $idPersona");
+        }
+
+        $tutor = null;
+        if ($tipo === 'PACIENTE' && isset($xdat['tutor']) && $xdat['tutor']) {
+            $tutor = $xdat['tutor'];
+            unset($xdat['tutor']);
+        }
+
+        $ok = ($tipo==='PROFESIONAL')
+            ? actualizarOInsertarProfesional($idPersona, $xdat)
+            : actualizarOInsertarPaciente($idPersona, $xdat);
+
+        if (!$ok) {
+            error_log("Error en actualizar datos específicos del $tipo");
+            return jsonResponse(['ok'=>false,'mensaje'=>'No se pudo guardar los datos específicos'],500);
+        }
+
+        $accion = $personaExistente ? 'actualizado' : 'creado';
+        return jsonResponse([
+            'ok'=>true,
+            'id'=>$idPersona,
+            'mensaje'=>ucfirst(strtolower($tipo)) . " $accion correctamente"
+        ]);
+
+    } catch (Exception $e) {
+        $mensaje = $e->getMessage();
+        error_log("Error creando/actualizando $tipo: $mensaje");
+
+        if (strpos($mensaje, 'ya está registrado') !== false) {
+            return jsonResponse(['ok'=>false,'mensaje'=>$mensaje], 409);
+        }
+        
+        if (strpos($mensaje, 'inexistente') !== false) {
+            return jsonResponse(['ok'=>false,'mensaje'=>$mensaje], 404);
+        }
+        
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error interno: ' . $mensaje], 500);
     }
-
-    $ok = ($tipo==='PROFESIONAL')
-        ? actualizarOInsertarProfesional($idPersona, $xdat)
-        : actualizarOInsertarPaciente($idPersona, $xdat);
-
-    return $ok
-      ? jsonResponse(['ok'=>true,'id'=>$idPersona])
-      : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo guardar'],500);
 });
+
 
 /* /admin/borrar-usuario/{id} */
 $app->delete('/admin/borrar-usuario/{id}', function ($req, $res, $args) {

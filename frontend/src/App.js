@@ -42,35 +42,57 @@ export default function App() {
   const [reservarCita, setReservarCita] = useState(false);
   const [toast, setToast] = useState({ show: false, ok: true, msg: '' });
 
+  // Limpiar sesión y token al recargar la página
+  useEffect(() => {
+    const handlePageReload = (e) => {
+      if (e.persisted) {
+        // La página se está recargando desde caché (F5)
+        setUser(null);
+        localStorage.removeItem('token');
+      }
+    };
+    window.addEventListener('pageshow', handlePageReload);
+    return () => window.removeEventListener('pageshow', handlePageReload);
+  }, []);
+
   // Verificar token y restaurar sesión al cargar
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      // Configurar axios con el token
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      // Intentar obtener la información del usuario a partir del token
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.exp * 1000 > Date.now()) { // Verificar que el token no ha expirado
-          // Petición para validar el token 
-          axios.get(`${process.env.REACT_APP_API_URL}/status`)
-            .then(response => {
-              if (response.data.ok) {
-                setUser({id: payload.sub,rol: payload.rol,role: payload.rol });
-              } else {
-                localStorage.removeItem('token');
-              }
-            })
-            .catch(() => {
-              localStorage.removeItem('token');
-            });
-        } else {
-          localStorage.removeItem('token');
-        }
-      } catch (error) {
+    if (!token) {
+      setUser(null);
+      return;
+    }
+
+    // Configurar axios con el token
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // Intentar obtener la información del usuario a partir del token
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp * 1000 <= Date.now()) {
+        // Token expirado
+        setUser(null);
         localStorage.removeItem('token');
+        return;
       }
+
+      // Petición para validar el token 
+      axios.get(`${process.env.REACT_APP_API_URL}/status`)
+        .then(response => {
+          if (response.data.ok) {
+            setUser({id: payload.sub, rol: payload.rol, role: payload.rol});
+          } else {
+            setUser(null);
+            localStorage.removeItem('token');
+          }
+        })
+        .catch(() => {
+          setUser(null);
+          localStorage.removeItem('token');
+        });
+    } catch (error) {
+      setUser(null);
+      localStorage.removeItem('token');
     }
   }, []);
 
@@ -132,9 +154,9 @@ export default function App() {
           )}
 
           {/* Redirigir si intenta acceder sin permiso */}
-          <Route path="/admin/*" element={<Navigate to="/" replace />} />
-          <Route path="/profesional/*" element={<Navigate to="/" replace />} />
-          <Route path="/paciente/*" element={<Navigate to="/" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/" replace state={{ sessionExpired: true }} />} />
+          <Route path="/profesional/*" element={<Navigate to="/" replace state={{ sessionExpired: true }} />} />
+          <Route path="/paciente/*" element={<Navigate to="/" replace state={{ sessionExpired: true }} />} />
         </Routes>
       </main>
 
