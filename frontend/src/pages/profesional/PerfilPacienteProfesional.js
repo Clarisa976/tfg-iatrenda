@@ -663,24 +663,7 @@ console.log('Datos que se envían al backend:', {
           </div>
 
           <div className="modal-body">
-            {/* Información de la cita actual */}            
-            {repro.citaActual && (
-              <div className="cita-actual-container">
-                <h4 className="cita-actual-titulo">
-                  Cita actual
-                </h4>                <div className="cita-actual-fecha-container">
-                  <span>🕒</span>
-                  <span className="cita-actual-fecha-texto">
-                    {fechaActualCita}
-                  </span>
-                </div>
-                {repro.citaActual.motivo && (
-                  <p className="cita-actual-motivo">
-                    <strong>Motivo:</strong> {repro.citaActual.motivo}
-                  </p>
-                )}
-              </div>
-            )}            
+           
             {/* Información importante */}
             <div className="horario-atencion-info">
               <strong>Horario de atención:</strong>
