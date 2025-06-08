@@ -1,36 +1,24 @@
-FROM php:8.2-apache
+FROM php:8.2-cli
 
 # Instalar extensiones necesarias
 RUN apt-get update && apt-get install -y \
     libpq-dev \
-    libzip-dev \
     unzip \
-    git \
-    && docker-php-ext-install pdo pdo_pgsql zip
+    && docker-php-ext-install pdo pdo_pgsql \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Habilitar mod_rewrite
-RUN a2enmod rewrite
+WORKDIR /app
 
-# Instalar Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Configurar directorio de trabajo
-WORKDIR /var/www/html
-
-# Copiar archivos
+# Copiar todo el código
 COPY . .
 
-# Instalar dependencias PHP
-RUN composer install --no-dev --optimize-autoloader
+# Dar permisos de ejecución a TU composer.phar
+RUN chmod +x composer.phar
 
-# Configurar permisos
-RUN chown -R www-data:www-data /var/www/html
-RUN chmod -R 755 /var/www/html
+# Usar TU composer.phar (el que funciona)
+RUN php composer.phar install --no-dev --optimize-autoloader
 
-# Configurar Apache
-COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
+EXPOSE $PORT
 
-# Exponer puerto
-EXPOSE 80
-
-CMD ["apache2-foreground"]
+CMD php -S 0.0.0.0:$PORT -t public public/index.php
