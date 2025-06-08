@@ -97,6 +97,7 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
       setStep(1);
     })
     .catch(e => console.error('Error cargando usuario', e));
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialUser]);
 
 

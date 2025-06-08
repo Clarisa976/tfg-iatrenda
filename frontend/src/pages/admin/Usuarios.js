@@ -141,7 +141,7 @@ const confirmarDelete = async () => {
       {/* cabecera */}
       <div className="usuarios-header">
         <h2 className="usuarios-title">Usuarios</h2>
-        <a className="btn-agregar" onClick={agregar}>Agregar usuario</a>
+        <button className="btn-agregar" onClick={agregar}>Agregar usuario</button>
       </div>
 
       {/* buscador */}
