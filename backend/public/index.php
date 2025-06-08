@@ -8,11 +8,7 @@ use Slim\Factory\AppFactory;
 require __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/funciones_CTES_servicios.php';
 
-/* .env */
-if (file_exists(__DIR__ . '/../.env')) {
-    $dotenv = Dotenv\Dotenv::createUnsafeImmutable(__DIR__ . '/../');
-    $dotenv->load();
-}
+
 /*error_log('DB_USER: ' . getenv('DB_USER'));
 error_log('DB_PASS: ' . getenv('DB_PASS'));*/
 
@@ -27,24 +23,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-
+/* .env */
+if (file_exists(__DIR__ . '/../.env')) {
+    $dotenv = Dotenv\Dotenv::createUnsafeImmutable(__DIR__ . '/../');
+    $dotenv->load();
+}
 /* Slim */
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
-// Middleware para manejar las solicitudes OPTIONS de CORS
-$app->options('/{routes:.+}', function (Request $request, Response $response) {
-    $origin = $request->getHeaderLine('Origin');
-    $allowedOrigins = ['https://clinica-petaka.netlify.app'];
-    $useOrigin = in_array($origin, $allowedOrigins) ? $origin : 'https://clinica-petaka.netlify.app';
-    
-    return $response
-        ->withHeader('Access-Control-Allow-Origin', $useOrigin)
-        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-        ->withHeader('Access-Control-Allow-Credentials', 'true')
-        ->withHeader('Access-Control-Max-Age', '86400')
-        ->withStatus(200);
-});
+
 
 
 // Middleware para manejar las solicitudes OPTIONS de CORS
