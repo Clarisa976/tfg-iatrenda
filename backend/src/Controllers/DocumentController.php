@@ -176,12 +176,12 @@ class DocumentController {
 
                 // Guardar documento en base de datos
                 $documentData = [
-                    'id_tratamiento' => $tratamientoId,
+                    'id_historial' => $historialId,  // Siempre asociar al historial
+                    'id_tratamiento' => $tratamientoId,  // También asociar al tratamiento específico
                     'id_profesional' => $profesionalId,
                     'ruta' => $uploadResult['key'],
-                    'tipo' => $fileType,
-                    'nombre_original' => $fileName,
-                    'tamano' => $uploadedFile->getSize()
+                    'tipo' => $fileType, // Tipo de archivo (PDF, JPG, etc.)
+                    'nombre_archivo' => $fileName
                 ];
 
                 $documentId = $this->saveDocumentToDatabase($documentData);
@@ -315,11 +315,11 @@ class DocumentController {
             // 4. Guardar documento en base de datos
             $documentData = [
                 'id_historial' => $historialId,
+                'id_tratamiento' => null,  // NULL para documentos generales del historial
                 'id_profesional' => $profesionalId,
                 'ruta' => $uploadResult['key'],
-                'tipo' => $fileType,
-                'nombre_original' => $fileName,
-                'tamano' => $uploadedFile->getSize()
+                'tipo' => $fileType, // Tipo de archivo (PDF, JPG, etc.)
+                'nombre_archivo' => $fileName
             ];
 
             $documentId = $this->saveDocumentToDatabase($documentData);
@@ -523,13 +523,14 @@ class DocumentController {
                 return $historial['id_historial'];
             }
             
-            // Crear nuevo historial
-            $sql = "INSERT INTO historial_clinico (id_paciente, fecha_inicio) VALUES (?, CURRENT_DATE)";
+            // Crear nuevo historial (PostgreSQL)
+            $sql = "INSERT INTO historial_clinico (id_paciente, fecha_inicio) VALUES (?, CURRENT_DATE) RETURNING id_historial";
             $stmt = $baseDatos->prepare($sql);
-            $success = $stmt->execute([$pacienteId]);
+            $stmt->execute([$pacienteId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($success) {
-                $newId = $baseDatos->lastInsertId();
+            if ($result) {
+                $newId = $result['id_historial'];
                 error_log('Nuevo historial creado: ' . $newId);
                 return $newId;
             }
@@ -549,12 +550,13 @@ class DocumentController {
         try {
             $baseDatos = conectar();
             
+            // PostgreSQL - usar RETURNING
             $sql = "INSERT INTO tratamiento 
                     (id_historial, id_profesional, fecha_inicio, fecha_fin, frecuencia_sesiones, notas) 
-                    VALUES (?, ?, ?, ?, ?, ?)";
+                    VALUES (?, ?, ?, ?, ?, ?) RETURNING id_tratamiento";
             
             $stmt = $baseDatos->prepare($sql);
-            $success = $stmt->execute([
+            $stmt->execute([
                 $data['id_historial'],
                 $data['id_profesional'],
                 $data['fecha_inicio'],
@@ -563,8 +565,9 @@ class DocumentController {
                 $data['notas']
             ]);
             
-            if ($success) {
-                return $baseDatos->lastInsertId();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                return $result['id_tratamiento'];
             }
             
             return null;
@@ -615,33 +618,25 @@ class DocumentController {
         try {
             $baseDatos = conectar();
             
-            if (isset($data['id_historial']) && $data['id_historial']) {
-                $sql = "INSERT INTO documento_clinico 
-                        (id_historial, id_profesional, ruta, tipo) 
-                        VALUES (?, ?, ?, ?)";
-                $params = [
-                    $data['id_historial'],
-                    $data['id_profesional'],
-                    $data['ruta'],
-                    $data['tipo']
-                ];
-            } else {
-                $sql = "INSERT INTO documento_clinico 
-                        (id_tratamiento, id_profesional, ruta, tipo) 
-                        VALUES (?, ?, ?, ?)";
-                $params = [
-                    $data['id_tratamiento'],
-                    $data['id_profesional'],
-                    $data['ruta'],
-                    $data['tipo']
-                ];
-            }
+            // PostgreSQL - usar RETURNING
+            $sql = "INSERT INTO documento_clinico 
+                    (id_historial, id_tratamiento, id_profesional, ruta, tipo, nombre_archivo) 
+                    VALUES (?, ?, ?, ?, ?, ?) RETURNING id_documento";
+            $params = [
+                $data['id_historial'],        // Siempre requerido
+                $data['id_tratamiento'],      // Puede ser NULL
+                $data['id_profesional'],
+                $data['ruta'],
+                $data['tipo'],
+                $data['nombre_archivo']
+            ];
             
             $stmt = $baseDatos->prepare($sql);
-            $success = $stmt->execute($params);
+            $stmt->execute($params);
             
-            if ($success) {
-                return $baseDatos->lastInsertId();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                return $result['id_documento'];
             }
             
             return null;
@@ -660,7 +655,7 @@ class DocumentController {
         try {
             $baseDatos = conectar();
             $sql = "SELECT dc.*, 
-                           'documento' as nombre_original
+                           COALESCE(dc.nombre_archivo, 'documento') as nombre_original
                     FROM documento_clinico dc 
                     WHERE dc.id_documento = ?";
             $stmt = $baseDatos->prepare($sql);
@@ -704,10 +699,11 @@ class DocumentController {
             $whereClause = implode(' OR ', $conditions);
             
             $sql = "SELECT dc.id_documento, 
-                           'documento' as nombre_original,
+                           COALESCE(dc.nombre_archivo, 'documento') as nombre_original,
                            dc.tipo, 
                            dc.fecha_subida,
                            dc.ruta,
+                           dc.id_tratamiento,
                            (p.nombre || ' ' || p.apellido1) as profesional_nombre
                     FROM documento_clinico dc
                     LEFT JOIN historial_clinico h ON dc.id_historial = h.id_historial
