@@ -1412,18 +1412,17 @@ function exportLogsCsv(int $año, int $mes): string
     try {
         error_log("exportLogsCsv: Iniciando para año=$año, mes=$mes");
 
-        /* Si se pasa 0 como mes, mostrar todos los logs (sin filtro por fecha) */
+
         if ($mes === 0) {
             $consulta = "
-              SELECT 
-                     l.fecha,
+              SELECT TO_CHAR(l.fecha,'DD/MM/YYYY HH24:MI') AS fecha,
                      COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
                      l.accion,
                      l.tabla_afectada,
                      COALESCE(l.campo_afectado, '-') AS campo_afectado,
                      COALESCE(l.valor_antiguo, '-') AS valor_antiguo,
                      COALESCE(l.valor_nuevo, '-') AS valor_nuevo,
-                     COALESCE(l.ip, '-') AS ip
+                     COALESCE(CAST(l.ip AS TEXT), '-') AS ip
                 FROM log_evento_dato l
            LEFT JOIN persona actor ON actor.id_persona = l.id_actor 
            ORDER BY l.fecha DESC";
@@ -1437,15 +1436,14 @@ function exportLogsCsv(int $año, int $mes): string
             error_log("exportLogsCsv: Rango de fechas $fechaInicio a $fechaFin");
             
             $consulta = "
-              SELECT 
-                     l.fecha,
+              SELECT TO_CHAR(l.fecha,'DD/MM/YYYY HH24:MI') AS fecha,
                      COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
                      l.accion,
                      l.tabla_afectada,
                      COALESCE(l.campo_afectado, '-') AS campo_afectado,
                      COALESCE(l.valor_antiguo, '-') AS valor_antiguo,
                      COALESCE(l.valor_nuevo, '-') AS valor_nuevo,
-                     COALESCE(l.ip, '-') AS ip
+                     COALESCE(CAST(l.ip AS TEXT), '-') AS ip
                 FROM log_evento_dato l
            LEFT JOIN persona actor ON actor.id_persona = l.id_actor
                WHERE l.fecha BETWEEN :d AND :h 
@@ -1471,22 +1469,8 @@ function exportLogsCsv(int $año, int $mes): string
         $contadorFilas = 0;
 
         /* Agregar datos al CSV */
-        while ($fila = $consultaPreparada->fetch(PDO::FETCH_ASSOC)) {
-            // Formatear fecha para CSV
-            $fechaFormateada = date('d/m/Y H:i', strtotime($fila['fecha']));
-            
-            $filaCsv = [
-                $fechaFormateada,
-                $fila['actor'],
-                $fila['accion'],
-                $fila['tabla_afectada'],
-                $fila['campo_afectado'],
-                $fila['valor_antiguo'],
-                $fila['valor_nuevo'],
-                $fila['ip']
-            ];
-            
-            fputcsv($archivo, $filaCsv, ';');
+        while ($fila = $consultaPreparada->fetch(PDO::FETCH_NUM)) {
+            fputcsv($archivo, $fila, ';');
             $contadorFilas++;
         }
 
