@@ -1028,14 +1028,14 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
             if (!$paciente) {
                 throw new Exception('Datos del paciente no encontrados');
             }
-            
-            // Crear la cita
+              // Crear la cita
             $insertarCita = $baseDatos->prepare("
                 INSERT INTO cita (
                     id_paciente, id_profesional, fecha_hora, estado, 
                     nombre_contacto, email_contacto, telefono_contacto,
                     motivo, origen
                 ) VALUES (?, ?, ?, 'SOLICITADA', ?, ?, ?, ?, 'WEB')
+                RETURNING id_cita
             ");
             
             $nombreCompleto = trim($paciente['nombre'] . ' ' . $paciente['apellido1']);
@@ -1050,7 +1050,7 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
                 $motivo
             ]);
             
-            $idCita = $baseDatos->lastInsertId();
+            $idCita = $insertarCita->fetchColumn();
             
             // Registrar actividad
             registrarActividad($idPaciente, $idPaciente,  'cita', 'crear', null, $idCita, 'INSERT');

@@ -101,10 +101,35 @@ function tieneConsentimientoVigente(int $idPersona): bool
 
 /* REGISTRO DE ACTIVIDADES */
 /* Función para registrar una actividad*/
-function registrarActividad(int $quienLoHace, int $aQuienAfecta, string $queTabla, ?string $queCampo, $valorAnterior, $valorNuevo, string $queAccion): bool
+function registrarActividad(int $quienLoHace, ?int $aQuienAfecta, string $queTabla, ?string $queCampo, $valorAnterior, $valorNuevo, string $queAccion): bool
 {
     try {
         $baseDatos = conectar();
+        
+        // Map action types to valid enum values
+        $validActions = ['INSERT', 'UPDATE', 'DELETE', 'SELECT'];
+        $accionMapeada = strtoupper($queAccion);
+        
+        // If the action is not valid, map common variations
+        if (!in_array($accionMapeada, $validActions)) {
+            $accionMap = [
+                'CREATE' => 'INSERT',
+                'CREAR' => 'INSERT', 
+                'ADD' => 'INSERT',
+                'MODIFY' => 'UPDATE',
+                'EDIT' => 'UPDATE',
+                'CHANGE' => 'UPDATE',
+                'REMOVE' => 'DELETE',
+                'DROP' => 'DELETE',
+                'TEST' => 'SELECT' // For testing purposes
+            ];
+            $accionMapeada = $accionMap[$accionMapeada] ?? 'SELECT';
+        }        // Handle IP address for PostgreSQL inet type
+        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+        if (empty($ipAddress) || $ipAddress === '') {
+            $ipAddress = null; // PostgreSQL inet type requires NULL for empty values
+        }
+        
         $consulta = "INSERT INTO log_evento_dato
                 (id_actor,id_afectado,tabla_afectada,campo_afectado,
                  valor_antiguo,valor_nuevo,accion,ip)
@@ -116,8 +141,8 @@ function registrarActividad(int $quienLoHace, int $aQuienAfecta, string $queTabl
             ':c'  => $queCampo,
             ':v1' => $valorAnterior,
             ':v2' => $valorNuevo,
-            ':ac' => strtoupper($queAccion),
-            ':ip' => $_SERVER['REMOTE_ADDR'] ?? ''
+            ':ac' => $accionMapeada,
+            ':ip' => $ipAddress
         ]);
     } catch (Throwable $error) {
         error_log('Fallo al registrar actividad: ' . $error->getMessage());
@@ -290,11 +315,9 @@ function pedirCitaNueva(string $nombre, string $email, ?string $telefono, string
 
     if (!$idProf) {
         return ['ok' => false, 'mensaje' => 'No hay profesionales disponibles para esta fecha y hora', 'status' => 409];
-    }
-    try {
-        // Crear la cita en el sistema 
-        $citaCreada = execLogged(
-            "INSERT INTO cita
+    }    try {
+        // Crear la cita en el sistema usando RETURNING para PostgreSQL
+        $consultaCita = "INSERT INTO cita
                (id_paciente,id_profesional,id_bloque,
                 fecha_hora,estado,
                 nombre_contacto,telefono_contacto,email_contacto,
@@ -303,23 +326,36 @@ function pedirCitaNueva(string $nombre, string $email, ?string $telefono, string
                (:pac,:prof,NULL,
                 :ts,'PENDIENTE_VALIDACION',
                 :nom,:tel,:email,
-                :motivo,'WEB')",
-            [
-                ':pac'=> $idPersona,
-                ':prof'=> $idProf,
-                ':ts'=> $ts,
-                ':nom'=> $nombre,
-                ':tel'=> $telefono, 
-                ':email'=> $email,
-                ':motivo'=> $motivo
-            ],
-            $quienLoPide, 
-            'cita' 
-        );
+                :motivo,'WEB')
+             RETURNING id_cita";
+        
+        $stmtCita = $baseDatos->prepare($consultaCita);
+        $citaCreada = $stmtCita->execute([
+            ':pac'=> $idPersona,
+            ':prof'=> $idProf,
+            ':ts'=> $ts,
+            ':nom'=> $nombre,
+            ':tel'=> $telefono, 
+            ':email'=> $email,
+            ':motivo'=> $motivo
+        ]);
+        
         if (!$citaCreada) {
             return ['ok' => false, 'mensaje' => 'Error al crear la cita', 'status' => 500];
         }
-        $idCita = (int)$baseDatos->lastInsertId();
+        
+        $idCita = $stmtCita->fetchColumn();
+        
+        // Registrar la actividad
+        registrarActividad(
+            $quienLoPide,
+            $idPersona,
+            'cita',
+            null,
+            null,
+            json_encode(['id_cita' => $idCita, 'fecha_hora' => $ts], JSON_UNESCAPED_UNICODE),
+            'INSERT'
+        );
 
         return ['ok' => true, 'mensaje' => 'Cita reservada correctamente'];
     } catch (PDOException $e) {
@@ -375,22 +411,20 @@ function buscarOCrearPersona(string $nombre, string $email, ?string $telefono): 
         // Si no tiene teléfono, le ponemos un valor único para evitar conflictos
         $telefonoParaGuardar = 'SIN_TEL_' . uniqid();
         error_log("Asignando teléfono temporal para evitar conflictos: $telefonoParaGuardar");
-    }
-
-    $nuevaPersona = $baseDatos->prepare("
+    }    $nuevaPersona = $baseDatos->prepare("
       INSERT INTO persona
-        (nombre, apellido1, email, telefono, rol, password_hash)
+        (nombre, apellido1, email, telefono, rol)
       VALUES
-        (:nom, :ap1, :email, :tel, 'PACIENTE', :pass)
+        (:nom, :ap1, :email, :tel, 'PACIENTE')
+      RETURNING id_persona
     ");
     $nuevaPersona->execute([
         ':nom'   => $nombrePila,
         ':ap1'   => $apellido,
         ':email' => $email,
-        ':tel'   => $telefonoParaGuardar,
-        ':pass'  => password_hash('', PASSWORD_DEFAULT), 
+        ':tel'   => $telefonoParaGuardar
     ]);
-    $idNueva = (int)$baseDatos->lastInsertId();
+    $idNueva = (int)$nuevaPersona->fetchColumn();
     error_log("Nueva persona creada con ID: $idNueva");
     return $idNueva;
 }
@@ -670,17 +704,16 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
                     WHERE id_persona = ?
                 ");
                 $declaracionPaciente->execute([$fila['id_paciente']]);
-                $nombrePaciente = $declaracionPaciente->fetchColumn() ?: 'Paciente';
-
-                error_log("Creando bloque de agenda: Prof={$fila['id_profesional']}, Inicio=$fechaInicio, Fin=$fechaFin");
-                $baseDatos->prepare("
+                $nombrePaciente = $declaracionPaciente->fetchColumn() ?: 'Paciente';                error_log("Creando bloque de agenda: Prof={$fila['id_profesional']}, Inicio=$fechaInicio, Fin=$fechaFin");
+                $stmt = $baseDatos->prepare("
                     INSERT INTO bloque_agenda (
                         id_profesional, fecha_inicio, fecha_fin, 
                         tipo_bloque, comentario, id_creador
                     ) VALUES (
                         :p, :i, :f, 'CITA', :c, :cr
-                    )
-                ")->execute([
+                    ) RETURNING id_bloque
+                ");
+                $stmt->execute([
                     ':p' => $fila['id_profesional'],
                     ':i' => $fechaInicio,
                     ':f' => $fechaFin,
@@ -689,7 +722,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
                 ]);
 
                 /* Actualizar la cita con el ID del bloque creado */
-                $idBloque = $baseDatos->lastInsertId();
+                $idBloque = (int)$stmt->fetchColumn();
                 $baseDatos->prepare("UPDATE cita SET id_bloque = ? WHERE id_cita = ?")
                     ->execute([$idBloque, $idCita]);
 
@@ -938,10 +971,12 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
     }    /*INSERT*/
     $columnas = array_map(fn($p) => substr($p, 1), array_keys($valores));
     $consultaSql  = "INSERT INTO persona (" . implode(',', $columnas) . ",rol,fecha_alta)
-             VALUES (" . implode(',', array_keys($valores)) . ",:rol,CURRENT_DATE)";
+             VALUES (" . implode(',', array_keys($valores)) . ",:rol,CURRENT_DATE)
+             RETURNING id_persona";
     $valores[':rol'] = $rolFinal;
-    $baseDatos->prepare($consultaSql)->execute($valores);
-    $idNuevo = (int)$baseDatos->lastInsertId();
+    $stmt = $baseDatos->prepare($consultaSql);
+    $stmt->execute($valores);
+    $idNuevo = (int)$stmt->fetchColumn();
 
     /* email crear contraseña*/
     if ($esRolLogin && !empty($datos['email'])) {
@@ -1322,27 +1357,27 @@ function crearTratamiento( int $idPac, int $idProf, string $titulo, string $desc
            LIMIT 1
         ");
         $consultaHistorial->execute([$idPac]);
-        $idHist = $consultaHistorial->fetchColumn();
-        if (!$idHist) {
-            $baseDatos->prepare("
+        $idHist = $consultaHistorial->fetchColumn();        if (!$idHist) {
+            $stmt = $baseDatos->prepare("
               INSERT INTO historial_clinico (id_paciente, fecha_inicio)
               VALUES (?, CURRENT_DATE)
-            ")->execute([$idPac]);
-            $idHist = $baseDatos->lastInsertId();
+              RETURNING id_historial
+            ");
+            $stmt->execute([$idPac]);
+            $idHist = (int)$stmt->fetchColumn();
         }
 
         /* Verificar que los datos mínimos están presentes */
         if (empty($titulo)) {
             throw new Exception('El título es obligatorio');
-        }
-
-        /* Insertar tratamiento con todos los campos */
+        }        /* Insertar tratamiento con todos los campos */
         $consultaSql = "
           INSERT INTO tratamiento
             (id_historial, id_profesional, fecha_inicio, fecha_fin, 
              frecuencia_sesiones, titulo, notas)
           VALUES
             (?, ?, ?, ?, ?, ?, ?)
+          RETURNING id_tratamiento
         ";
 
         $consultaTratamiento = $baseDatos->prepare($consultaSql);
@@ -1356,7 +1391,7 @@ function crearTratamiento( int $idPac, int $idProf, string $titulo, string $desc
             $desc
         ]);
         /* Obtener el ID del tratamiento recién creado */
-        $idTratamiento = $baseDatos->lastInsertId();        /* Documento opcional */
+        $idTratamiento = (int)$consultaTratamiento->fetchColumn();/* Documento opcional */
         if ($file && $file->getError() === UPLOAD_ERR_OK) {
             /* Verificar que el directorio existe y tiene permisos */
             $uploadDir = __DIR__ . '/../public/uploads/';
@@ -1434,16 +1469,16 @@ function crearDocumentoHistorial(int $idPac, int $idProf, $file = null, string $
     $baseDatos = conectar();
     $baseDatos->beginTransaction();
 
-    try {
-
-        /* Cada documento representa una consulta/entrada específica en el historial */
-        $baseDatos->prepare("
+    try {        /* Cada documento representa una consulta/entrada específica en el historial */
+        $stmt = $baseDatos->prepare("
             INSERT INTO historial_clinico
                    (id_paciente, fecha_inicio, diagnostico_preliminar, diagnostico_final)
             VALUES (?, CURRENT_DATE, ?, ?)
-        ")->execute([$idPac, $diagnosticoPreliminar, $diagnosticoFinal ?: null]);
+            RETURNING id_historial
+        ");
+        $stmt->execute([$idPac, $diagnosticoPreliminar, $diagnosticoFinal ?: null]);
 
-        $idHistorial = (int)$baseDatos->lastInsertId();
+        $idHistorial = (int)$stmt->fetchColumn();
         error_log("Nueva entrada en historial creada con ID: $idHistorial para paciente $idPac - Diagnóstico: '$diagnosticoPreliminar'");
 
         $rutaArchivo = null;
@@ -1486,11 +1521,11 @@ function crearDocumentoHistorial(int $idPac, int $idProf, $file = null, string $
             if ($tipo === 'documento' || $tipo === '') {
                 $tipo = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? 'imagen'
                     : ($ext === 'pdf' ? 'pdf' : 'documento');
-            }            /* Registrar documento (SIN diagnósticos - esos están en historial_clinico) */
-            $consultaDocumento = $baseDatos->prepare("
+            }            /* Registrar documento (SIN diagnósticos - esos están en historial_clinico) */            $consultaDocumento = $baseDatos->prepare("
                 INSERT INTO documento_clinico
                        (id_historial, id_profesional, ruta, nombre_archivo, tipo, fecha_subida, id_tratamiento)
                 VALUES (:h, :p, :r, :n, :t, CURRENT_TIMESTAMP, NULL)
+                RETURNING id_documento
             ");
 
             $consultaDocumento->execute([
@@ -1501,7 +1536,7 @@ function crearDocumentoHistorial(int $idPac, int $idProf, $file = null, string $
                 ':t' => $tipo
             ]);
 
-            $idDocumento = $baseDatos->lastInsertId();
+            $idDocumento = (int)$consultaDocumento->fetchColumn();
             error_log("Documento registrado con ID: $idDocumento vinculado a entrada de historial: $idHistorial");
         }
 
