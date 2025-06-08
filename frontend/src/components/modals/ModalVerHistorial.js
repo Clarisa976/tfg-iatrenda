@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Download } from 'lucide-react';
+import { X } from 'lucide-react';
 
 
 const isImage = (path) => {

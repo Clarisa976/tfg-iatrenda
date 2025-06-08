@@ -21,6 +21,7 @@ export default function AgendaProfesional() {
   const [detalleOpen, setDetalleOpen] = useState(false);  
   useEffect(() => { 
     cargar(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Función para cargar eventos de un mes

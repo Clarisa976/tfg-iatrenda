@@ -82,6 +82,7 @@ export default function CitasPaciente() {
       hour12: false
     });
   };
+  /*
   const obtenerEstadoColor = (estado) => {
     switch (estado?.toLowerCase()) {
       case 'confirmada': return '#27ae60';
@@ -102,7 +103,7 @@ export default function CitasPaciente() {
       case 'atendida': return 'Atendida';
       default: return estado;
     }
-  };
+  };*/
   const abrirDetalles = (cita) => {
     setCitaSeleccionada(cita);
     setMostrarDetalles(true);

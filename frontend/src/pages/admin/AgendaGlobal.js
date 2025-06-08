@@ -22,6 +22,7 @@ export default function AgendaGlobal() {
   const [detalleOpen, setDetalleOpen]     = useState(false);
 
   /* cargar datos */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { cargar(); }, []);
   const cargar = async () => {
     try {
@@ -30,15 +31,18 @@ export default function AgendaGlobal() {
 
       const [pRes, eRes] = await Promise.all([
         axios.get('/profesionales'),
-        axios.get('/agenda/global')
+        axios.get('/agenda/global'),
       ]);
 
       if (pRes.data.ok) setProfesionales(pRes.data.data || []);
       if (eRes.data.ok) setEventos(map(eRes.data.data || []));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+    }
   };
 
-  const map = arr => arr.map(x => {
+  const map = (arr) => arr.map((x) => {
     // Usar directamente el nombre del profesional 
     let profNombre = x.nombre_profesional || '';
 
@@ -53,9 +57,9 @@ export default function AgendaGlobal() {
       start: new Date(x.inicio),
       end: new Date(x.fin),
       profId: x.recurso,
-      profNombre: profNombre,
+      profNombre,
       creadorNombre: x.creador || '—',
-      title: `${x.tipo} – ${profNombre || 'Todos'}`
+      title: `${x.tipo} – ${profNombre || 'Todos'}`,
     };
   });
 
@@ -94,9 +98,15 @@ export default function AgendaGlobal() {
   };
 
   /* colores opcionales */
-  const eventStyleGetter = event => {
-    const c = { VACACIONES:'#FEC400', AUSENCIA:'#FF6464', BAJA:'#A259FF',
-                EVENTO:'#56CCF2', OTROS:'#7AD6A0', cita:'#2F80ED' };
+  const eventStyleGetter = (event) => {
+    const c = {
+      VACACIONES: '#FEC400',
+      AUSENCIA: '#FF6464',
+      BAJA: '#A259FF',
+      EVENTO: '#56CCF2',
+      OTROS: '#7AD6A0',
+      cita: '#2F80ED',
+    };
     return { style: { backgroundColor: c[event.tipo] || '#2F80ED' } };
   };
 

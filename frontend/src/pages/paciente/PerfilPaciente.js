@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle, ChevronLeft, ChevronRight, Eye, Calendar, FileText, CheckSquare, Clock, Check, Download } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { CheckCircle, XCircle, ChevronLeft, ChevronRight, Eye, Calendar} from 'lucide-react';
 import ModalVerTarea from '../../components/modals/ModalVerTarea';
 import ModalVerHistorial from '../../components/modals/ModalVerHistorial';
 import '../../styles.css';
 
 export default function PerfilPaciente() {
-    const navigate = useNavigate();
+
     const [searchParams] = useSearchParams();
     const hoy = new Date().toISOString().split('T')[0];
     
@@ -16,7 +16,7 @@ export default function PerfilPaciente() {
     const [documentosHistorial, setDocumentosHistorial] = useState([]);
     const [mostrarModalHistorial, setMostrarModalHistorial] = useState(false);
     const [loadingHistorial, setLoadingHistorial] = useState(false);
-    const [viendoTareas, setViendoTareas] = useState(false);
+
     const [loadingTareas, setLoadingTareas] = useState(false);
     const [tareas, setTareas] = useState([]);
     const [currentSlide, setCurrentSlide] = useState(0);
