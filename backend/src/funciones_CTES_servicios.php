@@ -906,12 +906,11 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
         }
     }    
     foreach (['email', 'telefono', 'nif'] as $campo) {
-        if (empty($datos[$campo])) continue; 
-        $consulta = "SELECT id_persona,rol FROM persona
+        if (empty($datos[$campo])) continue;        $consulta = "SELECT id_persona,rol FROM persona
                 WHERE $campo=:v AND activo=true";
         $parametros = [':v' => $datos[$campo]];
         if ($registroPrevio) {
-            $consulta .= " AND id_persona<>:yo";
+            $consulta .= " AND id_persona != :yo";
             $parametros[':yo'] = $registroPrevio['id_persona'];
         }
         $sentencia = $baseDatos->prepare($consulta);
@@ -1115,7 +1114,7 @@ function getUsuarioDetalle(int $id): ?array
 
 function citasActivas(int $id): int
 {
-    $consulta = 'SELECT COUNT(*) FROM cita WHERE estado<>"CANCELADA" AND (id_paciente=:id OR id_profesional=:id)';
+    $consulta = 'SELECT COUNT(*) FROM cita WHERE estado != \'CANCELADA\' AND (id_paciente=:id OR id_profesional=:id)';
     $consultaPreparada  = conectar()->prepare($consulta);
     $consultaPreparada->execute([':id' => $id]);
     return (int)$consultaPreparada->fetchColumn();
@@ -1151,9 +1150,9 @@ function getInformeMes(int $año, int $mes): array
     /* totales citas */
     $filaDatos = $baseDatos->query("
        SELECT
-         COUNT(*)                                      total,
-         SUM(estado='CONFIRMADA' OR estado='ATENDIDA') conf,
-         SUM(estado='CANCELADA' OR estado='NO_PRESENTADA') canc
+         COUNT(*) as total,
+         SUM(CASE WHEN estado='CONFIRMADA' OR estado='ATENDIDA' THEN 1 ELSE 0 END) as conf,
+         SUM(CASE WHEN estado='CANCELADA' OR estado='NO_PRESENTADA' THEN 1 ELSE 0 END) as canc
        FROM cita
        WHERE DATE(fecha_hora) BETWEEN '$fechaInicio' AND '$fechaFin'")
         ->fetch(PDO::FETCH_NUM);

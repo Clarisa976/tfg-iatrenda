@@ -472,6 +472,62 @@ $app->delete('/admin/borrar-usuario/{id}', function ($req, $res, $args) {
     return jsonResponse(['ok'=>true,'mensaje'=>'Usuario marcado como inactivo']);
 });
 
+/* /admin/usuario/{id} - PUT para editar usuario existente */
+$app->put('/admin/usuario/{id}', function ($req, $res, $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+
+    $id = (int)$args['id'];
+    $actorId = $val['usuario']['id_persona'];
+    
+    $body = $req->getParsedBody() ?? [];
+    error_log("PUT /admin/usuario/{$id} - Body recibido: " . json_encode($body));
+    
+    // Determinar el tipo basado en el rol actual o el nuevo rol
+    $baseDatos = conectar();
+    $consulta = $baseDatos->prepare("SELECT rol FROM persona WHERE id_persona = ?");
+    $consulta->execute([$id]);
+    $usuarioActual = $consulta->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$usuarioActual) {
+        error_log("Usuario ID {$id} no encontrado");
+        return jsonResponse(['ok'=>false,'mensaje'=>'Usuario no encontrado'], 404);
+    }
+    
+    $rolFinal = strtoupper($body['rol'] ?? $usuarioActual['rol']);
+    error_log("Rol final determinado: {$rolFinal}");
+    
+    if (!in_array($rolFinal, ['PROFESIONAL','PACIENTE','ADMIN'], true))
+        return jsonResponse(['ok'=>false,'mensaje'=>'Rol inválido'], 400);
+
+    try {
+        // Usar actualizarOInsertarPersona con el ID forzado para actualización
+        error_log("Llamando actualizarOInsertarPersona con ID: {$id}");
+        $idPersona = actualizarOInsertarPersona($body, $rolFinal, $actorId, $id);
+        error_log("actualizarOInsertarPersona exitoso, ID: {$idPersona}");
+        
+        // Actualizar datos específicos según el rol
+        if ($rolFinal === 'PROFESIONAL') {
+            $xdat = $body['datosprofesional'] ?? [];
+            $ok = actualizarOInsertarProfesional($idPersona, $xdat, $actorId);
+        } else if ($rolFinal === 'PACIENTE') {
+            $xdat = $body['datospaciente'] ?? [];
+            $ok = actualizarOInsertarPaciente($idPersona, $xdat);
+        } else {
+            $ok = true; // Para ADMIN no hay datos extra
+        }
+        
+        error_log("Resultado final ok: " . ($ok ? 'true' : 'false'));
+        return $ok
+            ? jsonResponse(['ok'=>true,'id'=>$idPersona,'mensaje'=>'Usuario actualizado correctamente'])
+            : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo actualizar el usuario'],500);
+    } catch (Exception $e) {
+        error_log("Error en PUT /admin/usuario/{$id}: " . $e->getMessage());
+        return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()], 400);
+    }
+});
+
 /* crear-contrasena*/
 $app->post('/crear-contrasena', function ($req) {
     $b = $req->getParsedBody() ?? [];
