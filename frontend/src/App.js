@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, XCircle } from 'lucide-react';
 import axios from 'axios';
 
@@ -14,8 +14,6 @@ import Usuarios from './pages/admin/Usuarios'
 import Notificaciones from './pages/admin/Notificaciones'
 import AgendaGlobal from './pages/admin/AgendaGlobal'
 import InformesYLogs from './pages/admin/InformesYLogs'
-
-
 
 import LoginModal from './components/modals/LoginModal';
 import ReservarCitaModal from './components/modals/ReservarCitaModal';
@@ -34,19 +32,50 @@ import PoliticaPrivacidad from './components/secciones/PoliticaPrivacidad';
 import TerminosCondiciones from './components/secciones/TerminosCondiciones';
 import PoliticaCookies from './components/secciones/PoliticaCookies';
 
+// Componente para rutas protegidas
+function ProtectedRoute({ children, requiredRole, user, onUnauthorized }) {
+  const navigate = useNavigate();
+  const location = useLocation();
 
+  useEffect(() => {
+    if (!user) {
+      onUnauthorized('Debes iniciar sesión para acceder a esta página');
+      navigate('/', { replace: true });
+      return;
+    }
+
+    const userRole = user?.rol?.toLowerCase() || user?.role?.toLowerCase();
+    if (userRole !== requiredRole.toLowerCase()) {
+      onUnauthorized(`No tienes permisos para acceder a la sección de ${requiredRole}`);
+      navigate('/', { replace: true });
+      return;
+    }
+  }, [user, requiredRole, navigate, location, onUnauthorized]);
+
+  // Si no cumple los requisitos, no renderizar nada (ya se redirigió)
+  const userRole = user?.rol?.toLowerCase() || user?.role?.toLowerCase();
+  if (!user || userRole !== requiredRole.toLowerCase()) {
+    return null;
+  }
+
+  return children;
+}
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [reservarCita, setReservarCita] = useState(false);
-  const [toast, setToast] = useState({ show: false, ok: true, msg: '' });
+  const [toast, setToast] = useState({ show: false, ok: true, msg: '', type: 'default' });
+
+  // Función para mostrar mensajes de error de permisos
+  const showUnauthorizedMessage = (message) => {
+    setToast({ show: true, ok: false, msg: message, type: 'unauthorized' });
+  };
 
   // Limpiar sesión y token al recargar la página
   useEffect(() => {
     const handlePageReload = (e) => {
       if (e.persisted) {
-        // La página se está recargando desde caché (F5)
         setUser(null);
         localStorage.removeItem('token');
       }
@@ -62,14 +91,12 @@ export default function App() {
       setUser(null);
     };
 
-    // Manejar la recarga de la página
     const handleBeforeUnload = () => {
       cleanupSession();
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
 
-    // Verificar token y restaurar sesión al cargar
     const token = localStorage.getItem('token');
     if (!token) {
       cleanupSession();
@@ -83,10 +110,8 @@ export default function App() {
         return;
       }
 
-      // Configurar axios con el token
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // Petición para validar el token 
       axios.get(`${process.env.REACT_APP_API_URL}/status`)
         .then(response => {
           if (response.data.ok) {
@@ -118,9 +143,10 @@ export default function App() {
     setUser(userData);
     setLoginOpen(false);
   };
+  
   const abrirCita = () => setReservarCita(true);
-  const onCitaSuccess = msg => { setReservarCita(false); setToast({ show: true, ok: true, msg }); };
-  const onCitaError = msg => { setReservarCita(false); setToast({ show: true, ok: false, msg }); };
+  const onCitaSuccess = msg => { setReservarCita(false); setToast({ show: true, ok: true, msg, type: 'cita' }); };
+  const onCitaError = msg => { setReservarCita(false); setToast({ show: true, ok: false, msg, type: 'cita' }); };
 
   return (
     <BrowserRouter>
@@ -136,38 +162,94 @@ export default function App() {
           <Route path="/privacidad" element={<PoliticaPrivacidad />} />
           <Route path="/cookies" element={<PoliticaCookies />} />
 
-          {/* Rutas Admin */}
-          {(user?.rol?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin') && (
-            <>
-              <Route path="/admin/usuarios" element={<Usuarios />} />
-              <Route path="/admin/notificaciones" element={<Notificaciones />} />
-              <Route path="/admin/agenda-global" element={<AgendaGlobal />} />
-              <Route path="/admin/informes" element={<InformesYLogs />} />
-            </>
-          )}
+          {/* Rutas Admin - Protegidas */}
+          <Route 
+            path="/admin/usuarios" 
+            element={
+              <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <Usuarios />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/notificaciones" 
+            element={
+              <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <Notificaciones />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/agenda-global" 
+            element={
+              <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <AgendaGlobal />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/informes" 
+            element={
+              <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <InformesYLogs />
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* Rutas Profesional */}
-          {(user?.rol?.toLowerCase() === 'profesional' || user?.role?.toLowerCase() === 'profesional') && (
-            <>
-              <Route path="/profesional/mi-perfil" element={<PerfilProfesional />} />
-              <Route path="/profesional/pacientes" element={<PacientesProfesional />} />
-              <Route path="/profesional/paciente/:id" element={<PerfilPacienteProfesional />} />
-              <Route path="/profesional/agenda" element={<AgendaProfesional />} />
-            </>
-          )}
+          {/* Rutas Profesional - Protegidas */}
+          <Route 
+            path="/profesional/mi-perfil" 
+            element={
+              <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <PerfilProfesional />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profesional/pacientes" 
+            element={
+              <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <PacientesProfesional />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profesional/paciente/:id" 
+            element={
+              <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <PerfilPacienteProfesional />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profesional/agenda" 
+            element={
+              <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <AgendaProfesional />
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* Rutas Paciente */}
-          {(user?.rol?.toLowerCase() === 'paciente' || user?.role?.toLowerCase() === 'paciente') && (
-            <>
-              <Route path="/paciente/mi-perfil" element={<PerfilPaciente />} />
-              <Route path="/paciente/mis-citas" element={<CitasPaciente />} />
-            </>
-          )}
+          {/* Rutas Paciente - Protegidas */}
+          <Route 
+            path="/paciente/mi-perfil" 
+            element={
+              <ProtectedRoute requiredRole="paciente" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <PerfilPaciente />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/paciente/mis-citas" 
+            element={
+              <ProtectedRoute requiredRole="paciente" user={user} onUnauthorized={showUnauthorizedMessage}>
+                <CitasPaciente />
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* Redirigir si intenta acceder sin permiso */}
-          <Route path="/admin/*" element={<Navigate to="/" replace />} />
-          <Route path="/profesional/*" element={<Navigate to="/" replace />} />
-          <Route path="/paciente/*" element={<Navigate to="/" replace />} />
+          {/* Ruta catch-all para páginas no encontradas */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
@@ -175,7 +257,7 @@ export default function App() {
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLoginSuccess={handleLoginSuccess} />}
       {reservarCita && <ReservarCitaModal onClose={() => setReservarCita(false)} onSuccess={onCitaSuccess} onError={onCitaError} />}
 
-      {/* Toast Global */}
+      {/* Toast Global*/}
       {toast.show && (
         <div className="toast-global centered-toast">
           <div className={`toast-card ${toast.ok ? 'success' : 'error'}`}>
@@ -183,16 +265,26 @@ export default function App() {
               ? <CheckCircle size={48} className="toast-icon success" />
               : <XCircle size={48} className="toast-icon error" />
             }
-            <h3 className="toast-title">{toast.ok ? '¡Reserva enviada!' : '¡Lo sentimos!'}</h3>
+            <h3 className="toast-title">
+              {toast.type === 'unauthorized' ? '¡Acceso denegado!' :
+               toast.type === 'cita' && toast.ok ? '¡Reserva enviada!' :
+               toast.type === 'cita' && !toast.ok ? '¡Lo sentimos!' :
+               toast.ok ? '¡Éxito!' : '¡Error!'
+              }
+            </h3>
             <p className="toast-text">
-              {toast.ok
-                ? 'Te avisaremos cuando el equipo confirme tu cita.'
-                : 'El día o la hora que has seleccionado no están disponibles. Elige otra fecha.'
+              {toast.msg || 
+               (toast.type === 'cita' && toast.ok ? 'Te avisaremos cuando el equipo confirme tu cita.' :
+                toast.type === 'cita' && !toast.ok ? 'El día o la hora que has seleccionado no están disponibles. Elige otra fecha.' :
+                toast.type === 'unauthorized' ? 'No tienes permisos para acceder a esta página.' :
+                toast.ok ? 'Operación completada correctamente.' : 'Ha ocurrido un error.'
+               )
               }
             </p>
           </div>
         </div>
       )}
+      
       <ScrollArriba />
       <Footer />
     </BrowserRouter>
