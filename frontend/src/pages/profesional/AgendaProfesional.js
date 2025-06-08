@@ -58,6 +58,7 @@ export default function AgendaProfesional() {
       
       if (perfilRes.data.ok) {
         const perfil = perfilRes.data.data;
+        console.log('Perfil del profesional cargado:', perfil);
         setPerfilProf(perfil);
         
         // eventos solo de este profesional
