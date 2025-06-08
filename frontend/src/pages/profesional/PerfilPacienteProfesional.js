@@ -204,6 +204,15 @@ export default function PerfilPacienteProfesional() {
   const [pTut, setPTut] = useState({});
   const [rgpd, setRgpd] = useState(false);
 
+const cancelEdit = () => {
+  // Restaurar datos originales
+  setPPer(data.persona || {});
+  setPPac(data.paciente || {});
+  setPTut(data.tutor || {});
+  setRgpd(data.consentimiento_activo || false);
+  setEdit(false);
+};
+
   useEffect(() => {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
     const tk = localStorage.getItem('token');
@@ -312,7 +321,7 @@ const doAccion = async (idCita, accion, fecha = null) => {
         {!edit
           ? <button className="btn-save" onClick={() => setEdit(true)}>Editar datos</button>
           : <>
-            <button className="btn-cancel" onClick={() => setEdit(false)}>Cancelar</button>
+            <button className="btn-cancel" onClick={cancelEdit}>Cancelar</button>
             <button className="btn-save" onClick={savePerfil}>Guardar</button>
           </>
         }
@@ -604,10 +613,11 @@ const doAccion = async (idCita, accion, fecha = null) => {
       try {
         const fechaHoraCompleta = fechaNueva.toISOString().slice(0, 19).replace('T', ' '); // format to YYYY-MM-DD HH:mm:ss
 
-        console.log('Reprogramando cita:', {
-          citaId: repro.citaId,
-          fechaHora: fechaHoraCompleta
-        });
+console.log('Datos que se envían al backend:', {
+  accion: 'REPROGRAMAR',
+  fecha: fechaHoraCompleta,
+  citaId: repro.citaId
+});
 
         const response = await axios.post(
           `/prof/citas/${repro.citaId}/accion`,
