@@ -57,35 +57,56 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
     setIsLoading(true);
 
     try {
-      // Subir todo directamente a AWS S3 incluyendo datos del tratamiento
-      const formDataFile = new FormData();
-      
-      // Datos del tratamiento
-      formDataFile.append('titulo', tit);
-      formDataFile.append('notas', desc);
-      formDataFile.append('fecha_inicio', fechaInicio || '');
-      formDataFile.append('fecha_fin', fechaFin || '');
-      formDataFile.append('frecuencia_sesiones', frecuencia || '1');
-      formDataFile.append('id_paciente', idPaciente);
-      formDataFile.append('tipo', 'tratamiento');
-      
-      // Archivo si existe
       if (file) {
+        // Si hay archivo, usar AWS S3
+        const formDataFile = new FormData();
+        
+        // Datos del tratamiento
+        formDataFile.append('titulo', tit);
+        formDataFile.append('notas', desc);
+        formDataFile.append('fecha_inicio', fechaInicio || '');
+        formDataFile.append('fecha_fin', fechaFin || '');
+        formDataFile.append('frecuencia_sesiones', frecuencia || '1');
+        formDataFile.append('id_paciente', idPaciente);
+        formDataFile.append('tipo', 'tratamiento');
         formDataFile.append('file', file);
-      }
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${tk}`
-        },
-        body: formDataFile
-      });
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${tk}`
+          },
+          body: formDataFile
+        });
 
-      const result = await response.json();
-      console.log('Respuesta del servidor:', result);
-      if (!result.ok) {
-        throw new Error(result.mensaje || 'Error al crear tratamiento');
+        const result = await response.json();
+        console.log('Respuesta del servidor (con archivo):', result);
+        if (!result.ok) {
+          throw new Error(result.mensaje || 'Error al crear tratamiento');
+        }
+      } else {
+        // Si NO hay archivo, crear tratamiento sin archivo (ruta normal)
+        const fd = new FormData();
+        fd.append('titulo', tit);
+        fd.append('descripcion', desc);
+        if (fechaInicio) fd.append('fecha_inicio', fechaInicio);
+        if (fechaFin) fd.append('fecha_fin', fechaFin);
+        if (frecuencia) fd.append('frecuencia', frecuencia);
+
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/prof/pacientes/${idPaciente}/tareas`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${tk}`,
+            'Content-Type': 'multipart/form-data'
+          },
+          body: fd
+        });
+
+        const result = await response.json();
+        console.log('Respuesta del servidor (sin archivo):', result);
+        if (!result.ok) {
+          throw new Error(result.mensaje || 'Error al crear tratamiento');
+        }
       }
 
       // Limpiar formulario y cerrar modal

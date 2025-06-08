@@ -35,10 +35,15 @@ import PoliticaCookies from './components/secciones/PoliticaCookies';
 // Componente para rutas protegidas
 function ProtectedRoute({ children, requiredRole, user, onUnauthorized }) {
   const navigate = useNavigate();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
+
+    if (hasRedirected) return;
+
     if (!user) {
       onUnauthorized('Debes iniciar sesión para acceder a esta página');
+      setHasRedirected(true);
       navigate('/', { replace: true });
       return;
     }
@@ -46,9 +51,15 @@ function ProtectedRoute({ children, requiredRole, user, onUnauthorized }) {
     const userRole = user?.rol?.toLowerCase() || user?.role?.toLowerCase();
     if (userRole !== requiredRole.toLowerCase()) {
       onUnauthorized(`No tienes permisos para acceder a la sección de ${requiredRole}`);
+      setHasRedirected(true);
       navigate('/', { replace: true });
     }
-  }, [user, requiredRole, navigate, onUnauthorized]);
+  }, [user, requiredRole, navigate, onUnauthorized, hasRedirected]);
+
+
+  useEffect(() => {
+    setHasRedirected(false);
+  }, [user, requiredRole]);
 
   if (!user) return null;
 
@@ -66,7 +77,15 @@ export default function App() {
 
   // Función para mostrar mensajes de error de permisos
   const showUnauthorizedMessage = (message) => {
-    setToast({ show: true, ok: false, msg: message, type: 'unauthorized' });
+
+    if (toast.show && toast.type === 'unauthorized') return;
+    
+    setToast({ 
+      show: true, 
+      ok: false, 
+      msg: message, 
+      type: 'unauthorized' 
+    });
   };
 
   // Limpiar sesión solo en recarga forzada (Ctrl+F5)
@@ -136,9 +155,19 @@ export default function App() {
   // Oculta el toast tras 2s para errores de permisos, 5s para otros
   useEffect(() => {
     if (!toast.show) return;
+    
+    // Reduced timeout for unauthorized messages
     const timeout = toast.type === 'unauthorized' ? 2000 : 5000;
-    const id = setTimeout(() => setToast(t => ({ ...t, show: false })), timeout);
-    return () => clearTimeout(id);
+    
+    // Use a ref to keep track of the timeout
+    const timeoutId = setTimeout(() => {
+      setToast(t => ({ ...t, show: false }));
+    }, timeout);
+    
+    // Clear the timeout when component unmounts or toast changes
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [toast.show, toast.type]);
 
   const handleLoginSuccess = userData => {
