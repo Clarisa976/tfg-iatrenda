@@ -13,12 +13,29 @@ WORKDIR /app
 # Copiar todo el código
 COPY . .
 
-# Dar permisos de ejecución a TU composer.phar
+# Debug: ver qué archivos tenemos
+RUN ls -la
+
+# Debug: verificar composer.phar
+RUN ls -la composer.phar || echo "composer.phar no encontrado"
+
+# Dar permisos
 RUN chmod +x composer.phar
 
-# Usar TU composer.phar (el que funciona)
-RUN php composer.phar install --no-dev --optimize-autoloader
+# Debug: probar composer
+RUN php composer.phar --version || echo "Error con composer.phar"
+
+# Debug: validar composer.json
+RUN php composer.phar validate || echo "composer.json inválido"
+
+# Debug: diagnóstico
+RUN php composer.phar diagnose || echo "Diagnóstico falló"
+
+# Debug: mostrar composer.json
+RUN cat composer.json
+
+# Instalar con verbose para ver errores
+RUN php composer.phar install --no-dev --optimize-autoloader --verbose
 
 EXPOSE $PORT
-
 CMD php -S 0.0.0.0:$PORT -t public public/index.php
