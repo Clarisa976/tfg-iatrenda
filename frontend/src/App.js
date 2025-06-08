@@ -72,16 +72,20 @@ export default function App() {
     setToast({ show: true, ok: false, msg: message, type: 'unauthorized' });
   };
 
-  // Limpiar sesión y token al recargar la página
+  // Limpiar sesión solo en recarga forzada (Ctrl+F5)
   useEffect(() => {
-    const handlePageReload = (e) => {
-      if (e.persisted) {
-        setUser(null);
+    const handleKeyDown = (e) => {
+      // Detectar Ctrl+F5 o Ctrl+Shift+R (recarga forzada)
+      if ((e.ctrlKey && e.key === 'F5') || (e.ctrlKey && e.shiftKey && e.key === 'R')) {
+        console.log('Recarga forzada detectada - limpiando sesión');
         localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+        setUser(null);
       }
     };
-    window.addEventListener('pageshow', handlePageReload);
-    return () => window.removeEventListener('pageshow', handlePageReload);
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -248,7 +252,7 @@ export default function App() {
             } 
           />
 
-          {/* Ruta catch-all para páginas no encontradas */}
+          {/* Ruta para páginas no encontradas */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
