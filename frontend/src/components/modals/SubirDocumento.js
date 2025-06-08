@@ -60,8 +60,8 @@ export default function SubirDocumento({ onDone, idPaciente }) {
       formDataFile.append('tipo', 'historial');
       formDataFile.append('diagnostico_preliminar', diagnosticoPreliminar);
       formDataFile.append('diagnostico_final', diagnosticoFinal);
-
-      const response = await fetch('/api/s3/upload', {
+      
+const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${tk}`
