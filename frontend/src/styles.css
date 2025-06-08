@@ -761,7 +761,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .modal-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 1rem;
   border-top: 1px solid #e9ecef;
   padding-top: 1rem;
@@ -2440,10 +2440,9 @@ input[type="checkbox"]:checked::after {
   .cookie-banner__actions {
     flex: 0;
   }
-
   .add-user-modal {
     width: 90% !important;
-    max-width: 900px !important;
+    max-width: 600px !important;
   }
 
   .form-section {

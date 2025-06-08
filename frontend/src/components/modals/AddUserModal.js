@@ -168,16 +168,14 @@ export default function AddUserModal({ open, toggle, onSuccess, initialUser })
     const url     = isEdit
       ? `${baseURL}/admin/usuarios/${initialUser.id}`
       : `${baseURL}/admin/usuarios`;
-    const method  = isEdit ? 'put' : 'post';
-
-    try {
+    const method  = isEdit ? 'put' : 'post';    try {
       const res = await axios({
         method, url, data: body,
         headers: { Authorization:`Bearer ${tk}` }
       });
 
       if (res.data.ok) {
-        onSuccess(p.nombre);
+        onSuccess(p.nombre, null);
         toggle(); 
       } else {
         onSuccess(null, {

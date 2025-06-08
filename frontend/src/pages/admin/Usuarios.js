@@ -57,32 +57,28 @@ export default function Usuarios() {
 const confirmarDelete = async () => {
   const tk = localStorage.getItem('token');
   try {
-    const response = await axios.post(
+    const response = await axios.delete(
       `/admin/borrar-usuario/${userToDel.id}`,
-      {},
       { headers: { 'Authorization': `Bearer ${tk}` } }
     );
 
     console.log('Respuesta al eliminar:', response.data);
-    
-    if (response.data && response.data.ok) {
+      if (response.data && response.data.ok) {
       mostrarToast({
         ok: true,
-        titulo: 'Usuario eliminado',
-        mensaje: `${userToDel.nombre} ${userToDel.apellido1} eliminado correctamente.`
+        titulo: 'Usuario desactivado',
+        mensaje: `${userToDel.nombre} ${userToDel.apellido1} desactivado correctamente.`
       });
       setDelOpen(false);
       setUserToDel(null);
       cargar();
-    } else {
-      mostrarToast({
+    } else {      mostrarToast({
         ok: false,
         titulo: 'Error',
-        mensaje: response.data.mensaje || 'No se pudo eliminar el usuario.'
+        mensaje: response.data.mensaje || 'No se pudo desactivar el usuario.'
       });
-    }
-  } catch (err) {
-    console.error('Error al eliminar:', err);
+    }  } catch (err) {
+    console.error('Error al desactivar:', err);
     
     // Si hay datos en la respuesta de error
     if (err.response && err.response.data) {
@@ -204,13 +200,11 @@ const confirmarDelete = async () => {
         toggle={()=>{ setOpenModal(false); setSelectedUser(null); }}
         initialUser={selectedUser}
         onSuccess={afterSave}
-      />
-
-      <ConfirmacionEliminacionModal
+      />      <ConfirmacionEliminacionModal
         open={delOpen}
         toggle={()=>setDelOpen(o=>!o)}
         onConfirm={confirmarDelete}
-        message={`¿Eliminar a ${userToDel?.nombre} ${userToDel?.apellido1}?`}
+        message={`¿Desactivar a ${userToDel?.nombre} ${userToDel?.apellido1}?`}
       />
 
       {/* Toast global personalizado */}

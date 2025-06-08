@@ -1071,6 +1071,15 @@ function eliminarUsuario(int $id, int $actor = 0): array
     return $exito ? ['ok' => true] : ['ok' => false, 'code' => 500, 'msg' => 'Error SQL'];
 }
 
+/* marca una persona como inactiva solo si NO tiene citas activas */
+function marcarUsuarioInactivo(int $id, int $actor = 0): array
+{
+    if (citasActivas($id) > 0) {
+        return ['ok' => false, 'code' => 409, 'msg' => 'El usuario tiene citas activas'];
+    }
+    $exito = execLogged('UPDATE persona SET activo=false WHERE id_persona=:id', [':id' => $id], $actor, 'persona', $id);
+    return $exito ? ['ok' => true] : ['ok' => false, 'code' => 500, 'msg' => 'Error SQL'];
+}
 
 
 function getInformeMes(int $año, int $mes): array
@@ -1627,7 +1636,7 @@ function validarFechaReprogramacion(string $fecha, int $idProfesional): array
         ];
     }
 
-    // 2. Validar día de la semana (Lunes=1 a Viernes=5)
+    //   // 2. Validar día de la semana (Lunes=1 a Viernes=5)
     $diaSemana = (int)$fechaObj->format('N'); // 1=Lunes, 7=Domingo
     if ($diaSemana < 1 || $diaSemana > 5) {
         return [
@@ -2245,14 +2254,8 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
             WHERE id_cita = ?
         ");
         $consulta->execute([$nuevoEstado, $idCita]);
-        // Registrar en el sistema lo que hicimos
-        registrarActividad($idPaciente, $idPaciente, 'cita', 'estado', $cita['estado'], $nuevoEstado, 'UPDATE');
-        $baseDatos->commit();
 
-        return [
-            'ok' => true,
-            'mensaje' => $mensaje
-        ];
+        $baseDatos->commit();
     } catch (Exception $e) {
         $baseDatos->rollBack();
         error_log("Error procesando solicitud de cita: " . $e->getMessage());

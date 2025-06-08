@@ -364,6 +364,25 @@ $app->post('/admin/usuarios', function ($req) {
       : jsonResponse(['ok'=>false,'mensaje'=>'No se pudo guardar'],500);
 });
 
+/* /admin/borrar-usuario/{id} */
+$app->delete('/admin/borrar-usuario/{id}', function ($req, $res, $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+
+    $id = (int)$args['id'];
+    $actorId = $val['usuario']['id_persona'];
+    
+    $resultado = marcarUsuarioInactivo($id, $actorId);
+    
+    if (!$resultado['ok']) {
+        $codigo = $resultado['code'] ?? 500;
+        return jsonResponse(['ok'=>false,'mensaje'=>$resultado['msg']], $codigo);
+    }
+    
+    return jsonResponse(['ok'=>true,'mensaje'=>'Usuario marcado como inactivo']);
+});
+
 /* crear-contrasena*/
 $app->post('/crear-contrasena', function ($req) {
     $b = $req->getParsedBody() ?? [];
