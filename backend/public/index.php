@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 
-use Dotenv\Dotenv;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
@@ -10,9 +9,10 @@ require __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/funciones_CTES_servicios.php';
 
 /* .env */
-$dotenv = Dotenv::createUnsafeImmutable(__DIR__ . '/../');
-$dotenv->load();
-
+if (file_exists(__DIR__ . '/../.env')) {
+    $dotenv = Dotenv\Dotenv::createUnsafeImmutable(__DIR__ . '/../');
+    $dotenv->load();
+}
 /*error_log('DB_USER: ' . getenv('DB_USER'));
 error_log('DB_PASS: ' . getenv('DB_PASS'));*/
 
