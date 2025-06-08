@@ -838,5 +838,90 @@ class DocumentController {
             ->withHeader('Content-Type', 'application/json')
             ->withStatus($status);
     }
+
+
+    
+/**
+ * Obtener tratamientos de un paciente con URLs de documentos
+ * GET /api/s3/tratamientos/{paciente_id}
+ */
+public function getTreatmentsWithDocuments($request, $response, $args) {
+    try {
+        $pacienteId = $args['paciente_id'];
+        
+        // Verificar permisos
+        $val = verificarTokenUsuario();
+        if ($val === false) {
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'No autorizado'
+            ], 401);
+        }
+
+        $baseDatos = conectar();
+        
+        // Obtener tratamientos del paciente
+        $sql = "SELECT t.*, h.id_historial
+                FROM tratamiento t
+                INNER JOIN historial_clinico h ON t.id_historial = h.id_historial
+                WHERE h.id_paciente = ?
+                ORDER BY t.fecha_inicio DESC";
+        
+        $stmt = $baseDatos->prepare($sql);
+        $stmt->execute([$pacienteId]);
+        $tratamientos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Para cada tratamiento, obtener sus documentos con URLs firmadas
+        foreach ($tratamientos as &$tratamiento) {
+            // Obtener documentos del tratamiento
+            $sqlDocs = "SELECT dc.* 
+                        FROM documento_clinico dc 
+                        WHERE dc.id_tratamiento = ?
+                        ORDER BY dc.fecha_subida DESC";
+            
+            $stmtDocs = $baseDatos->prepare($sqlDocs);
+            $stmtDocs->execute([$tratamiento['id_tratamiento']]);
+            $documentos = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Generar URLs firmadas para cada documento
+            $documentosConUrls = [];
+            foreach ($documentos as $documento) {
+                $urlResult = $this->s3Service->getPresignedUrl(
+                    $documento['ruta'],
+                    '+1 hour', // URL válida por 1 hora
+                    $documento['nombre_archivo'] ?? 'documento'
+                );
+                
+                if ($urlResult['success']) {
+                    $documento['url_descarga'] = $urlResult['url'];
+                    $documento['url_temporal'] = true;
+                } else {
+                    $documento['url_descarga'] = null;
+                    $documento['url_temporal'] = false;
+                    error_log('Error generando URL para documento ' . $documento['id_documento'] . ': ' . $urlResult['error']);
+                }
+                
+                $documentosConUrls[] = $documento;
+            }
+            
+            $tratamiento['documentos'] = $documentosConUrls;
+        }
+        
+        return $this->jsonResponse($response, [
+            'ok' => true,
+            'tratamientos' => $tratamientos,
+            'total' => count($tratamientos)
+        ]);
+
+    } catch (\Exception $e) {
+        error_log('Error getting treatments with documents: ' . $e->getMessage());
+        return $this->jsonResponse($response, [
+            'ok' => false,
+            'mensaje' => 'Error interno del servidor'
+        ], 500);
+    }
+}
+
+
 }
 ?>

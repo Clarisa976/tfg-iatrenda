@@ -14,9 +14,30 @@ import SubirDocumento from '../../components/modals/SubirDocumento';
 import ModalTratamiento from '../../components/modals/ModalTratamiento';
 
 
+
 registerLocale('es', es);
 
+// Hook para manejar URLs de S3
+const useS3Documents = (documentos) => {
+ //const [documentUrls, setDocumentUrls] = useState({});
+  
+  const getDocumentUrl = async (documentoId) => {
+    try {
+      const tk = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/s3/download/${documentoId}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${tk}` },
+        redirect: 'manual'
+      });
+      return response.status === 302 ? response.headers.get('Location') : null;
+    } catch (error) {
+      console.error('Error obteniendo URL de S3:', error);
+      return null;
+    }
+  };
 
+  return { getDocumentUrl };
+};
 const TabBtn = ({ label, sel, onClick }) => (
   <button className={`tab-btn ${sel ? 'tab-button-selected' : 'tab-button-unselected'}`}
     onClick={onClick}>{label}</button>
@@ -267,6 +288,8 @@ export default function PerfilPacienteProfesional() {
   const [pTut, setPTut] = useState({});
   const [rgpd, setRgpd] = useState(false);
 
+  const { getDocumentUrl } = useS3Documents(data?.tratamientos?.flatMap(t => t.documentos || []) || []);
+
 const cancelEdit = () => {
   // Restaurar datos originales
   setPPer(data.persona || {});
@@ -282,26 +305,43 @@ const cancelEdit = () => {
     if (tk) axios.defaults.headers.common.Authorization = `Bearer ${tk}`;
   }, []);
 
-  const fetchData = useCallback(async () => {
+const fetchData = useCallback(async () => {
+  try {
+    console.log('Fetching updated patient data...');
+    const tk = localStorage.getItem('token');
+    
+    // Cargar datos básicos del paciente
+    const r = await axios.get(`/prof/pacientes/${id}`);
+    if (!r.data?.ok) throw new Error(r.data?.mensaje || 'Error API');
+    const d = r.data.data;
+    
+    // Cargar tratamientos con documentos S3
     try {
-      console.log('Fetching updated patient data...');
-      const r = await axios.get(`/prof/pacientes/${id}`);
-      if (!r.data?.ok) throw new Error(r.data?.mensaje || 'Error API');
-      const d = r.data.data;
-      console.log('Patient data updated:', d);
-      setData(d);
-      setPPer(d.persona || {});
-      setPPac(d.paciente || {});
-      setPTut(d.tutor || {});
-      setRgpd(d.consentimiento_activo || false);
-      if (r.data.token) localStorage.setItem('token', r.data.token);
-    } catch (e) {
-      console.error(e);
-      msg(false, 'Error', e.message);
-      setData({ tratamientos: [], documentos: [], citas: [] });
+      const treatmentsResponse = await axios.get(`/api/s3/tratamientos/${id}`, {
+        headers: { 'Authorization': `Bearer ${tk}` }
+      });
+      
+      if (treatmentsResponse.data?.ok) {
+        d.tratamientos = treatmentsResponse.data.tratamientos;
+        console.log('Tratamientos cargados desde S3:', treatmentsResponse.data.tratamientos);
+      }
+    } catch (s3Error) {
+      console.warn('Error cargando desde S3, usando datos originales:', s3Error);
     }
-  }, [id]);
-
+    
+    console.log('Patient data updated:', d);
+    setData(d);
+    setPPer(d.persona || {});
+    setPPac(d.paciente || {});
+    setPTut(d.tutor || {});
+    setRgpd(d.consentimiento_activo || false);
+    if (r.data.token) localStorage.setItem('token', r.data.token);
+  } catch (e) {
+    console.error(e);
+    msg(false, 'Error', e.message);
+    setData({ tratamientos: [], documentos: [], citas: [] });
+  }
+}, [id]);
 
   useEffect(() => {
     fetchData();
@@ -401,7 +441,24 @@ const doAccion = async (idCita, accion, fecha = null) => {
           {data.tratamientos.map(t => (
             <li key={t.id_tratamiento}
               className="tratamiento-item"
-              onClick={() => setSelT(t)}>
+              onClick={async () => {
+  // Cargar URLs de documentos antes de abrir modal
+  if (t.documentos && t.documentos.length > 0) {
+    const tratamientoConUrls = { ...t };
+    for (const doc of tratamientoConUrls.documentos) {
+      if (!doc.url_descarga) {
+        const url = await getDocumentUrl(doc.id_documento);
+        if (url) {
+          doc.url_descarga = url;
+          doc.url_temporal = true;
+        }
+      }
+    }
+    setSelT(tratamientoConUrls);
+  } else {
+    setSelT(t);
+  }
+}}>
               <h5>{t.titulo || 'Sin título'}</h5>
               <p>{t.notas?.substring(0, 120) || 'Sin descripción'}</p>
               {t.documentos && t.documentos.length > 0 && (

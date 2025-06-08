@@ -1382,6 +1382,40 @@ $app->get('/api/s3/documentos', function (Request $request, Response $response) 
     $controller = new App\Controllers\DocumentController();
     return $controller->listDocuments($request, $response);
 });
+// También añadir la ruta en tu archivo de rutas:
+
+$app->get('/api/s3/tratamientos/{paciente_id}', function (Request $request, Response $response, array $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        $response->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'No autorizado']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
+    }
+    
+    $controller = new App\Controllers\DocumentController();
+    return $controller->getTreatmentsWithDocuments($request, $response, $args);
+});
+
+
+// Obtener tratamientos con documentos S3
+$app->get('/api/s3/tratamientos/{paciente_id}', function (Request $request, Response $response, array $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        $response->getBody()->write(json_encode(['ok' => false, 'mensaje' => 'No autorizado']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
+    }
+    
+    $controller = new App\Controllers\DocumentController();
+    return $controller->getTreatmentsWithDocuments($request, $response, $args);
+});
+
+// CORS para las nuevas rutas
+$app->options('/api/s3/tratamientos/{paciente_id}', function (Request $request, Response $response, array $args) {
+    return $response
+        ->withHeader('Access-Control-Allow-Origin', '*')
+        ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+});
+
 
 // Eliminar documento S3
 $app->delete('/api/s3/documentos/{id}', function (Request $request, Response $response, array $args) {

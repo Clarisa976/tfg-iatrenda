@@ -1,36 +1,22 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { useS3Documents } from './useS3Documents'; // Ajusta la ruta según tu estructura
 
-
-const isImage = (path) => {
-  if (!path) return false;
-  const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
-  return extensions.some(ext => path.toLowerCase().endsWith(ext));
-};
-
-
-const getFileUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-
-  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  const fileName = cleanPath.split('/').pop();
-
-  let baseUrl;
-  if (process.env.REACT_APP_API_URL) {
-    baseUrl = process.env.REACT_APP_API_URL.replace(/\/$/, '');
-  } else if (window.location.hostname === 'localhost') {
-    baseUrl = 'http://localhost:8081';
-  } else {
-    baseUrl = window.location.origin;
-  }
-
-  const finalUrl = `${baseUrl}/uploads/${fileName}?t=${Date.now()}`;
-  return finalUrl;
+const isImage = (tipo) => {
+  if (!tipo) return false;
+  return tipo.startsWith('image/');
 };
 
 export default function ModalVerTarea({ tarea, onClose }) {
-  return (    <div className="modal-backdrop" onClick={onClose}>
+  const { 
+    getDocumentUrl, 
+    isDocumentLoading, 
+    hasDocumentError, 
+    downloadDocument 
+  } = useS3Documents(tarea?.documentos || []);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-ver-tarea-container" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{tarea.titulo}</h3>
@@ -57,53 +43,89 @@ export default function ModalVerTarea({ tarea, onClose }) {
           )}
 
           <h4>Descripción</h4>
-          <p>{tarea.descripcion || 'Sin descripción disponible'}</p>
+          <p>{tarea.descripcion || tarea.notas || 'Sin descripción disponible'}</p>
 
           {/* Archivos adjuntos */}
-          {tarea.documentos && tarea.documentos.length > 0 && (<div className="tratamiento-attachment tarea-info-section">
+          {tarea.documentos && tarea.documentos.length > 0 && (
+            <div className="tratamiento-attachment tarea-info-section">
               <h4>Archivos adjuntos</h4>
               
               {tarea.documentos.map((documento, index) => {
-                const docFileUrl = getFileUrl(documento.ruta);
-                const isDocImage = isImage(documento.ruta);
+                const docId = documento.id_documento;
+                const documentUrl = getDocumentUrl(docId);
+                const isLoading = isDocumentLoading(docId);
+                const hasError = hasDocumentError(docId);
+                const isDocImage = isImage(documento.tipo);
 
                 return (
                   <div key={documento.id_documento || index} className="tarea-documento-item">
-                    
-
                     {isDocImage ? (
-                      <div className="imagen-container-center">                       
-                       <img
-                          src={docFileUrl}
-                          alt={`Adjunto ${index + 1} de la tarea`}
-                          className="tarea-imagen-preview"
-                          onError={(e) => {
-                            console.error('Error al cargar imagen:', docFileUrl);
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
-                        <div className="tarea-imagen-error">
-                          <p>No se pudo visualizar la imagen</p>
-                          <p><small>Ruta: {documento.ruta}</small></p>
+                      <div className="imagen-container-center">
+                        {isLoading ? (
+                          <div className="tarea-imagen-loading">
+                            <p>Cargando imagen...</p>
+                          </div>
+                        ) : hasError || !documentUrl ? (
+                          <div className="tarea-imagen-error">
+                            <p>No se pudo cargar la imagen</p>
+                            <button 
+                              className="btn-primary btn-small"
+                              onClick={() => downloadDocument(documento)}
+                              style={{ marginTop: '10px' }}
+                            >
+                              Descargar archivo
+                            </button>
+                          </div>
+                        ) : (
+                          <img
+                            src={documentUrl}
+                            alt={`Adjunto ${index + 1} de la tarea`}
+                            className="tarea-imagen-preview"
+                            onError={(e) => {
+                              console.error('Error al cargar imagen desde S3:', documentUrl);
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'block';
+                            }}
+                          />
+                        )}
+                        
+                        {/* Div de error que se muestra si falla la imagen */}
+                        <div className="tarea-imagen-error" style={{ display: 'none' }}>
+                          <p>Error al visualizar la imagen</p>
+                          <button 
+                            className="btn-primary btn-small"
+                            onClick={() => downloadDocument(documento)}
+                            style={{ marginTop: '10px' }}
+                          >
+                            Descargar archivo
+                          </button>
                         </div>
                       </div>
-                    ) : ( <div className="tarea-file-link-container">                        
-                    <a
-                          href={docFileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="tarea-download-link"
-                        >
-                          {documento.nombre_archivo = 'Ver archivo'}
-                        </a>
+                    ) : (
+                      <div className="tarea-file-link-container">
+                        {isLoading ? (
+                          <p>Cargando documento...</p>
+                        ) : (
+                          <div>
+                            <p><strong>Archivo:</strong> {documento.nombre_archivo || 'Documento'}</p>
+                            <p><strong>Tipo:</strong> {documento.tipo || 'Desconocido'}</p>
+                            <button
+                              className="tarea-download-link btn-primary"
+                              onClick={() => downloadDocument(documento)}
+                              disabled={hasError}
+                            >
+                              {hasError ? 'Error al cargar' : 'Descargar archivo'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
-          )}         
+          )}
+          
           {/* Mensaje si no hay archivos */}
           {(!tarea.documentos || tarea.documentos.length === 0) && (
             <div className="tarea-sin-archivos-container">
