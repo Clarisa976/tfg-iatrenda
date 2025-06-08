@@ -17,9 +17,9 @@ if (file_exists(__DIR__ . '/../.env')) {
 error_log('DB_PASS: ' . getenv('DB_PASS'));*/
 
 /* Permitir CORS */
-header('Access-Control-Allow-Origin: ' . (getenv('FRONTEND_URL') ?: 'https://clinica-petaka.netlify.app'));
+header('Access-Control-Allow-Origin: https://clinica-petaka.netlify.app');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Access-Control-Allow-Credentials: true');
 
 /* Si es una solicitud OPTIONS, terminar aquí */
@@ -27,6 +27,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+
+// Middleware para manejar las solicitudes OPTIONS de CORS
+$app->options('/{routes:.+}', function (Request $request, Response $response) {
+    $origin = $request->getHeaderLine('Origin');
+    $allowedOrigins = ['https://clinica-petaka.netlify.app'];
+    $useOrigin = in_array($origin, $allowedOrigins) ? $origin : 'https://clinica-petaka.netlify.app';
+    
+    return $response
+        ->withHeader('Access-Control-Allow-Origin', $useOrigin)
+        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+        ->withHeader('Access-Control-Allow-Credentials', 'true')
+        ->withHeader('Access-Control-Max-Age', '86400')
+        ->withStatus(200);
+});
 
 /* Slim */
 $app = AppFactory::create();
