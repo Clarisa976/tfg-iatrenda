@@ -37,7 +37,7 @@ const getEstadoClass = (estado) => {
   };
   return clases[estado] || '';
 };
-const api = {
+/*const api = {
   get: async (url, params = {}) => {
     const token = localStorage.getItem('token');
     const queryString = new URLSearchParams(params).toString();
@@ -100,7 +100,7 @@ const api = {
     });
     return response.json();
   }
-};
+};*/
 
 // Componente Input memoizado
 const InputField = memo(({ obj, onChange, fieldKey, label, type = 'text', full = false, edit }) => {
