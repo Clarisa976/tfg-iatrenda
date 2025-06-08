@@ -17,7 +17,7 @@ if (file_exists(__DIR__ . '/../.env')) {
 error_log('DB_PASS: ' . getenv('DB_PASS'));*/
 
 /* Permitir CORS */
-header('Access-Control-Allow-Origin: ' . (getenv('FRONTEND_URL') ?: 'http://localhost:3000'));
+header('Access-Control-Allow-Origin: ' . (getenv('FRONTEND_URL') ?: 'https://clinica-petaka.netlify.app/'));
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Credentials: true');
@@ -305,7 +305,7 @@ $app->post('/notificaciones/{id}', function ($req,$res,$args){
 // Handler específico para OPTIONS en /notificaciones/{id}
 $app->options('/notificaciones/{id}', function ($request, $response, $args) {
     $origin = $request->getHeaderLine('Origin');
-    $allowedOrigins = [getenv('FRONTEND_URL') ?: 'http://localhost:3000', 'http://127.0.0.1:3000'];
+    $allowedOrigins = [getenv('FRONTEND_URL') ?: 'https://clinica-petaka.netlify.app/'];
     $useOrigin = in_array($origin, $allowedOrigins) ? $origin : '*';
     
     error_log("CORS OPTIONS para /notificaciones/{id}: Origin=$origin");
@@ -430,7 +430,7 @@ $app->post('/forgot-password', function ($req) {
 
         // El email existe - generar token de recuperación y enviar email
         $uid = rtrim(strtr(base64_encode((string)$usuario['id_persona']), '+/', '-_'), '=');
-        $front = getenv('FRONTEND_URL') ?: 'http://localhost:3000';
+        $front = getenv('FRONTEND_URL') ?: 'https://clinica-petaka.netlify.app/';
         $link = "$front/crear-contrasena?uid=$uid";
         
         $html = "
