@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import '../../styles.css';
 
-export default function SubirTratamiento({ onDone }) {
-  const { id } = useParams();
+export default function SubirTratamiento({ onDone, idPaciente }) {
   const tk = localStorage.getItem('token');
 
   const [show, setShow] = useState(false);
@@ -60,17 +57,53 @@ export default function SubirTratamiento({ onDone }) {
     setIsLoading(true);
 
     try {
-      const fd = new FormData();
-      fd.append('titulo', tit);
-      fd.append('descripcion', desc);
-      if (fechaInicio) fd.append('fecha_inicio', fechaInicio);
-      if (fechaFin) fd.append('fecha_fin', fechaFin);
-      if (frecuencia) fd.append('frecuencia', frecuencia);
-      if (file) fd.append('file', file);
+      // 1. Crear tratamiento primero
+      const tratamientoData = {
+        titulo: tit,
+        notas: desc,
+        fecha_inicio: fechaInicio || null,
+        fecha_fin: fechaFin || null,
+        frecuencia_sesiones: frecuencia || 1,
+        id_paciente: idPaciente
+      };
 
-      await axios.post(`/prof/pacientes/${id}/tareas`, fd, {
-        headers: { Authorization: `Bearer ${tk}`, 'Content-Type': 'multipart/form-data' }
+      const response = await fetch('/prof/tratamientos', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${tk}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(tratamientoData)
       });
+
+      const result = await response.json();
+      if (!result.ok) {
+        throw new Error(result.mensaje || 'Error al crear tratamiento');
+      }
+
+      const tratamientoId = result.id_tratamiento;
+
+      // 2. Subir archivo a AWS S3 si existe
+      if (file) {
+        const formDataFile = new FormData();
+        formDataFile.append('file', file);
+        formDataFile.append('id_paciente', idPaciente);
+        formDataFile.append('id_tratamiento', tratamientoId);
+        formDataFile.append('tipo', 'tratamiento');
+
+        const uploadResponse = await fetch('/api/s3/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${tk}`
+          },
+          body: formDataFile
+        });
+
+        const uploadResult = await uploadResponse.json();
+        if (!uploadResult.ok) {
+          throw new Error(uploadResult.mensaje || 'Error al subir archivo');
+        }
+      }
 
       // Limpiar formulario y cerrar modal
       setTit('');
@@ -89,7 +122,7 @@ export default function SubirTratamiento({ onDone }) {
       // Actualizar datos
       onDone();
     } catch (e) {
-      setGeneralError('Error al guardar tratamiento: ' + (e.response?.data?.mensaje || e.message));
+      setGeneralError('Error al guardar tratamiento: ' + e.message);
     } finally {
       setIsLoading(false);
     }
@@ -235,6 +268,7 @@ export default function SubirTratamiento({ onDone }) {
                   setFileError('');
                 }
               }}
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
               style={{
                 border: fileError ? '1px solid #f44336' : 'none',
                 padding: fileError ? '5px' : '0'
@@ -251,7 +285,7 @@ export default function SubirTratamiento({ onDone }) {
               </span>
             )}
             <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
-              Tamaño máximo: 10MB
+              Formatos: PDF, DOC, DOCX, JPG, PNG, GIF. Tamaño máximo: 10MB
             </small>
           </div>
         </div>

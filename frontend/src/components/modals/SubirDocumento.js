@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import '../../styles.css';
 
-export default function SubirDocumento({ onDone }) {
-  const { id } = useParams();
+export default function SubirDocumento({ onDone, idPaciente }) {
   const tk = localStorage.getItem('token');
   
   const [show, setShow] = useState(false);
   const [file, setFile] = useState(null);
   const [diagnosticoPreliminar, setDiagnosticoPreliminar] = useState('');
+  const [diagnosticoFinal, setDiagnosticoFinal] = useState('');
   
   // Errores específicos para cada campo
   const [fileError, setFileError] = useState('');
@@ -55,17 +53,31 @@ export default function SubirDocumento({ onDone }) {
 
     setIsLoading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('diagnostico_preliminar', diagnosticoPreliminar);
+      // Subir archivo directamente a AWS S3
+      const formDataFile = new FormData();
+      formDataFile.append('file', file);
+      formDataFile.append('id_paciente', idPaciente);
+      formDataFile.append('tipo', 'historial');
+      formDataFile.append('diagnostico_preliminar', diagnosticoPreliminar);
+      formDataFile.append('diagnostico_final', diagnosticoFinal);
 
-      await axios.post(`/prof/pacientes/${id}/documentos`, fd, {
-        headers: { Authorization: `Bearer ${tk}`, 'Content-Type': 'multipart/form-data' }
+      const response = await fetch('/api/s3/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${tk}`
+        },
+        body: formDataFile
       });
+
+      const result = await response.json();
+      if (!result.ok) {
+        throw new Error(result.mensaje || 'Error al subir documento');
+      }
 
       // Limpiar formulario y cerrar modal
       setFile(null);
       setDiagnosticoPreliminar('');
+      setDiagnosticoFinal('');
       setFileError('');
       setDiagnosticoPreliminarError('');
       setGeneralError('');
@@ -74,7 +86,7 @@ export default function SubirDocumento({ onDone }) {
       // Actualizar datos
       onDone();
     } catch (e) {
-      setGeneralError('Error al subir documento: ' + (e.response?.data?.mensaje || e.message));
+      setGeneralError('Error al subir documento: ' + e.message);
     } finally {
       setIsLoading(false);
     }
@@ -133,6 +145,22 @@ export default function SubirDocumento({ onDone }) {
               )}
               <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
                 Este campo es obligatorio y se mostrará como identificador del documento
+              </small>
+            </div>
+
+            <div className="field full">
+              <label>Diagnóstico final (opcional)</label>
+              <textarea
+                value={diagnosticoFinal}
+                onChange={e => setDiagnosticoFinal(e.target.value)}
+                placeholder="Diagnóstico final tras seguimiento (opcional)..."
+                rows="3"
+                style={{
+                  border: '1px solid #ddd'
+                }}
+              />
+              <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
+                Este campo se puede completar posteriormente
               </small>
             </div>
           </div>

@@ -37,7 +37,70 @@ const getEstadoClass = (estado) => {
   };
   return clases[estado] || '';
 };
-
+const api = {
+  get: async (url, params = {}) => {
+    const token = localStorage.getItem('token');
+    const queryString = new URLSearchParams(params).toString();
+    const fullUrl = queryString ? `${url}?${queryString}` : url;
+    
+    const response = await fetch(fullUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.json();
+  },
+  
+  post: async (url, data) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    return response.json();
+  },
+  
+  put: async (url, data) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    return response.json();
+  },
+  
+  delete: async (url) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.json();
+  },
+  
+  upload: async (url, formData) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    return response.json();
+  }
+};
 
 // Componente Input memoizado
 const InputField = memo(({ obj, onChange, fieldKey, label, type = 'text', full = false, edit }) => {
@@ -213,31 +276,39 @@ const cancelEdit = () => {
   setEdit(false);
 };
 
-  useEffect(() => {
+ /* useEffect(() => {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
     const tk = localStorage.getItem('token');
     if (tk) axios.defaults.headers.common.Authorization = `Bearer ${tk}`;
-  }, []);
+  }, []);*/
 
-  const fetchData = useCallback(async () => {
-    try {
-      console.log('Fetching updated patient data...');
-      const r = await axios.get(`/prof/pacientes/${id}`);
-      if (!r.data?.ok) throw new Error(r.data?.mensaje || 'Error API');
-      const d = r.data.data;
-      console.log('Patient data updated:', d);
-      setData(d);
-      setPPer(d.persona || {});
-      setPPac(d.paciente || {});
-      setPTut(d.tutor || {});
-      setRgpd(d.consentimiento_activo || false);
-      if (r.data.token) localStorage.setItem('token', r.data.token);
-    } catch (e) {
-      console.error(e);
-      msg(false, 'Error', e.message);
-      setData({ tratamientos: [], documentos: [], citas: [] });
-    }
-  }, [id]);
+const fetchData = useCallback(async () => {
+  try {
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/prof/pacientes/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    const r = await response.json();
+    
+    if (!r?.ok) throw new Error(r?.mensaje || 'Error API');
+    const d = r.data;
+    console.log('Patient data updated:', d);
+    setData(d);
+    setPPer(d.persona || {});
+    setPPac(d.paciente || {});
+    setPTut(d.tutor || {});
+    setRgpd(d.consentimiento_activo || false);
+    if (r.token) localStorage.setItem('token', r.token);
+  } catch (e) {
+    console.error(e);
+    msg(false, 'Error', e.message);
+    setData({ tratamientos: [], documentos: [], citas: [] });
+  }
+}, [id]);
 
 
   useEffect(() => {
@@ -272,31 +343,56 @@ const cancelEdit = () => {
 
  
   const savePerfil = async () => {
-    try {
-      await axios.put(`/prof/pacientes/${id}`, {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/prof/pacientes/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         persona: pPer,
         paciente: { ...pPac, tutor: pPac.tipo_paciente !== 'ADULTO' ? pTut : null },
         rgpd
-      });
-      msg(true, '¡Éxito!', 'Paciente actualizado correctamente');
-      setEdit(false);
-    } catch (e) { msg(false, 'Error', e.response?.data?.mensaje || 'El paciente no se ha podido actualizar'); }
-  };
-
-const doAccion = async (idCita, accion, fecha = null) => {
-    try {
-      const response = await axios.post(`/prof/citas/${idCita}/accion`, { accion, ...(fecha ? { fecha } : {}) });
-      if (response.data?.token) {
-        localStorage.setItem('token', response.data.token);
-      }
-      await fetchData();
-      msg(true, 'Éxito', 'La cita se ha actualizado correctamente');
-    } catch (e) {
-      console.error('Error al realizar acción en cita:', e);
-      const errorMsg = e.response?.data?.mensaje || 'No se pudo cambiar la cita. Por favor, inténtalo de nuevo.';
-      msg(false, 'Error', errorMsg);
+      })
+    });
+    const result = await response.json();
+    
+    if (!result.ok) {
+      throw new Error(result.mensaje || 'Error al actualizar paciente');
     }
-  };
+    
+    msg(true, '¡Éxito!', 'Paciente actualizado correctamente');
+    setEdit(false);
+  } catch (e) { 
+    msg(false, 'Error', e.message || 'El paciente no se ha podido actualizar'); 
+  }
+};
+const doAccion = async (idCita, accion, fecha = null) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/prof/citas/${idCita}/accion`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ accion, ...(fecha ? { fecha } : {}) })
+    });
+    const result = await response.json();
+    
+    if (result?.token) {
+      localStorage.setItem('token', result.token);
+    }
+    await fetchData();
+    msg(true, 'Éxito', 'La cita se ha actualizado correctamente');
+  } catch (e) {
+    console.error('Error al realizar acción en cita:', e);
+    const errorMsg = e.response?.data?.mensaje || 'No se pudo cambiar la cita. Por favor, inténtalo de nuevo.';
+    msg(false, 'Error', errorMsg);
+  }
+};
 
   if (data === null) return <div className="loading-estado">Cargando…</div>;
 
@@ -349,7 +445,7 @@ const doAccion = async (idCita, accion, fecha = null) => {
             </li>
           ))}
         </ul>}
-      <SubirTratamiento onDone={fetchData} />
+      <SubirTratamiento onDone={fetchData} idPaciente={id}/>
       {selT && (
         <ModalTratamiento idPac={id} treat={selT}
           onClose={() => setSelT(null)}
@@ -383,7 +479,7 @@ const doAccion = async (idCita, accion, fecha = null) => {
             </div>
           ))}
         </div>}
-      <SubirDocumento onDone={fetchData} />
+      <SubirDocumento onDone={fetchData}  idPaciente={id}/>
       {selDoc && (
         <ModalDocumento
           idPac={id}
