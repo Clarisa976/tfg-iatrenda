@@ -91,7 +91,42 @@ function obtenerUltimoConsentimiento(int $idPersona): ?array
     $resultado = $busqueda->fetch(PDO::FETCH_ASSOC);
     return $resultado ?: null;
 }
+function obtenerPerfilProfesional(int $idProfesional): array
+{
+    $baseDatos = conectar();
+    
+    // Datos de persona
+    $consultaPersona = $baseDatos->prepare("
+        SELECT nombre, apellido1, apellido2, email, telefono, 
+               fecha_nacimiento, tipo_via, nombre_calle, numero, 
+               escalera, piso, puerta, codigo_postal, ciudad, 
+               provincia, pais
+        FROM persona WHERE id_persona = ?
+    ");
+    $consultaPersona->execute([$idProfesional]);
+    $persona = $consultaPersona->fetch(PDO::FETCH_ASSOC);
+    
+    // Datos de profesional
+    $consultaProfesional = $baseDatos->prepare("
+        SELECT num_colegiado, especialidad, fecha_alta_profesional
+        FROM profesional WHERE id_profesional = ?
+    ");
+    $consultaProfesional->execute([$idProfesional]);
+    $profesional = $consultaProfesional->fetch(PDO::FETCH_ASSOC);
+    
+    return [
+        'persona' => $persona,
+        'profesional' => $profesional
+    ];
+}
 
+function actualizarPerfilProfesional(int $idProfesional, array $data, int $actor): bool
+{
+    if (!empty($data['persona'])) {
+        actualizarOInsertarPersona($data['persona'], 'PROFESIONAL', $actor, $idProfesional);
+    }
+    return true;
+}
 /* Función para ver si hay consentimiento vigente*/
 function tieneConsentimientoVigente(int $idPersona): bool
 {

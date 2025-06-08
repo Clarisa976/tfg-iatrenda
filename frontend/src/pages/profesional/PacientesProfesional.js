@@ -28,7 +28,7 @@ export default function PacientesProfesional () {
   });
 
 
-  const verPerfil = p => navigate(`/profesional/paciente/${p.id}`);
+  const verPerfil = p => navigate(`/prof/paciente/${p.id}`);
 
 
   return(

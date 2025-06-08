@@ -1361,8 +1361,57 @@ $app->delete('/api/s3/documentos/{id}', function (Request $request, Response $re
     return $controller->deleteDocument($request, $response, $args);
 });
 
-/* corre la aplicación */
-$app->run();
+/* GET /prof/perfil */
+$app->get('/prof/perfil', function(Request $req, Response $res): Response {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    
+    if ($val['usuario']['rol'] !== 'PROFESIONAL') {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+    
+    $idProfesional = (int)$val['usuario']['id_persona'];
+    
+    try {
+        $datos = obtenerPerfilProfesional($idProfesional);
+        return jsonResponse([
+            'ok' => true,
+            'data' => $datos,
+            'token' => $val['token']
+        ]);
+    } catch (Exception $e) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error al cargar el perfil'], 500);
+    }
+});
+
+/* PUT /prof/perfil */
+$app->put('/prof/perfil', function(Request $req, Response $res): Response {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    
+    if ($val['usuario']['rol'] !== 'PROFESIONAL') {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+    
+    $idProfesional = (int)$val['usuario']['id_persona'];
+    $data = $req->getParsedBody() ?? [];
+    
+    try {
+        actualizarPerfilProfesional($idProfesional, $data, $idProfesional);
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Perfil actualizado correctamente',
+            'token' => $val['token']
+        ]);
+    } catch (Exception $e) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error al actualizar el perfil'], 500);
+    }
+});
+
 /* obtiene detalles de un paciente específico para el profesional */
 $app->get('/prof/pacientes/{id}', function(Request $req, Response $res, array $args): Response {
     try {
@@ -1557,3 +1606,7 @@ $app->post('/prof/citas/{id}/accion', function(Request $req, Response $res, arra
         return jsonResponse(['ok'=>false,'mensaje'=>$e->getMessage()], 500);
     }
 });
+
+
+/* corre la aplicación */
+$app->run();
