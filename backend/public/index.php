@@ -1880,42 +1880,22 @@ $app->post('/cron/backup', function ($req) {
     try {
         $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? '';
         if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
-            error_log("Token inválido recibido: '$cronToken'");
             return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
         }
         
-        error_log("=== BACKUP INICIADO ===");
+        // Responder inmediatamente
+        fastcgi_finish_request(); // Si está disponible
         
+        // Ejecutar backup en background
         require_once __DIR__ . '/../src/Services/BackupService.php';
-        error_log("BackupService cargado");
-        
         $backupService = new BackupService();
-        error_log("BackupService instanciado");
+        $backupService->createFullBackup();
         
-        $backupResult = $backupService->createFullBackup();
-        error_log("Backup completado: " . json_encode($backupResult));
+        return jsonResponse(['ok' => true, 'mensaje' => 'Backup iniciado']);
         
-        $cleanupResult = $backupService->deleteOldBackups(10);
-        error_log("Cleanup completado: " . json_encode($cleanupResult));
-        
-        return jsonResponse([
-            'ok' => true,
-            'mensaje' => 'Backup automatico completado',
-            'backup' => $backupResult,
-            'cleanup' => $cleanupResult
-        ]);
     } catch (Exception $e) {
-        error_log('=== ERROR EN BACKUP ===');
-        error_log('Mensaje: ' . $e->getMessage());
-        error_log('Archivo: ' . $e->getFile() . ':' . $e->getLine());
-        error_log('Stack trace: ' . $e->getTraceAsString());
-        return jsonResponse([
-            'ok' => false,
-            'mensaje' => 'Error en backup automatico',
-            'error' => $e->getMessage()
-        ], 500);
+        return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
     }
 });
-
 /* corre la aplicación */
 $app->run();
