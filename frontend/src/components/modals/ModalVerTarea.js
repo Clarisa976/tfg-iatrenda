@@ -57,7 +57,8 @@ export default function ModalVerTarea({ tarea, onClose }) {
       }
     };
 
-    cargarUrls();  }, [tarea.documentos, API, tk]);
+    cargarUrls();
+  }, [tarea.documentos, API, tk]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -106,19 +107,19 @@ export default function ModalVerTarea({ tarea, onClose }) {
 
                     {documento.tiene_url ? (
                       // Si tenemos URL, mostrar contenido
-                      isDocImage ? (                        <div className="image-container image-container-centered">
-                          <img
-                            src={documento.url_visualizacion}
-                            alt={`Adjunto ${index + 1} de la tarea`}
-                            className="documento-imagen"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentNode.querySelector('.imagen-error-container').style.display = 'block';
-                            }}
-                          />                          <div className="imagen-error-container" style={{ display: 'none' }}>
-                            <p>Error al cargar la imagen</p>
-                          </div>
-                        </div>) : (
+                      isDocImage ? (<div className="image-container image-container-centered">
+                        <img
+                          src={documento.url_visualizacion}
+                          alt={`Adjunto ${index + 1} de la tarea`}
+                          className="documento-imagen"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentNode.querySelector('.imagen-error-container').style.display = 'block';
+                          }}
+                        />                          <div className="imagen-error-container" style={{ display: 'none' }}>
+                          <p>Error al cargar la imagen</p>
+                        </div>
+                      </div>) : (
                         <div className="file-link file-link-container">
                           <a
                             href={documento.url_visualizacion}
