@@ -82,7 +82,7 @@ class DocumentController
             error_log('Transacción iniciada');
 
             // 1. Crear historial clínico si no existe
-            $historialId = $this->getOrCreateHistorial($data['id_paciente'], $baseDatos);
+            $historialId = $this->crearNuevoHistorial($data['id_paciente'], $baseDatos);
             if (!$historialId) {
                 $baseDatos->rollBack();
                 return $this->jsonResponse($response, [
@@ -354,7 +354,7 @@ class DocumentController
         error_log("Transacción iniciada");
 
         // 1. Obtener o crear historial clínico
-        $historialId = $this->getOrCreateHistorial($data['id_paciente'], $baseDatos);
+        $historialId = $this->crearNuevoHistorial($data['id_paciente'], $baseDatos);
         if (!$historialId) {
             error_log("ERROR: No se pudo obtener/crear historial");
             $baseDatos->rollBack();
@@ -645,40 +645,25 @@ public function deleteDocument($request, $response, $args)
     }
 
     /* Obtener o crear historial clínico para un paciente */
-private function getOrCreateHistorial($pacienteId, $baseDatos = null)
+private function crearNuevoHistorial($pacienteId, $baseDatos = null)
 {
     try {
         if (!$baseDatos) {
             $baseDatos = conectar();
         }
-
-        // Buscar historial existente ACTIVO (sin fecha_fin)
-        $sql = "SELECT id_historial 
-                FROM historial_clinico 
-                WHERE id_paciente = ? AND fecha_fin IS NULL 
-                ORDER BY fecha_inicio DESC 
-                LIMIT 1";
         
-        $stmt = $baseDatos->prepare($sql);
-        $stmt->execute([$pacienteId]);
-        $historial = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($historial) {
-            error_log("Historial existente encontrado: ID {$historial['id_historial']} para paciente $pacienteId");
-            return $historial['id_historial'];
-        }
-        
-        // Solo crear nuevo historial si NO existe ninguno activo
+        // Versión para PostgreSQL
         $sql = "INSERT INTO historial_clinico (id_paciente, fecha_inicio) 
                 VALUES (?, CURRENT_DATE) 
                 RETURNING id_historial";
         
         $stmt = $baseDatos->prepare($sql);
         $stmt->execute([$pacienteId]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($result) {
-            $nuevoId = $result['id_historial'];
+        // En PostgreSQL con PDO, fetchColumn() es más directo para un solo valor
+        $nuevoId = $stmt->fetchColumn();
+        
+        if ($nuevoId) {
             error_log("Nuevo historial creado: ID $nuevoId para paciente $pacienteId");
             return $nuevoId;
         }
@@ -686,11 +671,10 @@ private function getOrCreateHistorial($pacienteId, $baseDatos = null)
         return null;
         
     } catch (\Exception $e) {
-        error_log("Error obteniendo/creando historial para paciente $pacienteId: " . $e->getMessage());
+        error_log("Error creando historial para paciente $pacienteId: " . $e->getMessage());
         return null;
     }
 }
-
     /* Guardar tratamiento en base de datos  */
     private function saveTreatmentToDatabase($data, $baseDatos = null)
     {
