@@ -6,3 +6,4 @@
 
 *.sql
 backend/vendor/
+.md

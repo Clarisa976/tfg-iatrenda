@@ -1790,6 +1790,124 @@ $app->post('/prof/citas/{id}/accion', function (Request $req, Response $res, arr
 
 
 
+// ========== RUTAS DE BACKUP ==========
+
+/* crear backup manual*/
+$app->post('/admin/backup/create', function ($req) {
+    $val = verificarTokenUsuario();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+    }
+
+    try {
+        require_once __DIR__ . '/src/Services/BackupService.php';
+        $backupService = new BackupService();
+        $result = $backupService->createFullBackup();
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Backup creado exitosamente',
+            'data' => $result
+        ]);
+    } catch (Exception $e) {
+        error_log('Error creando backup: ' . $e->getMessage());
+        return jsonResponse([
+            'ok' => false,
+            'mensaje' => 'Error creando backup',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+/* listar backups*/
+$app->get('/admin/backup/list', function ($req) {
+    $val = verificarTokenUsuario();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+    }
+
+    try {
+        require_once __DIR__ . '/src/Services/BackupService.php';
+        $backupService = new BackupService();
+        $backups = $backupService->listBackups();
+        
+        return jsonResponse([
+            'ok' => true,
+            'data' => $backups
+        ]);
+    } catch (Exception $e) {
+        error_log('Error listando backups: ' . $e->getMessage());
+        return jsonResponse([
+            'ok' => false,
+            'mensaje' => 'Error listando backups',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+/* limpiar backups antiguos*/
+$app->post('/admin/backup/cleanup', function ($req) {
+    $val = verificarTokenUsuario();
+    if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
+        return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
+    }
+
+    try {
+        $input = $req->getParsedBody() ?? [];
+        $keep = $input['keep'] ?? 10;
+        
+        require_once __DIR__ . '/src/Services/BackupService.php';
+        $backupService = new BackupService();
+        $result = $backupService->deleteOldBackups($keep);
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => $result['message'],
+            'deleted' => $result['deleted']
+        ]);
+    } catch (Exception $e) {
+        error_log('Error en cleanup: ' . $e->getMessage());
+        return jsonResponse([
+            'ok' => false,
+            'mensaje' => 'Error en cleanup de backups',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+/* backup automatico para cron */
+$app->post('/cron/backup', function ($req) {
+    try {
+        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? '';
+        if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
+            error_log("Token inválido recibido: '$cronToken'");
+            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
+        }
+        
+        error_log("Cron backup autorizado - ejecutando...");
+        
+        require_once __DIR__ . '/src/Services/BackupService.php';
+        $backupService = new BackupService();
+        
+        $backupResult = $backupService->createFullBackup();
+        $cleanupResult = $backupService->deleteOldBackups(10);
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Backup automatico completado',
+            'backup' => $backupResult,
+            'cleanup' => $cleanupResult
+        ]);
+    } catch (Exception $e) {
+        error_log('Error en backup automatico: ' . $e->getMessage());
+        return jsonResponse([
+            'ok' => false,
+            'mensaje' => 'Error en backup automatico',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 
 /* corre la aplicación */
 $app->run();
