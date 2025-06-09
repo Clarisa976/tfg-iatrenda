@@ -3293,6 +3293,9 @@ input[type="checkbox"]:checked::after {
     display: none !important;
   }
   
-  /* En desktop, overlay y sidebar mantienen su comportamiento original con clases .show */
-  /* El overlay y sidebar ya tienen su lógica de opacity/visibility y transform definida arriba */
+  /* En desktop, permitir que overlay y sidebar funcionen con sus clases .show */
+  .overlay,
+  .sidebar {
+    display: block; /* Permitir que funcionen normalmente */
+  }
 }
