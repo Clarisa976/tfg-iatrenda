@@ -242,7 +242,7 @@ export default function CitasPaciente() {
       )}      
       {mostrarCambiar && citaSeleccionada && (
         <ModalCitaUniversal
-          modo="cambiar"
+          modo="CAMBIAR"
           cita={citaSeleccionada}
           datosUsuario={datosUsuario}
           onClose={() => {
