@@ -1416,7 +1416,6 @@ $app->get('/api/s3/tratamientos/{paciente_id}', function (Request $request, Resp
 
 
 
-
 /* GET /prof/perfil */
 $app->get('/prof/perfil', function(Request $req, Response $res): Response {
     $val = verificarTokenUsuario();
