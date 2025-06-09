@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import axios from 'axios';
 import '../../styles.css';
 
 const isImage = (filePath) => {
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-  return imageExtensions.some(ext =>
-    filePath.toLowerCase().includes(ext)
-  );
+  return imageExtensions.some(ext => filePath.toLowerCase().includes(ext));
 };
 
 export default function ModalDocumento({ doc, onClose, onChange }) {
+  const API = process.env.REACT_APP_API_URL;
   const tk = localStorage.getItem('token');
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -18,8 +17,36 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
   const [error, setError] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [diagnosticoFinal, setDiagnosticoFinal] = useState(doc.diagnostico_final || '');
-  const [diagnosticoFinalError, setDiagnosticoFinalError] = useState('');
+  const [diagError, setDiagError] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [signedUrl, setSignedUrl] = useState(null);
+  const [imgError, setImgError] = useState(false);
+
+
+  const fetchSignedUrl = async () => {
+    try {
+      const res = await axios.get(
+        `${API}/api/s3/documentos/${doc.id_documento}/url`,
+        { headers: { Authorization: `Bearer ${tk}` } }
+      );
+      if (res.data.ok) {
+        setSignedUrl(res.data.url);
+        return res.data.url;
+      } else {
+        throw new Error(res.data.mensaje);
+      }
+    } catch (e) {
+      console.error('Error fetching signed URL:', e);
+      setImgError(true);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (isImage(doc.ruta)) {
+      fetchSignedUrl();
+    }
+  }, []);
 
   const deleteDocument = async () => {
     setIsDeleting(true);
@@ -39,37 +66,40 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
 
   const updateDiagnostico = async () => {
     if (!diagnosticoFinal.trim()) {
-      setDiagnosticoFinalError('El diagnóstico final no puede estar vacío');
+      setDiagError('El diagnóstico final no puede estar vacío');
       return;
     }
-
     setIsUpdating(true);
-    setDiagnosticoFinalError('');
+    setDiagError('');
     setError('');
 
     try {
-      const response = await axios.put(
+      const res = await axios.put(
         `/api/s3/documentos/${doc.id_documento}`,
         { diagnostico_final: diagnosticoFinal },
         { headers: { Authorization: `Bearer ${tk}` } }
       );
-
-      if (response.data?.ok) {
-        doc.diagnostico_final = diagnosticoFinal;
+      if (res.data.ok) {
         setEditMode(false);
         onChange();
       } else {
-        throw new Error(response.data?.mensaje || 'Error al actualizar');
+        throw new Error(res.data.mensaje || 'Error al actualizar');
       }
     } catch (e) {
-      console.error('Error updating diagnostico:', e);
-      setDiagnosticoFinalError('Error al actualizar el diagnóstico. Inténtalo de nuevo.');
+      console.error('Error updating diagnóstico:', e);
+      setDiagError('Error al actualizar el diagnóstico. Inténtalo de nuevo.');
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const docFileUrl = `${process.env.REACT_APP_API_URL}/api/s3/download/${doc.id_documento}`;
+  const handleViewFile = async (e) => {
+    e.preventDefault();
+    const url = signedUrl || await fetchSignedUrl();
+    if (url) window.open(url, '_blank');
+    else alert('No se pudo obtener la URL del archivo');
+  };
+
   const isDocImage = isImage(doc.ruta);
 
   return (
@@ -82,12 +112,17 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
           </div>
 
           <div className="modal-body">
-            <p><strong>Fecha de subida:</strong> {new Date(doc.fecha_subida).toLocaleDateString()}</p>
+            <p>
+              <strong>Fecha de subida:</strong>{' '}
+              {new Date(doc.fecha_subida).toLocaleDateString()}
+            </p>
 
             {doc.diagnostico_preliminar && (
               <div className="documento-info-section">
                 <h4>Diagnóstico preliminar</h4>
-                <p className="documento-info-destacado">{doc.diagnostico_preliminar}</p>
+                <p className="documento-info-destacado">
+                  {doc.diagnostico_preliminar}
+                </p>
               </div>
             )}
 
@@ -95,40 +130,54 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
               <div className="documento-header-container">
                 <h4>Diagnóstico final</h4>
                 {!editMode && (
-                  <button onClick={() => setEditMode(true)} className="btn-edit-diagnostico">
+                  <button
+                    onClick={() => setEditMode(true)}
+                    className="btn-edit-diagnostico"
+                  >
                     {doc.diagnostico_final ? 'Editar' : 'Añadir'}
                   </button>
                 )}
               </div>
+
               {editMode ? (
                 <>
                   <textarea
                     value={diagnosticoFinal}
                     onChange={e => {
                       setDiagnosticoFinal(e.target.value);
-                      if (e.target.value.trim() && diagnosticoFinalError) {
-                        setDiagnosticoFinalError('');
+                      if (e.target.value.trim()) {
+                        setDiagError('');
                       }
                     }}
                     placeholder="Introduce el diagnóstico final..."
-                    rows="4"
-                    className={`diagnostico-textarea ${diagnosticoFinalError ? 'error' : ''}`}
+                    rows={4}
+                    className={`diagnostico-textarea ${diagError ? 'error' : ''}`}
                   />
-                  {diagnosticoFinalError && (
-                    <span className="diagnostico-error-message">{diagnosticoFinalError}</span>
+                  {diagError && (
+                    <span className="diagnostico-error-message">{diagError}</span>
                   )}
                   <div className="diagnostico-botones-container">
-                    <button onClick={() => setEditMode(false)} className="btn-cancelar-diagnostico" disabled={isUpdating}>
+                    <button
+                      onClick={() => setEditMode(false)}
+                      className="btn-cancelar-diagnostico"
+                      disabled={isUpdating}
+                    >
                       Cancelar
                     </button>
-                    <button onClick={updateDiagnostico} className={`btn-guardar-diagnostico ${isUpdating ? 'loading' : ''}`} disabled={isUpdating}>
+                    <button
+                      onClick={updateDiagnostico}
+                      className={`btn-guardar-diagnostico ${isUpdating ? 'loading' : ''}`}
+                      disabled={isUpdating}
+                    >
                       {isUpdating ? 'Guardando...' : 'Guardar'}
                     </button>
                   </div>
                 </>
               ) : (
                 doc.diagnostico_final ? (
-                  <p className="diagnostico-final-existente">{doc.diagnostico_final}</p>
+                  <p className="diagnostico-final-existente">
+                    {doc.diagnostico_final}
+                  </p>
                 ) : (
                   <p className="diagnostico-final-vacio">
                     No hay diagnóstico final. Haz clic en "Añadir" para agregarlo.
@@ -139,42 +188,39 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
 
             <div className="documento-preview">
               <h4>Vista previa</h4>
-              {isDocImage ? (
-                <div className="documento-imagen-container">
-                  <img
-                    src={docFileUrl}
-                    alt={`Documento ${doc.id_documento}`}
-                    className="documento-imagen"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'block';
-                    }}
-                  />
-                  <div className="documento-imagen-error" style={{ display: 'none' }}>
-                    <p>No se pudo visualizar la imagen</p>
-                    <p><small>Ruta: {doc.ruta}</small></p>
-                  </div>
-                </div>
+
+              {isDocImage && signedUrl && !imgError ? (
+                <img
+                  src={signedUrl}
+                  alt={`Documento ${doc.id_documento}`}
+                  className="documento-imagen"
+                  onError={() => setImgError(true)}
+                />
               ) : (
                 <div className="documento-enlace-container">
                   <a
-                    href={docFileUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={handleViewFile}
                     className="documento-enlace-archivo"
                   >
                     Ver archivo
                   </a>
                 </div>
               )}
+
             </div>
           </div>
 
           <div className="modal-footer">
-            <button className="btn-delete" onClick={() => setShowDeleteModal(true)}>
+            <button
+              className="btn-delete"
+              onClick={() => setShowDeleteModal(true)}
+            >
               Eliminar
             </button>
-            <button className="btn-cancel" onClick={onClose}>Cerrar</button>
+            <button className="btn-cancel" onClick={onClose}>
+              Cerrar
+            </button>
           </div>
         </div>
       </div>
@@ -187,15 +233,25 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
             </div>
             <div className="modal-body">
               <p>¿Estás seguro de que quieres eliminar este documento?</p>
-              <p><strong>{doc.diagnostico_preliminar || 'Documento sin diagnóstico'}</strong></p>
-              <p className="texto-advertencia-pequeno">Esta acción no se puede deshacer.</p>
+              <p><strong>{doc.diagnostico_preliminar || doc.nombre_original}</strong></p>
+              <p className="texto-advertencia-pequeno">
+                Esta acción no se puede deshacer.
+              </p>
               {error && <div className="error-eliminacion-container">{error}</div>}
             </div>
             <div className="modal-footer">
-              <button className="btn-cancel" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
+              <button
+                className="btn-cancel"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
                 Cancelar
               </button>
-              <button className={`btn-delete ${isDeleting ? 'loading' : ''}`} onClick={deleteDocument} disabled={isDeleting}>
+              <button
+                className={`btn-delete ${isDeleting ? 'loading' : ''}`}
+                onClick={deleteDocument}
+                disabled={isDeleting}
+              >
                 {isDeleting ? 'Eliminando...' : 'Eliminar'}
               </button>
             </div>

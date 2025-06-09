@@ -1340,6 +1340,17 @@ $app->get('/api/s3/health', function (Request $request, Response $response) {
     $controller = new App\Controllers\DocumentController();
     return $controller->healthCheck($request, $response);
 });
+// Obtener URL firmada de un documento
+$app->get('/api/s3/documentos/{idDoc}/url', function (Request $request, Response $response, array $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    // Permitir que el propietario lo vea o rol admin/profesional
+    $controller = new App\Controllers\DocumentController();
+    return $controller->getDocumentUrl($request, $response, $args);
+});
+
 
 // Subir documento a S3
 $app->post('/api/s3/upload', function (Request $request, Response $response) {

@@ -676,6 +676,30 @@ class DocumentController {
         }
     }
 
+    public function getDocumentUrl($request, $response, $args) {
+    $idDoc = $args['idDoc'];
+    // 1) Obtener el documento
+    $document = $this->getDocumentFromDatabase($idDoc);
+    if (!$document) {
+        return $this->jsonResponse($response, ['ok'=>false,'mensaje'=>'No encontrado'], 404);
+    }
+    // 2) Pedir URL firmada
+    $urlResult = $this->s3Service->getPresignedUrl(
+        $document['ruta'],
+        '+30 minutes',
+        $document['nombre_archivo']
+    );
+    if (!$urlResult['success']) {
+        return $this->jsonResponse($response, ['ok'=>false,'mensaje'=>$urlResult['error']], 500);
+    }
+    // 3) Devolverla en JSON
+    return $this->jsonResponse($response, [
+        'ok'  => true,
+        'url' => $urlResult['url']
+    ]);
+}
+
+
     public function updateDocument($request, $response, $args) {
     try {
         $id = $args['id'];
