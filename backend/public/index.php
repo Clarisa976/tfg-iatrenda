@@ -1924,6 +1924,47 @@ $app->post('/cron/backup/execute', function ($req) {
         return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
     }
 });
-
+// RUTA TEMPORAL PARA PROBAR SOLO pg_dump
+$app->post('/test/pgdump', function ($req) {
+    try {
+        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? '';
+        if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
+        }
+        
+        $fileName = "test_backup_" . date('Y-m-d-H-i-s') . ".sql";
+        $filePath = "/tmp/" . $fileName;
+        
+        $databaseUrl = $_ENV['DATABASE_URL'];
+        error_log("DATABASE_URL: " . substr($databaseUrl, 0, 50) . "...");
+        
+        // Comando simple
+        $command = "pg_dump \"$databaseUrl\" --no-owner --no-privileges > \"$filePath\" 2>&1";
+        error_log("Comando: $command");
+        
+        $output = [];
+        $returnCode = 0;
+        exec($command, $output, $returnCode);
+        
+        error_log("Return code: $returnCode");
+        error_log("Output: " . implode("\n", $output));
+        
+        if (file_exists($filePath)) {
+            $size = filesize($filePath);
+            error_log("Archivo creado: $size bytes");
+            unlink($filePath); // Limpiar
+        }
+        
+        return jsonResponse([
+            'ok' => $returnCode === 0,
+            'return_code' => $returnCode,
+            'output' => $output,
+            'file_size' => $size ?? 0
+        ]);
+        
+    } catch (Exception $e) {
+        return jsonResponse(['ok' => false, 'error' => $e->getMessage()], 500);
+    }
+});
 /* corre la aplicación */
 $app->run();
