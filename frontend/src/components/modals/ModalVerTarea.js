@@ -8,19 +8,40 @@ const isImage = (tipo) => {
 
 export default function ModalVerTarea({ tarea, onClose }) {
   
-  const downloadDocument = async (documento) => {
-    try {
-      const tk = localStorage.getItem('token');
-      const downloadUrl = `${process.env.REACT_APP_API_URL}/api/s3/download/${documento.id_documento}`;
-      
-      // Abrir directamente el enlace de descarga
-      window.open(downloadUrl + `?token=${encodeURIComponent(tk)}`, '_blank');
-      
-    } catch (error) {
-      console.error('Error al descargar documento:', error);
-      alert('Error al descargar el documento');
+const downloadDocument = async (documento) => {
+  try {
+    const tk = localStorage.getItem('token');
+    const downloadUrl = `${process.env.REACT_APP_API_URL}/api/s3/download/${documento.id_documento}`;
+    
+    // Hacer fetch con headers de autorización
+    const response = await fetch(downloadUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${tk}`
+      }
+    });
+    
+    if (response.redirected) {
+      // Si el servidor redirige a S3, abrir esa URL
+      window.open(response.url, '_blank');
+    } else if (response.ok) {
+      // Si devuelve el archivo directamente, crear blob y descargar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = documento.nombre_archivo || 'documento';
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } else {
+      throw new Error('Error al acceder al documento');
     }
-  };
+    
+  } catch (error) {
+    console.error('Error al descargar documento:', error);
+    alert('Error al descargar el documento');
+  }
+};
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
