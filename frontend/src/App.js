@@ -79,12 +79,12 @@ export default function App() {
   const showUnauthorizedMessage = (message) => {
 
     if (toast.show && toast.type === 'unauthorized') return;
-
-    setToast({
-      show: true,
-      ok: false,
-      msg: message,
-      type: 'unauthorized'
+    
+    setToast({ 
+      show: true, 
+      ok: false, 
+      msg: message, 
+      type: 'unauthorized' 
     });
   };
 
@@ -111,10 +111,15 @@ export default function App() {
       setUser(null);
     };
 
-    // Solo restaurar la sesión al cargar la página, no limpiarla
+    const handleBeforeUnload = () => {
+      cleanupSession();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     const token = localStorage.getItem('token');
     if (!token) {
-      setUser(null);
+      cleanupSession();
       return;
     }
 
@@ -130,7 +135,7 @@ export default function App() {
       axios.get(`${process.env.REACT_APP_API_URL}/status`)
         .then(response => {
           if (response.data.ok) {
-            setUser({ id: payload.sub, rol: payload.rol, role: payload.rol });
+            setUser({id: payload.sub, rol: payload.rol, role: payload.rol});
           } else {
             cleanupSession();
           }
@@ -141,20 +146,24 @@ export default function App() {
     } catch (error) {
       cleanupSession();
     }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   // Oculta el toast tras 2s para errores de permisos, 5s para otros
   useEffect(() => {
     if (!toast.show) return;
-
+    
     // Reduced timeout for unauthorized messages
     const timeout = toast.type === 'unauthorized' ? 2000 : 5000;
-
+    
     // Use a ref to keep track of the timeout
     const timeoutId = setTimeout(() => {
       setToast(t => ({ ...t, show: false }));
     }, timeout);
-
+    
     // Clear the timeout when component unmounts or toast changes
     return () => {
       clearTimeout(timeoutId);
@@ -165,7 +174,7 @@ export default function App() {
     setUser(userData);
     setLoginOpen(false);
   };
-
+  
   const abrirCita = () => setReservarCita(true);
   const onCitaSuccess = msg => { setReservarCita(false); setToast({ show: true, ok: true, msg, type: 'cita' }); };
   const onCitaError = msg => { setReservarCita(false); setToast({ show: true, ok: false, msg, type: 'cita' }); };
@@ -185,89 +194,89 @@ export default function App() {
           <Route path="/cookies" element={<PoliticaCookies />} />
 
           {/* Rutas Admin - Protegidas */}
-          <Route
-            path="/admin/usuarios"
+          <Route 
+            path="/admin/usuarios" 
             element={
               <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <Usuarios />
               </ProtectedRoute>
-            }
+            } 
           />
-          <Route
-            path="/admin/notificaciones"
+          <Route 
+            path="/admin/notificaciones" 
             element={
               <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <Notificaciones />
               </ProtectedRoute>
-            }
+            } 
           />
-          <Route
-            path="/admin/agenda-global"
+          <Route 
+            path="/admin/agenda-global" 
             element={
               <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <AgendaGlobal />
               </ProtectedRoute>
-            }
+            } 
           />
-          <Route
-            path="/admin/informes"
+          <Route 
+            path="/admin/informes" 
             element={
               <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <InformesYLogs />
               </ProtectedRoute>
-            }
+            } 
           />
 
           {/* Rutas Profesional - Protegidas */}
-          <Route
-            path="/profesional/mi-perfil"
+          <Route 
+            path="/profesional/mi-perfil" 
             element={
               <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <PerfilProfesional />
               </ProtectedRoute>
-            }
+            } 
           />
-          <Route
-            path="/profesional/pacientes"
+          <Route 
+            path="/profesional/pacientes" 
             element={
               <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <PacientesProfesional />
               </ProtectedRoute>
-            }
+            } 
           />
-          <Route
-            path="/profesional/paciente/:id"
+          <Route 
+            path="/profesional/paciente/:id" 
             element={
               <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <PerfilPacienteProfesional />
               </ProtectedRoute>
-            }
+            } 
           />
-          <Route
-            path="/profesional/agenda"
+          <Route 
+            path="/profesional/agenda" 
             element={
               <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <AgendaProfesional />
               </ProtectedRoute>
-            }
+            } 
           />
 
           {/* Rutas Paciente - Protegidas */}
-          <Route
-            path="/paciente/mi-perfil"
+          <Route 
+            path="/paciente/mi-perfil" 
             element={
               <ProtectedRoute requiredRole="paciente" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <PerfilPaciente />
               </ProtectedRoute>
-            }
+            } 
           />
-          <Route
-            path="/paciente/mis-citas"
+          <Route 
+            path="/paciente/mis-citas" 
             element={
               <ProtectedRoute requiredRole="paciente" user={user} onUnauthorized={showUnauthorizedMessage}>
                 <CitasPaciente />
               </ProtectedRoute>
-            }
+            } 
           />
 
           {/* Ruta para páginas no encontradas */}
@@ -289,24 +298,24 @@ export default function App() {
             }
             <h3 className="toast-title">
               {toast.type === 'unauthorized' ? '¡Acceso denegado!' :
-                toast.type === 'cita' && toast.ok ? '¡Reserva enviada!' :
-                  toast.type === 'cita' && !toast.ok ? '¡Lo sentimos!' :
-                    toast.ok ? '¡Éxito!' : '¡Error!'
+               toast.type === 'cita' && toast.ok ? '¡Reserva enviada!' :
+               toast.type === 'cita' && !toast.ok ? '¡Lo sentimos!' :
+               toast.ok ? '¡Éxito!' : '¡Error!'
               }
             </h3>
             <p className="toast-text">
-              {toast.msg ||
-                (toast.type === 'cita' && toast.ok ? 'Te avisaremos cuando el equipo confirme tu cita.' :
-                  toast.type === 'cita' && !toast.ok ? 'El día o la hora que has seleccionado no están disponibles. Elige otra fecha.' :
-                    toast.type === 'unauthorized' ? 'No tienes permisos para acceder a esta página.' :
-                      toast.ok ? 'Operación completada correctamente.' : 'Ha ocurrido un error.'
-                )
+              {toast.msg || 
+               (toast.type === 'cita' && toast.ok ? 'Te avisaremos cuando el equipo confirme tu cita.' :
+                toast.type === 'cita' && !toast.ok ? 'El día o la hora que has seleccionado no están disponibles. Elige otra fecha.' :
+                toast.type === 'unauthorized' ? 'No tienes permisos para acceder a esta página.' :
+                toast.ok ? 'Operación completada correctamente.' : 'Ha ocurrido un error.'
+               )
               }
             </p>
           </div>
         </div>
       )}
-
+      
       <ScrollArriba />
       <Footer />
     </BrowserRouter>
