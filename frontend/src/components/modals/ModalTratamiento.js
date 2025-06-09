@@ -41,6 +41,12 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
 const del = async () => {
   setIsDeleting(true);
   setError('');
+for (const doc of treat.documentos) {
+  console.log('Intentando eliminar documento ID:', doc.id_documento);
+  await axios.delete(`/api/s3/documentos/${doc.id_documento}`, {
+    headers: { Authorization: `Bearer ${tk}` }
+  });
+}
 
   try {
     // Eliminar todos los documentos asociados
