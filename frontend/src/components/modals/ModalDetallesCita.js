@@ -65,14 +65,13 @@ export default function ModalDetallesCita({ cita, onClose, onSolicitar }) {
 
         <div className="modal-footer">
           {puedeModificar() ? (
-            <>
-              <button 
+            <>              <button 
                 style={{
                   backgroundColor: 'var(--blue)',
                   color: 'var(--black)'
                 }}
                 className="btn-save"
-                onClick={() => onSolicitar('cambiar')}
+                onClick={() => onSolicitar('CAMBIAR')}
               >
                 Solicitar cambio
               </button>
@@ -82,7 +81,7 @@ export default function ModalDetallesCita({ cita, onClose, onSolicitar }) {
                   color: 'var(--black)'
                 }}
                 className="btn-cancel"
-                onClick={() => onSolicitar('cancelar')}
+                onClick={() => onSolicitar('CANCELAR')}
               >
                 Solicitar cancelación
               </button>
