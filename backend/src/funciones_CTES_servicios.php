@@ -1205,13 +1205,12 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
 
 
 function actualizarOInsertarProfesional(int $id, array $datosProfesional, int $actor = 0): bool
-{
-    $baseDatos   = conectar();
+{    $baseDatos   = conectar();
     $consulta   = $baseDatos->prepare('SELECT 1 FROM profesional WHERE id_profesional=?');
     $consulta->execute([$id]);
     $consultaSql = $consulta->fetch()
         ? 'UPDATE profesional SET num_colegiado=:n, especialidad=:e WHERE id_profesional=:id'
-        : 'INSERT INTO profesional SET id_profesional=:id, num_colegiado=:n, especialidad=:e';
+        : 'INSERT INTO profesional (id_profesional, num_colegiado, especialidad) VALUES (:id, :n, :e)';
 
     return execLogged(
         $consultaSql,
@@ -1230,28 +1229,25 @@ function actualizarOInsertarTutor(array $datosTutor): int
     // Check if tutor record already exists
     $baseDatos = conectar();
     $consulta = $baseDatos->prepare("SELECT 1 FROM tutor WHERE id_tutor = ?");
-    $consulta->execute([$id]);
-    $consultaSql = $consulta->fetch()
+    $consulta->execute([$id]);    $consultaSql = $consulta->fetch()
         ? "UPDATE tutor
               SET metodo_contacto_preferido = :m
             WHERE id_tutor = :id"
-        : "INSERT INTO tutor
-              SET id_tutor = :id,
-                  metodo_contacto_preferido = :m";
+        : "INSERT INTO tutor (id_tutor, metodo_contacto_preferido)
+              VALUES (:id, :m)";
 
-    // FIXED: Handle metodo_contacto_preferido that could be an array or comma-separated string
-    // This fix ensures we properly handle both formats from frontend components
+
     $metodoContacto = '';
     if (isset($datosTutor['metodo_contacto_preferido'])) {
         if (is_array($datosTutor['metodo_contacto_preferido'])) {
-            // Convert array to comma-separated string for database storage
+
             $metodoContacto = implode(',', $datosTutor['metodo_contacto_preferido']);
         } else {
-            // Already a string, use as is
+
             $metodoContacto = $datosTutor['metodo_contacto_preferido'];
         }
     } else if (isset($datosTutor['metodo'])) {
-        // Legacy field name support
+
         $metodoContacto = $datosTutor['metodo'];
     }
 
@@ -1276,11 +1272,8 @@ function actualizarOInsertarPaciente(int $id, array $datosPaciente): bool
     if ($esMenor && !empty($datosPaciente['tutor']) && is_array($datosPaciente['tutor'])) {
         error_log("Procesando datos de tutor para paciente menor");
 
-        // FIXED: Ensure tutor data has correct format before passing it to actualizarOInsertarTutor
-        // This fix addresses inconsistencies in how tutor data was being processed
         $tutorData = $datosPaciente['tutor'];
 
-        // Convert metodo_contacto_preferido to proper format if it's an array
         if (isset($tutorData['metodo_contacto_preferido']) && is_array($tutorData['metodo_contacto_preferido'])) {
             $tutorData['metodo_contacto_preferido'] = implode(',', $tutorData['metodo_contacto_preferido']);
             error_log("Convertido metodo_contacto_preferido de array a string: " . $tutorData['metodo_contacto_preferido']);
@@ -2088,8 +2081,6 @@ function obtenerHorasDisponibles(int $idProfesional, string $fecha): array
         return [];
     }
     $baseDatos = conectar();
-
-
     error_log("Buscando bloqueos para profesional $idProfesional en fecha $fecha...");
     $consultaBloqueo = $baseDatos->prepare("        SELECT 
             id_bloque, 
@@ -2101,7 +2092,7 @@ function obtenerHorasDisponibles(int $idProfesional, string $fecha): array
             DATE(fecha_fin) as fin_fecha
         FROM bloque_agenda
         WHERE id_profesional = ?
-          AND tipo_bloque IN ('AUSENCIA', 'VACACIONES', 'CITA')
+          AND tipo_bloque IN ('AUSENCIA', 'VACACIONES')
           AND DATE(?) BETWEEN DATE(fecha_inicio) AND DATE(fecha_fin)
     ");
     $consultaBloqueo->execute([$idProfesional, $fecha]);
@@ -2133,9 +2124,7 @@ function obtenerHorasDisponibles(int $idProfesional, string $fecha): array
     ");
     $consultaCitas->execute([$idProfesional, $fecha]);
     $citasExistentes = $consultaCitas->fetchAll(PDO::FETCH_ASSOC);
-    $horasOcupadas = array_column($citasExistentes, 'hora');
-
-    error_log("Citas existentes: " . (empty($horasOcupadas) ? "Ninguna" : implode(', ', $horasOcupadas)));
+    $horasOcupadas = array_column($citasExistentes, 'hora');    error_log("Citas existentes: " . (empty($horasOcupadas) ? "Ninguna" : implode(', ', $horasOcupadas)));
 
     // Generar horas disponibles (10:00 a 17:00)
     $horasDisponibles = [];
@@ -2146,20 +2135,25 @@ function obtenerHorasDisponibles(int $idProfesional, string $fecha): array
         }
     }
 
+    error_log("Horas disponibles finales: " . (empty($horasDisponibles) ? "Ninguna" : implode(', ', $horasDisponibles)));
+    error_log("=== FIN obtenerHorasDisponibles ===");
+
     return $horasDisponibles;
 }
 
 /* Obtiene las fechas en las que el profesional está bloqueado */
 function obtenerDiasBloqueados(int $idProfesional, string $fechaInicio, string $fechaFin): array
 {
-    try {
+    error_log("=== INICIO obtenerDiasBloqueados ===");
+    error_log("Profesional: $idProfesional, Rango: $fechaInicio a $fechaFin");
+      try {
         $baseDatos = conectar();
 
         // Primero, obtener todos los bloques que podrían afectar al rango de fechas
         $consulta = $baseDatos->prepare("SELECT fecha_inicio, fecha_fin, tipo_bloque
             FROM bloque_agenda
             WHERE id_profesional = ?
-              AND tipo_bloque IN ('AUSENCIA', 'VACACIONES', 'CITA')
+              AND tipo_bloque IN ('AUSENCIA', 'VACACIONES')
               AND (
                   (DATE(fecha_inicio) BETWEEN ? AND ?) OR
                   (DATE(fecha_fin) BETWEEN ? AND ?) OR
@@ -2175,10 +2169,13 @@ function obtenerDiasBloqueados(int $idProfesional, string $fechaInicio, string $
             $fechaFin,
             $fechaInicio,
             $fechaFin
-        ]);
-
-        $bloques = $consulta->fetchAll(PDO::FETCH_ASSOC);
+        ]);$bloques = $consulta->fetchAll(PDO::FETCH_ASSOC);
         $fechasBloquedas = [];
+
+        error_log("Bloques encontrados: " . count($bloques));
+        foreach ($bloques as $bloque) {
+            error_log("- Bloque tipo: {$bloque['tipo_bloque']}, desde: {$bloque['fecha_inicio']}, hasta: {$bloque['fecha_fin']}");
+        }
 
         // Para cada bloque, calcular todos los días entre fecha_inicio y fecha_fin
         foreach ($bloques as $bloque) {
@@ -2199,16 +2196,15 @@ function obtenerDiasBloqueados(int $idProfesional, string $fechaInicio, string $
                     $fechasBloquedas[] = $fechaStr;
                 }
             }
-        }
-
-        // Eliminar duplicados y ordenar
+        }        // Eliminar duplicados y ordenar
         $fechasBloquedas = array_unique($fechasBloquedas);
         sort($fechasBloquedas);
 
-        error_log("Días bloqueados para profesional $idProfesional entre $fechaInicio y $fechaFin: " . implode(', ', $fechasBloquedas));
-        return $fechasBloquedas;
-    } catch (Exception $e) {
+        error_log("Días bloqueados finales para profesional $idProfesional entre $fechaInicio y $fechaFin: " . (empty($fechasBloquedas) ? "Ninguno" : implode(', ', $fechasBloquedas)));
+        error_log("=== FIN obtenerDiasBloqueados ===");
+        return $fechasBloquedas;    } catch (Exception $e) {
         error_log("Error obteniendo días bloqueados: " . $e->getMessage());
+        error_log("=== FIN obtenerDiasBloqueados (con error) ===");
         return [];
     }
 }
