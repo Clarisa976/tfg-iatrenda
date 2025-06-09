@@ -1800,7 +1800,7 @@ $app->post('/admin/backup/create', function ($req) {
     }
 
     try {
-        require_once __DIR__ . '/src/Services/BackupService.php';
+        require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
         $result = $backupService->createFullBackup();
         
@@ -1827,7 +1827,7 @@ $app->get('/admin/backup/list', function ($req) {
     }
 
     try {
-        require_once __DIR__ . '/src/Services/BackupService.php';
+        require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
         $backups = $backupService->listBackups();
         
@@ -1856,7 +1856,7 @@ $app->post('/admin/backup/cleanup', function ($req) {
         $input = $req->getParsedBody() ?? [];
         $keep = $input['keep'] ?? 10;
         
-        require_once __DIR__ . '/src/Services/BackupService.php';
+        require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
         $result = $backupService->deleteOldBackups($keep);
         
@@ -1886,7 +1886,7 @@ $app->post('/cron/backup', function ($req) {
         
         error_log("Cron backup autorizado - ejecutando...");
         
-        require_once __DIR__ . '/src/Services/BackupService.php';
+        require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
         
         $backupResult = $backupService->createFullBackup();
