@@ -1036,7 +1036,6 @@ input[type="checkbox"]:checked::after {
   color: var(--red);
   margin-bottom: 1rem;
   font-family: 'Inter', sans-serif;
-  font-size: 0.875rem;
 }
 
 /* ========================================
@@ -2427,7 +2426,7 @@ input[type="checkbox"]:checked::after {
 }
 
 /* ========================================
-    HISTORIAL SIMPLE - ESTRUCTURA SIMPLIFICADA
+    HISTORIAL SIMPLE 
 ======================================== */
 
 /* Container para las cards simplificadas */
@@ -2495,55 +2494,8 @@ input[type="checkbox"]:checked::after {
   transform: translateY(-1px);
 }
 
-/* Modal ancho para historial */
-.modal-ver-historial-wide {
-  max-width: 600px;
-  width: 90%;
-}
-
-/* ========================================
-   MEDIA QUERIES - RESPONSIVE DESIGN
-======================================== */
-
-/* TABLET - 768px y superior */
-@media (min-width: 768px) {
-  /* Footer responsive para tablet */
-  .footer__grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 3rem;
-    text-align: left;
-  }
-
-  .footer__section h3 {
-    text-align: left;
-  }
-
-  .footer__item {
-    justify-content: flex-start;
-  }
-
-  .footer__item p {
-    text-align: left;
-  }
-
-  .footer__links {
-    text-align: left;
-  }
-
-  .footer__socials {
-    justify-content: flex-start;
-  }
-
-  /* Historial modal para tablet */
-  .modal-ver-historial-wide {
-    width: 80%;
-    max-width: 700px;
-  }
-}
-
-/* MÓVIL - hasta 768px */
+/* Responsive para móviles */
 @media (max-width: 768px) {
-  /* Historial simple responsive para móvil */
   .historial-simple-card {
     flex-direction: column;
     gap: 15px;
@@ -2559,36 +2511,15 @@ input[type="checkbox"]:checked::after {
   }
 }
 
-/* ESCRITORIO - 1024px y superior */
-@media (min-width: 1024px) {
-  /* Footer responsive para escritorio */
-  .footer {
-    padding: 3rem 2rem;
-  }
+/* Modal ancho para historial */
+.modal-ver-historial-wide {
+  max-width: 600px;
+  width: 90%;
+}
 
-  .footer__grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4rem;
-    max-width: 1200px;
-  }
-
-  .footer__logo img {
-    width: 140px;
-  }
-
-  .footer__section h3 {
-    font-size: 24px;
-  }
-
-  .footer__item p {
-    font-size: 15px;
-  }
-
-  .footer__links a {
-    font-size: 13px;
-  }
-
-  .footer__bottom {
-    font-size: 13px;
+@media (min-width: 768px) {
+  .modal-ver-historial-wide {
+    width: 80%;
+    max-width: 700px;
   }
 }
