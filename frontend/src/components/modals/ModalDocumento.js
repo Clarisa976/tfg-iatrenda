@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import axios from 'axios';
 import '../../styles.css';
@@ -10,21 +10,21 @@ const isImage = (filePath) => {
 
 export default function ModalDocumento({ doc, onClose, onChange }) {
   const API = process.env.REACT_APP_API_URL;
-  const tk  = localStorage.getItem('token');
+  const tk = localStorage.getItem('token');
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting,       setIsDeleting]       = useState(false);
-  const [error,            setError]            = useState('');
-  const [editMode,         setEditMode]         = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState('');
+  const [editMode, setEditMode] = useState(false);
   const [diagnosticoFinal, setDiagnosticoFinal] = useState(doc.diagnostico_final || '');
-  const [diagError,        setDiagError]        = useState('');
-  const [isUpdating,       setIsUpdating]       = useState(false);
-  const [signedUrl,        setSignedUrl]        = useState(null);
-  const [imgError,         setImgError]         = useState(false);
+  const [diagError, setDiagError] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [signedUrl, setSignedUrl] = useState(null);
+  const [imgError, setImgError] = useState(false);
 
   const isDocImage = isImage(doc.ruta);
 
-  const fetchSignedUrl = async () => {
+  const fetchSignedUrl = useCallback(async () => {
     try {
       const res = await axios.get(
         `${API}/api/s3/documentos/${doc.id_documento}/url`,
@@ -33,21 +33,20 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       if (res.data.ok) {
         setSignedUrl(res.data.url);
         return res.data.url;
-      } else {
-        throw new Error(res.data.mensaje);
       }
+      throw new Error(res.data.mensaje);
     } catch (e) {
       console.error('Error fetching signed URL:', e);
       setImgError(true);
       return null;
     }
-  };
+  }, [API, doc.id_documento, tk]);
 
   useEffect(() => {
     if (isDocImage) {
       fetchSignedUrl();
     }
-  }, []); // solo al montar
+  }, [isDocImage, fetchSignedUrl]);
 
   const deleteDocument = async () => {
     setIsDeleting(true);
