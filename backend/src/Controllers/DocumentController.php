@@ -12,10 +12,7 @@ class DocumentController {
         $this->s3Service = new S3Service();
     }
 
-    /**
-     * Subir documento/tratamiento a S3
-     * POST /api/s3/upload
-     */
+    /* Subir documento/tratamiento a S3*/
     public function uploadDocument($request, $response) {
         try {
             error_log('=== UPLOAD DOCUMENT START ===');
@@ -51,9 +48,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Manejar subida de tratamiento (con o sin archivo)
-     */
+    /* Manejar subida de tratamiento (con o sin archivo) */
     private function handleTreatmentUpload($data, $uploadedFiles, $response) {
         $baseDatos = null;
         $uploadedToS3 = false;
@@ -258,9 +253,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Manejar subida de documento al historial
-     */
+    /* Manejar subida de documento al historial  */
     private function handleDocumentUpload($data, $uploadedFiles, $response) {
         $baseDatos = null;
         $uploadedToS3 = false;
@@ -429,10 +422,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Descargar documento desde S3
-     * GET /api/s3/download/{id}
-     */
+    /* Descargar documento desde S3 */
     public function downloadDocument($request, $response, $args) {
         try {
             $documentId = $args['id'];
@@ -482,10 +472,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Listar documentos
-     * GET /api/s3/documentos
-     */
+    /* Listar documentos */
     public function listDocuments($request, $response) {
         try {
             $params = $request->getQueryParams();
@@ -517,10 +504,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Eliminar documento
-     * DELETE /api/s3/documentos/{id}
-     */
+    /* Eliminar documento */
     public function deleteDocument($request, $response, $args) {
         try {
             $documentId = $args['id'];
@@ -566,10 +550,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Health check para S3
-     * GET /api/s3/health
-     */
+    /* Health check para S3 */
     public function healthCheck($request, $response) {
         try {
             $result = $this->s3Service->validateConfiguration();
@@ -588,9 +569,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Obtener o crear historial clínico para un paciente
-     */
+    /* Obtener o crear historial clínico para un paciente */
     private function getOrCreateHistorial($pacienteId, $baseDatos = null) {
         try {
             if (!$baseDatos) {
@@ -628,9 +607,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Guardar tratamiento en base de datos
-     */
+    /* Guardar tratamiento en base de datos  */
     private function saveTreatmentToDatabase($data, $baseDatos = null) {
         try {
             if (!$baseDatos) {
@@ -667,9 +644,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Actualizar diagnósticos en historial
-     */
+    /* Actualizar diagnósticos en historial  */
     private function updateHistorialDiagnosticos($historialId, $data, $baseDatos = null) {
         try {
             if (!$baseDatos) {
@@ -701,9 +676,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Guardar documento en base de datos
-     */
+    /* Guardar documento en base de datos*/
     private function saveDocumentToDatabase($data, $baseDatos = null) {
         try {
             if (!$baseDatos) {
@@ -740,9 +713,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Obtener documento de la base de datos
-     */
+    /* Obtener documento de la base de datos */
     private function getDocumentFromDatabase($documentId) {
         try {
             $baseDatos = conectar();
@@ -759,9 +730,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Obtener documentos de la base de datos
-     */
+    /* Obtener documentos de la base de datos */
     private function getDocumentsFromDatabase($historialId, $tratamientoId, $pacienteId = null) {
         try {
             $baseDatos = conectar();
@@ -813,9 +782,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Eliminar documento de la base de datos
-     */
+    /* Eliminar documento de la base de datos */
     private function deleteDocumentFromDatabase($documentId) {
         try {
             $baseDatos = conectar();
@@ -829,9 +796,7 @@ class DocumentController {
         }
     }
 
-    /**
-     * Crear respuesta JSON
-     */
+    /* Crear respuesta JSON */
     private function jsonResponse($response, $data, $status = 200) {
         $response->getBody()->write(json_encode($data, JSON_UNESCAPED_UNICODE));
         return $response
@@ -841,10 +806,7 @@ class DocumentController {
 
 
     
-/**
- * Obtener tratamientos de un paciente con URLs de documentos
- * GET /api/s3/tratamientos/{paciente_id}
- */
+/* Obtener tratamientos de un paciente con URLs de documentos */
 public function getTreatmentsWithDocuments($request, $response, $args) {
     try {
         $pacienteId = $args['paciente_id'];

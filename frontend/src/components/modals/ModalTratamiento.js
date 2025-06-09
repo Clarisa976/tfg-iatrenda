@@ -39,23 +39,21 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
   const [error, setError] = useState('');
 
   const del = async () => {
-    console.log('Tratamiento recibido para eliminar:', treat);
-
   setIsDeleting(true);
   setError('');
 
   try {
-    // Verificamos si hay documentos que eliminar
+    // Eliminar todos los documentos asociados
     if (treat.documentos && treat.documentos.length > 0) {
       for (const doc of treat.documentos) {
-        console.log('Intentando eliminar documento ID:', doc.id_documento);
+        console.log('Eliminando documento ID:', doc.id_documento);
         await axios.delete(`/api/s3/documentos/${doc.id_documento}`, {
           headers: { Authorization: `Bearer ${tk}` }
         });
       }
     }
 
-    // Eliminamos la tarea
+    // Eliminar la tarea
     await axios.delete(`/prof/pacientes/${idPac}/tareas/${treat.id_tratamiento}`, {
       headers: { Authorization: `Bearer ${tk}` }
     });
@@ -68,6 +66,7 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
     setIsDeleting(false);
   }
 };
+
 
 
   return (
