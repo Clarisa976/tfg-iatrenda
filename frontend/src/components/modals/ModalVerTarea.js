@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X } from 'lucide-react';
 
-const isImage = (tipo) => {
-  if (!tipo) return false;
-  return tipo.startsWith('image/');
+const isImage = (nombreArchivo) => {
+  if (!nombreArchivo) return false;
+  const extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+  return extensions.some(ext => nombreArchivo.toLowerCase().endsWith(ext));
 };
 
 export default function ModalVerTarea({ tarea, onClose }) {
@@ -56,42 +57,7 @@ export default function ModalVerTarea({ tarea, onClose }) {
       }
     };
 
-    cargarUrls();
-  }, [tarea.documentos, API, tk]);
-
-  const downloadDocument = async (documento) => {
-    try {
-      const downloadUrl = `${API}/api/s3/download/${documento.id_documento}`;
-
-      // Hacer fetch con headers de autorización
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${tk}`
-        }
-      });
-
-      if (response.redirected) {
-        // Si el servidor redirige a S3, abrir esa URL
-        window.open(response.url, '_blank');
-      } else if (response.ok) {
-        // Si devuelve el archivo directamente, crear blob y descargar
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = documento.nombre_archivo || 'documento';
-        link.click();
-        window.URL.revokeObjectURL(url);
-      } else {
-        throw new Error('Error al acceder al documento');
-      }
-
-    } catch (error) {
-      console.error('Error al descargar documento:', error);
-      alert('Error al descargar el documento');
-    }
-  };
+    cargarUrls();  }, [tarea.documentos, API, tk]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -125,14 +91,12 @@ export default function ModalVerTarea({ tarea, onClose }) {
 
           {/* Archivos adjuntos - USANDO LA MISMA LÓGICA QUE ModalTratamiento */}
           {documentosConUrls.length > 0 && (
-            <div className="tratamiento-attachment tarea-info-section">
-              <h4>Archivos adjuntos ({documentosConUrls.length})</h4>
-
-              {documentosConUrls.map((documento, index) => {
-                const isDocImage = isImage(documento.tipo);
+            <div className="tratamiento-attachment tratamiento-attachment-section">
+              <h4>Archivos adjuntos ({documentosConUrls.length})</h4>              {documentosConUrls.map((documento, index) => {
+                const isDocImage = isImage(documento.nombre_archivo);
 
                 return (
-                  <div key={documento.id_documento || index} className="tarea-documento-item">
+                  <div key={documento.id_documento || index} className="documento-item-container">
                     <div className="documento-header">
                       <h5 className="documento-titulo">
                         {documento.nombre_archivo || `Documento ${index + 1}`}
@@ -142,42 +106,28 @@ export default function ModalVerTarea({ tarea, onClose }) {
 
                     {documento.tiene_url ? (
                       // Si tenemos URL, mostrar contenido
-                      isDocImage ? (
-                        <div className="imagen-container-center">
+                      isDocImage ? (                        <div className="image-container image-container-centered">
                           <img
                             src={documento.url_visualizacion}
                             alt={`Adjunto ${index + 1} de la tarea`}
-                            className="tarea-imagen-preview"
+                            className="documento-imagen"
                             onError={(e) => {
-                              console.error('Error al cargar imagen desde S3:', documento.url_visualizacion);
                               e.target.style.display = 'none';
-                              e.target.parentNode.querySelector('.tarea-imagen-error').style.display = 'block';
+                              e.target.parentNode.querySelector('.imagen-error-container').style.display = 'block';
                             }}
-                          />
-                          <div className="tarea-imagen-error" style={{ display: 'none' }}>
-                            <p>Error al visualizar la imagen</p>
-                            <div className="tarea-download-link">
-                              <button
-                                className="btn-primary btn-small"
-                                onClick={() => downloadDocument(documento)}
-                              >
-                                Descargar archivo original
-                              </button>
-                            </div>
+                          />                          <div className="imagen-error-container" style={{ display: 'none' }}>
+                            <p>Error al cargar la imagen</p>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="tarea-file-link-container">
-                          <div>
-                            <p><strong>Archivo:</strong> {documento.nombre_archivo || 'Documento'}</p>
-                            <p><strong>Tipo:</strong> {documento.tipo || 'Desconocido'}</p>
-                            <button
-                              className="tarea-download-link btn-primary"
-                              onClick={() => downloadDocument(documento)}
-                            >
-                              Descargar archivo
-                            </button>
-                          </div>
+                        </div>) : (
+                        <div className="file-link file-link-container">
+                          <a
+                            href={documento.url_visualizacion}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="file-link-btn"
+                          >
+                            Descargar {documento.nombre_archivo}
+                          </a>
                         </div>
                       )
                     ) : (
@@ -187,17 +137,10 @@ export default function ModalVerTarea({ tarea, onClose }) {
                           <p><strong>Archivo:</strong> {documento.nombre_archivo}</p>
                           <p><strong>Tipo:</strong> {documento.tipo}</p>
                           <p><strong>Subido:</strong> {new Date(documento.fecha_subida).toLocaleDateString()}</p>
-                        </div>
-                        <div className="documento-estado">
+                        </div>                        <div className="documento-estado">
                           <p className="documento-error-msg">
                             {documento.error_url || 'Archivo almacenado, visualización pendiente'}
                           </p>
-                          <button
-                            className="btn-primary btn-small"
-                            onClick={() => downloadDocument(documento)}
-                          >
-                            Intentar descargar
-                          </button>
                         </div>
                       </div>
                     )}
@@ -205,14 +148,9 @@ export default function ModalVerTarea({ tarea, onClose }) {
                 );
               })}
             </div>
-          )}
-
-          {/* Mensaje si no hay archivos */}
-          {(!tarea.documentos || tarea.documentos.length === 0) && (
-            <div className="tarea-sin-archivos-container">
-              <p className="tarea-sin-archivos-texto">
-                Esta tarea no tiene materiales adjuntos
-              </p>
+          )}          {tarea.documentos && tarea.documentos.length === 0 && (
+            <div className="sin-documentos">
+              <p><em>No hay archivos adjuntos en esta tarea</em></p>
             </div>
           )}
         </div>
