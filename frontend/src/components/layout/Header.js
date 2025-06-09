@@ -64,7 +64,6 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
     window.addEventListener('noti-count', handler);
     return () => window.removeEventListener('noti-count', handler);
   }, []);
-
   // Función mejorada para navegación interna
   const handleNavLink = (e, sectionId) => {
     e.preventDefault();
@@ -98,6 +97,37 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
     }
   };
 
+  // Función para manejar clic en el logo/inicio
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+    setNavOpen(false);
+    setUserOpen(false);
+
+    // Si el usuario está logueado, redirigir a su página principal según el rol
+    if (userRole) {
+      switch (userRole) {
+        case 'admin':
+          navigate('/admin/usuarios');
+          break;
+        case 'profesional':
+          navigate('/profesional/mi-perfil');
+          break;
+        case 'paciente':
+          navigate('/paciente/mi-perfil');
+          break;
+        default:
+          navigate('/');
+      }
+    } else {
+      // Si no está logueado, ir a la página de inicio pública
+      if (location.pathname !== '/') {
+        navigate('/');
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
+
   // Función para navegar a secciones específicas del perfil de paciente
   const navigateToProfileSection = (section) => {
     navigate(`/paciente/mi-perfil?section=${section}`);
@@ -127,9 +157,8 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
   return (
     <header className="header">
       {/* TOP BAR */}
-      <div className="top-bar">
-        <div className="logo">
-          <Link to="/" onClick={e => handleNavLink(e, 'top')}>
+      <div className="top-bar">        <div className="logo">
+          <Link to="/" onClick={handleLogoClick}>
             <img src={logoImg} alt="Iatrenda" />
           </Link>
         </div>
@@ -158,12 +187,10 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
             <User size={24} />
           </button>
         </div>
-      </div>
-
-      {/* MENÚ PRINCIPAL */}
+      </div>      {/* MENÚ PRINCIPAL */}
       <div className={`menu-desplegable${navOpen ? ' open' : ''}`}>
         <nav className="nav-links">
-          <a href="/" onClick={e => handleNavLink(e, 'top')}>Inicio</a>
+          <a href="/" onClick={handleLogoClick}>Inicio</a>
           <a href="/#quienes-somos" onClick={e => handleNavLink(e, 'quienes-somos')}>Quiénes somos</a>
           <a href="/#servicios" onClick={e => handleNavLink(e, 'servicios')}>Servicios</a>
           

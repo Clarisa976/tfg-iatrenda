@@ -582,35 +582,80 @@ export default function PerfilPaciente() {
                             <div
                                 className="tareas-slider"
                                 style={{ transform: `translateX(-${currentSlide * 33.333}%)` }}
-                            >
-                                {tareas.map((tarea, index) => (
+                            >                                {tareas.map((tarea, index) => (
                                     <div
                                         key={index}
-                                        className="tarea-slide-item"
-                                        onClick={() => verTarea(tarea)}
+                                        className="tarea-slide-item tarea-preview-card"
                                     >
-                                        <h5 className="tarea-slide-titulo">
-                                            {tarea.titulo || 'Tarea sin título'}
-                                        </h5>
-                                        <div className="tarea-fecha-container">
-                                            <Calendar size={16} />
-                                            <span>{formatDate(tarea.fecha_asignacion)}</span>
+                                        <div className="tarea-slide-header">
+                                            <h5 className="tarea-slide-titulo">
+                                                {tarea.titulo || 'Tarea sin título'}
+                                            </h5>
+                                            <div className="tarea-fecha-container">
+                                                <Calendar size={16} />
+                                                <span>{formatDate(tarea.fecha_asignacion)}</span>
+                                            </div>
                                         </div>
-                                        <div className="tarea-preview">
-                                            <p className="tarea-profesional">
-                                                Dr/a: {tarea.profesional_nombre}
-                                            </p>
-                                            <p className="tarea-descripcion">
-                                                {tarea.descripcion && tarea.descripcion.length > 100
-                                                    ? `${tarea.descripcion.substring(0, 100)}...`
-                                                    : tarea.descripcion || 'Sin descripción disponible'
-                                                }
-                                            </p>
-                                            {tarea.documentos && tarea.documentos.length > 0 && (
-                                                <p className="tarea-archivos">
-                                                    {tarea.documentos.length} archivo{tarea.documentos.length > 1 ? 's' : ''} adjunto{tarea.documentos.length > 1 ? 's' : ''}
+                                        
+                                        <div className="tarea-preview-content">
+                                            <div className="tarea-preview-meta">
+                                                <p className="tarea-profesional">
+                                                    Asignado por: <strong>{tarea.profesional_nombre}</strong>
                                                 </p>
+                                                {tarea.fecha_inicio && (
+                                                    <p className="tarea-inicio">
+                                                        Inicio: <strong>{new Date(tarea.fecha_inicio).toLocaleDateString('es-ES')}</strong>
+                                                    </p>
+                                                )}
+                                                {tarea.fecha_fin && (
+                                                    <p className="tarea-fin">
+                                                        Fin: <strong>{new Date(tarea.fecha_fin).toLocaleDateString('es-ES')}</strong>
+                                                    </p>
+                                                )}
+                                                {tarea.frecuencia_sesiones && (
+                                                    <p className="tarea-frecuencia">
+                                                        Frecuencia: <strong>{tarea.frecuencia_sesiones} sesiones/semana</strong>
+                                                    </p>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="tarea-preview-description">
+                                                <h6>Descripción:</h6>
+                                                <p>{tarea.descripcion && tarea.descripcion.length > 150
+                                                    ? `${tarea.descripcion.substring(0, 150)}...`
+                                                    : tarea.descripcion || 'Sin descripción disponible'
+                                                }</p>
+                                            </div>
+                                            
+                                            {tarea.documentos && tarea.documentos.length > 0 && (
+                                                <div className="tarea-preview-attachments">
+                                                    <h6>Archivos adjuntos:</h6>
+                                                    <div className="tarea-archivos-lista">
+                                                        {tarea.documentos.slice(0, 3).map((doc, docIndex) => (
+                                                            <span key={docIndex} className="tarea-archivo-item">
+                                                                {doc.nombre_archivo || `Documento ${docIndex + 1}`}
+                                                            </span>
+                                                        ))}
+                                                        {tarea.documentos.length > 3 && (
+                                                            <span className="tarea-archivos-mas">
+                                                                +{tarea.documentos.length - 3} más
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             )}
+                                            
+                                            <div className="tarea-preview-actions">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        verTarea(tarea);
+                                                    }}
+                                                    className="tarea-ver-detalle-btn"
+                                                >
+                                                    Ver detalles completos
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

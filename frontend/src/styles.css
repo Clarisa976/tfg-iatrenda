@@ -608,6 +608,7 @@ h6 {
   font-size: 22px;
   font-weight: 700;
   margin-bottom: 1rem;
+  text-align: center;
 }
 
 .footer__item {
@@ -615,8 +616,7 @@ h6 {
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
-  margin-left: 0;
-  justify-content: flex-start;
+  justify-content: center;
   width: 100%;
 }
 
@@ -630,16 +630,16 @@ h6 {
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 400;
-  text-align: left;
+  text-align: center;
   margin: 0;
   color: var(--black);
 }
 
-/* Redes sociales en footer */
 .footer__socials {
   display: flex;
   justify-content: center;
   gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .footer__socials a {
@@ -652,19 +652,15 @@ h6 {
   font-size: 24px;
 }
 
-.footer__socials a+a {
-  margin-left: 1.5rem;
-}
-
 .footer__socials a:hover {
   color: var(--green);
 }
 
-/* Enlaces generales del footer */
 .footer__links {
   list-style: none;
   padding: 0;
   margin: 0;
+  text-align: center;
 }
 
 .footer__links li {
@@ -680,12 +676,12 @@ h6 {
   display: inline-block;
 }
 
-/* Línea de copyright */
 .footer__bottom {
   margin-top: 2rem;
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 400;
+  text-align: center;
 }
 
 /* ========================================
@@ -1040,6 +1036,7 @@ input[type="checkbox"]:checked::after {
   color: var(--red);
   margin-bottom: 1rem;
   font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
 }
 
 /* ========================================
@@ -2429,377 +2426,169 @@ input[type="checkbox"]:checked::after {
   border-radius: 8px;
 }
 
-.file-type-indicator {
-  background-color: var(--blue);
-  color: black;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.8rem;
-}
-
-/* Acciones de la card */
-.historial-card-actions {
-  display: flex;
-  gap: 10px;
-  padding: 15px 20px;
-  border-top: 1px solid #e9ecef;
-  background-color: #fafafa;
-}
-
-.historial-action-btn {
-  flex: 1;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.historial-action-btn.primary {
-  background-color: var(--blue);
-  color: black;
-}
-
-.historial-action-btn.primary:hover {
-  background-color: #0056b3;
-}
-
-.historial-action-btn.secondary {
-  background-color: #f8f9fa;
-  color: var(--gray);
-  border: 1px solid #dee2e6;
-}
-
-.historial-action-btn.secondary:hover {
-  background-color: #e9ecef;
-}
-
-/* Estado vacío */
-.historial-empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
-
-.historial-empty-state h4 {
-  margin-bottom: 10px;
-  color: var(--gray);
-}
-
-.historial-empty-state p {
-  font-size: 0.9rem;
-}
-
-/* Responsive para las cards */
-@media (max-width: 768px) {
-  .historial-cards-container {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  .historial-card-header {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-  }
-
-  .historial-card-actions {
-    flex-direction: column;
-  }
-}
-
-/* Estilos específicos para el modal de login */
-.modal .password-field {
-  position: relative;
-  width: 100%;
-  display: flex;
-  align-items: center;
-}
-
-.modal .password-field input {
-  width: 100%;
-  padding: 0.5rem;
-  padding-right: 2.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.modal .password-field input:focus {
-  outline: none;
-  border-color: var(--blue);
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
-}
-
-.modal .password-field input.invalid {
-  border-color: var(--red);
-}
-
-.modal .password-toggle {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  color: var(--gray);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  transition: color 0.2s ease;
-}
-
-.modal .password-toggle:hover {
-  color: var(--blue);
-}
-
 /* ========================================
-    PREVISUALIZACIÓN AUTOMÁTICA TAREAS
+    HISTORIAL SIMPLE - ESTRUCTURA SIMPLIFICADA
 ======================================== */
 
-/* Hacer las tarjetas de tareas clickeables */
-.tarea-slide-item {
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.tarea-slide-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Previsualización dentro de la tarjeta */
-.tarea-preview {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #e9ecef;
-}
-
-.tarea-profesional {
-  font-size: 0.85rem;
-  color: var(--gray);
-  margin: 5px 0;
-}
-
-.tarea-descripcion {
-  font-size: 0.8rem;
-  color: #666;
-  line-height: 1.3;
-  margin: 5px 0;
-}
-
-.tarea-archivos {
-  font-size: 0.75rem;
-  color: var(--blue);
-  font-weight: 500;
-  margin: 5px 0 0 0;
-}
-
-/* ========================================
-    HISTORIAL CLÍNICO CARDS
-======================================== */
-.historial-summary {
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  text-align: center;
-  font-size: 1.1rem;
-}
-
-/* Container para las cards apiladas */
-.historial-cards-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 20px;
+/* Container para las cards simplificadas */
+.historial-simple-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
   margin-top: 20px;
 }
 
-/* Card individual de documento */
-.historial-document-card {
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.historial-document-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-/* Header de la card */
-.historial-card-header {
+/* Card individual simplificada */
+.historial-simple-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
   padding: 15px 20px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.historial-card-date {
-  font-weight: 600;
-  color: var(--gray);
-  font-size: 0.9rem;
-}
-
-.historial-download-btn {
-  background-color: var(--blue);
-  color: black;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.historial-download-btn:hover {
-  background-color: #0056b3;
-}
-
-/* Contenido de la card */
-.historial-card-content {
-  padding: 20px;
-}
-
-.historial-card-info p {
-  margin: 8px 0;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.historial-profesional {
-  color: var(--gray);
-}
-
-.historial-diagnostico {
-  color: #666;
-  font-style: italic;
-}
-
-.historial-filename {
-  color: #333;
-  word-break: break-word;
-}
-
-/* Preview de imagen */
-.historial-image-preview {
-  margin: 15px 0;
-  text-align: center;
-}
-
-.historial-preview-img {
-  max-width: 100%;
-  max-height: 200px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.historial-image-error {
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-/* Placeholder para archivos no imagen */
-.historial-file-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 15px 0;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.file-type-indicator {
-  background-color: var(--blue);
-  color: black;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.8rem;
-}
-
-/* Acciones de la card */
-.historial-card-actions {
-  display: flex;
-  gap: 10px;
-  padding: 15px 20px;
-  border-top: 1px solid #e9ecef;
-  background-color: #fafafa;
-}
-
-.historial-action-btn {
-  flex: 1;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
 }
 
-.historial-action-btn.primary {
-  background-color: var(--blue);
-  color: black;
+.historial-simple-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--blue);
 }
 
-.historial-action-btn.primary:hover {
-  background-color: #0056b3;
+/* Información de la card */
+.historial-simple-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
-.historial-action-btn.secondary {
-  background-color: #f8f9fa;
+.historial-simple-date {
+  font-weight: 600;
   color: var(--gray);
-  border: 1px solid #dee2e6;
+  font-size: 1rem;
 }
 
-.historial-action-btn.secondary:hover {
-  background-color: #e9ecef;
-}
-
-/* Estado vacío */
-.historial-empty-state {
-  text-align: center;
-  padding: 60px 20px;
+.historial-simple-doctor {
   color: #666;
-}
-
-.historial-empty-state h4 {
-  margin-bottom: 10px;
-  color: var(--gray);
-}
-
-.historial-empty-state p {
   font-size: 0.9rem;
 }
 
-/* Responsive para las cards */
-@media (max-width: 768px) {
-  .historial-cards-container {
-    grid-template-columns: 1fr;
-    gap: 15px;
+/* Botón de descarga */
+.historial-simple-download {
+  background-color: var(--blue);
+  color: black;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.historial-simple-download:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+/* Modal ancho para historial */
+.modal-ver-historial-wide {
+  max-width: 600px;
+  width: 90%;
+}
+
+/* ========================================
+   MEDIA QUERIES - RESPONSIVE DESIGN
+======================================== */
+
+/* TABLET - 768px y superior */
+@media (min-width: 768px) {
+  /* Footer responsive para tablet */
+  .footer__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3rem;
+    text-align: left;
   }
 
-  .historial-card-header {
+  .footer__section h3 {
+    text-align: left;
+  }
+
+  .footer__item {
+    justify-content: flex-start;
+  }
+
+  .footer__item p {
+    text-align: left;
+  }
+
+  .footer__links {
+    text-align: left;
+  }
+
+  .footer__socials {
+    justify-content: flex-start;
+  }
+
+  /* Historial modal para tablet */
+  .modal-ver-historial-wide {
+    width: 80%;
+    max-width: 700px;
+  }
+}
+
+/* MÓVIL - hasta 768px */
+@media (max-width: 768px) {
+  /* Historial simple responsive para móvil */
+  .historial-simple-card {
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
     text-align: center;
   }
+  
+  .historial-simple-info {
+    align-items: center;
+  }
+  
+  .historial-simple-download {
+    width: 100%;
+  }
+}
 
-  .historial-card-actions {
-    flex-direction: column;
+/* ESCRITORIO - 1024px y superior */
+@media (min-width: 1024px) {
+  /* Footer responsive para escritorio */
+  .footer {
+    padding: 3rem 2rem;
+  }
+
+  .footer__grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4rem;
+    max-width: 1200px;
+  }
+
+  .footer__logo img {
+    width: 140px;
+  }
+
+  .footer__section h3 {
+    font-size: 24px;
+  }
+
+  .footer__item p {
+    font-size: 15px;
+  }
+
+  .footer__links a {
+    font-size: 13px;
+  }
+
+  .footer__bottom {
+    font-size: 13px;
   }
 }
