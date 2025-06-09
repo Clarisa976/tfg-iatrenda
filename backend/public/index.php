@@ -997,10 +997,10 @@ $app->get('/pac/citas', function (Request $req): Response {
 $app->post('/pac/citas/{id}/solicitud', function (Request $req, Response $res, array $args): Response {
     try {
         //error_log("=== INICIO /pac/citas/{id}/solicitud ===");
-       // error_log("Headers: " . json_encode($req->getHeaders()));
-       // error_log("Body raw: " . $req->getBody()->getContents());
+        // error_log("Headers: " . json_encode($req->getHeaders()));
+        // error_log("Body raw: " . $req->getBody()->getContents());
         $req->getBody()->rewind(); // Reset stream after reading
-        
+
         $val = verificarTokenUsuario();
         if ($val === false) {
             error_log("Token inválido");
@@ -1015,14 +1015,14 @@ $app->post('/pac/citas/{id}/solicitud', function (Request $req, Response $res, a
         $idPaciente = (int)$val['usuario']['id_persona'];
         $idCita = (int)$args['id'];
         $body = $req->getParsedBody();
-        
+
         //error_log("ID Paciente: $idPaciente");
         //error_log("ID Cita: $idCita");
-       // error_log("Body parsed: " . json_encode($body));
+        // error_log("Body parsed: " . json_encode($body));
 
         $accion = strtoupper(trim($body['accion'] ?? ''));
         $nuevaFecha = $body['nueva_fecha'] ?? null;
-        
+
         //error_log("Acción: '$accion'");
         //error_log("Nueva fecha: '$nuevaFecha'");
 

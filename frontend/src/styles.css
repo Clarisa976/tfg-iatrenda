@@ -48,9 +48,12 @@ body {
 main {
   flex: 1 0 auto;
   width: 100%;
-  padding-bottom: 2rem; /* Espacio para evitar que el contenido toque el footer */
-  padding-top: 140px; /* Espacio aumentado para el header */
-  min-height: calc(100vh - 140px); /* Asegurar que el contenido ocupe al menos toda la altura visible */
+  padding-bottom: 2rem;
+  /* Espacio para evitar que el contenido toque el footer */
+  padding-top: 140px;
+  /* Espacio aumentado para el header */
+  min-height: calc(100vh - 140px);
+  /* Asegurar que el contenido ocupe al menos toda la altura visible */
 }
 
 a {
@@ -58,7 +61,12 @@ a {
 }
 
 /* Estilos para encabezados */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: 'Montserrat', sans-serif;
   font-weight: 700;
   color: var(--blue);
@@ -644,7 +652,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 24px;
 }
 
-.footer__socials a + a {
+.footer__socials a+a {
   margin-left: 1.5rem;
 }
 
@@ -1104,7 +1112,7 @@ input[type="checkbox"]:checked::after {
 
 .btn-primary {
   background-color: var(--blue);
-  color: white;
+  color: black;
 }
 
 .btn-secondary {
@@ -1183,7 +1191,7 @@ input[type="checkbox"]:checked::after {
 .btn-ver-archivo {
   display: inline-block;
   background-color: var(--blue);
-  color: white;
+  color: black;
   padding: 8px 16px;
   border-radius: 4px;
   text-decoration: none;
@@ -1195,7 +1203,7 @@ input[type="checkbox"]:checked::after {
 .btn-ver-archivo:hover {
   background-color: #0056b3;
   text-decoration: none;
-  color: white;
+  color: black;
 }
 
 /* ========================================
@@ -1561,7 +1569,7 @@ input[type="checkbox"]:checked::after {
 
 .rbc-toolbar button.rbc-active {
   background-color: var(--blue);
-  color: white;
+  color: black;
 }
 
 .agenda-wrapper {
@@ -2234,1075 +2242,272 @@ input[type="checkbox"]:checked::after {
   padding: 8px;
 }
 
-/* ========================================
-   DOCUMENTOS Y GRIDS
-======================================== */
-
-.documentos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.documento-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 15px;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+/* =====  PREVISUALIZACIÓN AUTOMÁTICA DE TAREAS ===== */
+.tarea-preview-card {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  padding: 15px;
+  min-height: 180px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 120px;
 }
 
-.documento-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.tarea-preview-card:hover {
   border-color: var(--blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.documento-cabecera {
+.tarea-preview-content {
+  flex-grow: 1;
+  margin: 10px 0;
+}
+
+.tarea-preview-description {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.4;
   margin-bottom: 10px;
 }
 
-.documento-titulo {
-  font-weight: 600;
-  font-size: 1.1em;
-  color: #333;
-  margin-bottom: 5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
+.tarea-preview-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-top: 8px;
 }
 
-.documento-fecha {
-  color: #666;
-  font-size: 0.8em;
+.tarea-preview-profesional {
+  color: var(--blue);
+  font-weight: 500;
 }
 
-.documento-footer {
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid #f0f0f0;
+.tarea-preview-attachments {
+  color: #888;
+  font-size: 11px;
 }
 
-.diagnostico-completo {
-  background-color: #e7f3e5;
-  color: #2e7d32;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8em;
-  display: inline-block;
+.tarea-click-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 10px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.diagnostico-pendiente {
-  background-color: #fff3e0;
-  color: #e65100;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8em;
-  display: inline-block;
+.tarea-preview-card:hover .tarea-click-hint {
+  opacity: 1;
 }
 
 /* ========================================
-   ESTILOS UTILITARIOS
+    HISTORIAL CLÍNICO CON CARDS
 ======================================== */
-
-/* Espaciado y distribución */
-.flex-gap {
-  display: flex;
-  gap: 1rem;
-}
-
-.flex-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.text-left {
-  text-align: left;
-}
-
-.mb-20 {
+.historial-summary {
   margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1.1rem;
 }
 
-.mt-20 {
+/* Container para las cards apiladas */
+.historial-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
   margin-top: 20px;
 }
 
-.padding-20 {
+/* Card individual de documento */
+.historial-document-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.historial-document-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Header de la card */
+.historial-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.historial-card-date {
+  font-weight: 600;
+  color: var(--gray);
+  font-size: 0.9rem;
+}
+
+.historial-download-btn {
+  background-color: var(--blue);
+  color: black;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.historial-download-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Contenido de la card */
+.historial-card-content {
   padding: 20px;
 }
 
-/* Estados de carga */
-.loading-container {
-  padding: 2rem;
-  text-align: center;
+.historial-card-info p {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
-.loading-background {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.loading-text {
-  color: #6c757d;
-  margin: 0;
-  font-size: 1rem;
-}
-
-.loading-text-large {
-  font-size: 1rem;
-}
-
-/* ========================================
-   RESPONSIVE DESIGN - TABLETS Y DESKTOP
-======================================== */
-
-@media(min-width: 600px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media(min-width: 768px) {
-  /* Cabecera para tablet y desktop */
-  .icon.menu-icon {
-    display: none;
-  }
-
-  .menu-desplegable {
-    display: block;
-    position: relative;
-    top: 0;
-    right: 0;
-    width: 100%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-  }
-
-  .nav-links {
-    flex-direction: row;
-    justify-content: center;
-    position: static;
-  }
-
-  .nav-links a {
-    padding: 16px;
-  }
-
-  .nav-links a:not(.btn-reserva) {
-    text-decoration: underline;
-  }
-
-  .user-dropdown {
-    display: none;
-  }
-
-  /* Sidebar para tablet y desktop */
-  .overlay.show {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 20;
-  }
-
-  .sidebar {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    right: -250px;
-    width: 250px;
-    height: 100%;
-    background: var(--white);
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-    transition: right 0.3s ease;
-    z-index: 30;
-  }
-
-  .sidebar.show {
-    right: 0;
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    color: var(--gray);
-    align-self: flex-end;
-    margin: 16px;
-    cursor: pointer;
-  }
-
-  .sidebar-links {
-    display: flex;
-    flex-direction: column;
-    margin-top: 32px;
-  }
-
-  .sidebar-links a {
-    font-family: 'Inter';
-    font-weight: 400;
-    font-size: 16px;
-    color: var(--gray);
-    text-decoration: none;
-    padding: 12px 16px;
-  }
-
-  .sidebar-links a:hover {
-    color: var(--blue);
-  }
-
-  /* Hero para tablet y desktop */
-  .hero {
-    height: 75vh;
-    max-height: 75vh;
-    overflow: hidden;
-  }
-
-  .hero__img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: fill;
-  }
-
-  .hero__overlay {
-    height: 100%;
-  }
-
-  .hero__content {
-    bottom: 5%;
-  }
-
-  /* Sobre nosotros para tablet y desktop */
-  .about {
-    padding: 3rem 2rem;
-  }
-
-  .about__features {
-    flex-direction: row;
-    justify-content: space-between;
-    max-width: 900px;
-    margin: 0 auto;
-  }
-
-  .about__features li {
-    flex: 1 1 0;
-  }
-
-  .about__image-wrapper {
-    height: 160px;
-  }
-
-  /* Servicios para tablet y desktop */
-  .services__list {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 24px;
-  }
-
-  .service-item {
-    flex: 0 0 calc(50% - 12px);
-    display: flex;
-    align-items: flex-start;
-  }
-
-  /* Reseñas para tablet y desktop */
-  .resenas__slider {
-    gap: 32px;
-    padding: 0 60px;
-  }
-
-  .resenas__card {
-    flex: 0 0 320px;
-    padding: 20px;
-  }
-
-  /* Footer para tablet y desktop */
-  .footer h3 {
-    color: var(--black);
-  }
-
-  .footer__grid {
-    grid-template-columns: repeat(3, 1fr);
-    text-align: left;
-    justify-items: center;
-  }
-
-  .footer__section {
-    padding: 0 1rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .footer__bottom {
-    text-align: center;
-  }
-
-  /* Banner de cookies para tablet y desktop */
-  .cookie-banner {
-    flex-wrap: nowrap;
-  }
-
-  .cookie-banner__text {
-    flex: 1;
-    margin-bottom: 0;
-    text-align: left;
-  }
-
-  .cookie-banner__actions {
-    flex: 0;
-  }
-
-  /* Formularios para tablet y desktop */
-  .add-user-modal {
-  width: 90%;
-  max-width: 800px !important;
-  margin: auto;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 2rem;
-  box-sizing: border-box;
-    max-width: 900px !important;
-  }
-
-  .form-section {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* Acciones para tablet y desktop */
-  .acciones-mobile {
-    display: none;
-  }
-
-  .acciones-desktop {
-    display: inline-flex;
-  }
-}
-
-@media(min-width: 1024px) {
-  .stats-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .form-section {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-/* Campo de contraseña con botón de mostrar/ocultar */
-.password-field {
-  position: relative;
-  width: 100%;
-}
-
-.password-field input {
-  width: 100%;
-  padding-right: 40px;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
+.historial-profesional {
   color: var(--gray);
 }
 
-.password-toggle:hover {
-  color: var(--blue);
+.historial-diagnostico {
+  color: #666;
+  font-style: italic;
 }
 
-.perfil-paciente-container {
-  max-width: 900px;
-}
-
-.perfil-actions-flex {
-  display: flex;
-  gap: 1rem;
-}
-
-.modal-tareas-body {
-  margin-top: 2rem;
-}
-
-.modal-tareas-titulo {
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.tareas-sin-asignar {
-  text-align: center;
-  padding: 2rem;
-}
-
-.tareas-sin-asignar-fondo {
-  text-align: center;
-  padding: 2rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.tareas-sin-asignar-texto {
-  color: #6c757d;
-  margin: 0;
-  font-size: 1rem;
-}
-
-.tareas-container {
-  position: relative;
-}
-
-.tarea-card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 15px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.tarea-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-color: var(--blue);
-}
-
-.tarea-titulo {
-  margin: 0 0 8px 0;
-  color: var(--blue);
-  font-size: 1.1em;
-  font-weight: 600;
-}
-
-.tarea-meta {
-  color: #6c757d;
-  font-size: 0.9em;
-  margin-bottom: 8px;
-}
-
-.tarea-descripcion-preview {
-  background-color: #f8f9fa;
-  padding: 10px 12px;
-  border-radius: 4px;
-  margin-bottom: 10px;
-  border-left: 3px solid var(--blue);
-  font-size: 0.9rem;
-  color: #495057;
-  line-height: 1.4;
-  max-height: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tarea-acciones-container {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.tarea-progreso-container {
-  background-color: #e9ecef;
-  border-radius: 10px;
-  height: 8px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.tarea-progreso-barra {
-  height: 100%;
-  background: linear-gradient(90deg, var(--green) 0%, #4caf50 100%);
-  transition: width 0.3s ease;
-}
-
-.tarea-progreso-texto {
-  font-size: 0.8rem;
-  color: #6c757d;
-  text-align: center;
-  margin-bottom: 0.5rem;
-}
-
-.tarea-navegacion-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding: 0 1rem;
-}
-
-.tarea-nav-btn {
-  background: var(--blue);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.tarea-nav-btn:hover {
-  background: #1e6bb8;
-}
-
-.tarea-nav-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.tarea-indicators-container {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.tarea-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ddd;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.tarea-indicator.active {
-  background: var(--blue);
-}
-
-/* Clases adicionales específicas para PerfilPaciente.js */
-.tareas-slider-container {
-  overflow: hidden;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.tareas-slider {
-  display: flex;
-  transition: transform 0.3s ease-in-out;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.tarea-slide-item {
-  min-width: calc(33.333% - 0.667rem);
-  background-color: white;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-height: 180px;
-}
-
-.tarea-slide-titulo {
-  margin: 0 0 1rem 0;
-  color: #2c3e50;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.tarea-descripcion-preview-box {
-  background-color: #f8f9fa;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  border-left: 3px solid var(--blue);
-  font-size: 0.9rem;
-  color: #495057;
-  line-height: 1.4;
-  max-height: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tarea-fecha-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  color: #6c757d;
-  font-size: 0.9rem;
-}
-
-.tarea-ver-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-weight: 500;
-}
-
-.tarea-ver-btn:hover {
-  background-color: #0056b3;
-}
-
-.tarea-nav-left {
-  position: absolute;
-  left: -20px;
-  top: 50%;
-  transform: translateY(-50%);
-  background-color: white;
-  border: 1px solid #dee2e6;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  z-index: 10;
-}
-
-.tarea-nav-right {
-  position: absolute;
-  right: -20px;
-  top: 50%;
-  transform: translateY(-50%);
-  background-color: white;
-  border: 1px solid #dee2e6;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  z-index: 10;
-}
-
-/* Clases adicionales para ModalVerTarea.js */
-.tarea-documento-item {
-  margin-bottom: 15px;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-}
-
-.tarea-documento-titulo {
-  margin: 0 0 10px 0;
+.historial-filename {
   color: #333;
+  word-break: break-word;
 }
 
-.tarea-imagen-preview {
-  max-width: 100%;
-  max-height: 300px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  display: block;
-  margin: 10px auto;
-}
-
-.tarea-imagen-error {
-  display: none;
-  border: 1px dashed #f44336;
-  padding: 15px;
-  border-radius: 4px;
-  background-color: #ffeaa7;
-}
-
-.tarea-file-link-container {
-  text-align: center;
+/* Preview de imagen */
+.historial-image-preview {
   margin: 15px 0;
+  text-align: center;
 }
 
-.tarea-download-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--blue);
-  color: white;
-  text-decoration: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.tarea-download-link:hover {
-  background-color: #0056b3;
-  color: white;
-  text-decoration: none;
-}
-
-.tarea-info-completa-container {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
+.historial-preview-img {
+  max-width: 100%;
+  max-height: 200px;
   border-radius: 8px;
-  border-left: 4px solid var(--blue);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.tarea-info-completa-titulo {
-  margin-bottom: 10px;
-  color: #2c3e50;
-}
-
-.tarea-info-completa-texto {
-  margin: 0;
-}
-
-/* Nueva clase para mensaje de sin archivos */
-.tarea-sin-archivos-container {
-  margin-top: 20px;
+.historial-image-error {
   padding: 20px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  text-align: center;
-  color: #6c757d;
+  color: #666;
+  font-size: 0.9rem;
 }
 
-.tarea-sin-archivos-texto {
-  margin: 0;
-}
-
-/* Clases adicionales para PerfilPacienteProfesional.js */
-.cita-actual-container {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 15px;
-  margin-bottom: 20px;
-}
-
-.cita-actual-titulo {
-  margin: 0 0 10px 0;
-  color: #495057;
-  font-size: 0.9em;
-}
-
-.cita-actual-fecha-container {
+/* Placeholder para archivos no imagen */
+.historial-file-placeholder {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  justify-content: center;
+  margin: 15px 0;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
 }
 
-.cita-actual-fecha-texto {
-  color: #6c757d;
-  font-size: 0.9em;
-}
-
-.cita-actual-motivo {
-  margin: 0;
-  font-size: 0.85em;
-  color: #6c757d;
-}
-
-/* Información de horario de atención */
-.horario-atencion-info {
-  background: #d1ecf1;
-  border: 1px solid #bee5eb;
+.file-type-indicator {
+  background-color: var(--blue);
+  color: black;
+  padding: 8px 12px;
   border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 20px;
-  font-size: 0.85em;
-  color: #0c5460;
+  font-weight: 600;
+  font-size: 0.8rem;
 }
 
-/* Lista de horarios */
-.horario-atencion-lista {
-  margin: 5px 0 0 0;
-  padding-left: 15px;
+/* Acciones de la card */
+.historial-card-actions {
+  display: flex;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid #e9ecef;
+  background-color: #fafafa;
 }
 
-/* Campo de selección de fecha con margen específico */
-.fecha-seleccion-field {
-  margin-bottom: 20px;
-}
-
-/* Label para selección de fecha */
-.fecha-seleccion-label {
-  font-weight: bold;
-  margin-bottom: 8px;
-  display: block;
-}
-
-/* Contenedor de carga de horas */
-.cargando-horas-container {
-  padding: 10px;
-  text-align: center;
-  color: #666;
-  font-size: 0.9em;
-}
-
-/* Texto de ayuda para selección de fecha */
-.fecha-ayuda-texto {
-  color: #666;
-  font-size: 0.8em;
-  margin-top: 5px;
-  display: block;
-}
-
-/* Estado de carga general */
-.estado-carga-container {
-  padding: 15px;
-  background: #e3f2fd;
-  border: 1px solid #90caf9;
-  border-radius: 4px;
-  color: #1565c0;
-  margin-bottom: 15px;
-}
-
-/* Mensaje de error específico */
-.mensaje-error-container {
-  background: #fee;
-  border: 1px solid #fcc;
-  padding: 12px;
+.historial-action-btn {
+  flex: 1;
+  padding: 10px 15px;
+  border: none;
   border-radius: 6px;
-  margin-bottom: 15px;
-  color: #c33;
-}
-
-/* Sección de debug info */
-.debug-info-details {
-  margin-bottom: 15px;
-  font-size: 0.8em;
-}
-
-/* Summary del debug info */
-.debug-info-summary {
+  font-weight: 500;
   cursor: pointer;
-  color: #666;
+  transition: all 0.2s ease;
 }
 
-/* Contenido del debug info */
-.debug-info-contenido {
-  background: #f0f0f0;
-  padding: 10px;
-  border-radius: 4px;
-  margin-top: 5px;
+.historial-action-btn.primary {
+  background-color: var(--blue);
+  color: black;
 }
 
-/* Botón de reprogramar con opacidad variable */
-.btn-reprogramar-disabled {
-  opacity: 0.6;
+.historial-action-btn.primary:hover {
+  background-color: #0056b3;
 }
 
-/* Celda de estado de cita en tabla */
-.cita-estado-celda {
-  color: #000;
+.historial-action-btn.secondary {
+  background-color: #f8f9fa;
+  color: var(--gray);
+  border: 1px solid #dee2e6;
+}
+
+.historial-action-btn.secondary:hover {
+  background-color: #e9ecef;
+}
+
+/* Estado vacío */
+.historial-empty-state {
   text-align: center;
-}
-
-/* Icono dropdown con cursor pointer */
-.dropdown-icon-cita {
-  cursor: pointer;
-}
-
-/* ========================================
-   PERFIL PACIENTE PROFESIONAL - ESTILOS ESPECÍFICOS
-======================================== */
-
-/* Contenedor principal con ancho máximo específico */
-.perfil-paciente-profesional-container {
-  max-width: 950px;
-}
-
-/* Texto de fecha en cita actual */
-.cita-actual-fecha-texto {
-  color: #6c757d;
-  font-size: 0.9em;
-}
-
-/* Motivo de cita actual */
-.cita-actual-motivo {
-  margin: 0;
-  font-size: 0.85em;
-  color: #6c757d;
-}
-
-/* Información de horario de atención */
-.horario-atencion-info {
-  background: #d1ecf1;
-  border: 1px solid #bee5eb;
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 20px;
-  font-size: 0.85em;
-  color: #0c5460;
-}
-
-/* Lista de horarios */
-.horario-atencion-lista {
-  margin: 5px 0 0 0;
-  padding-left: 15px;
-}
-
-/* Campo de selección de fecha con margen específico */
-.fecha-seleccion-field {
-  margin-bottom: 20px;
-}
-
-/* Label para selección de fecha */
-.fecha-seleccion-label {
-  font-weight: bold;
-  margin-bottom: 8px;
-  display: block;
-}
-
-/* Contenedor de carga de horas */
-.cargando-horas-container {
-  padding: 10px;
-  text-align: center;
-  color: #666;
-  font-size: 0.9em;
-}
-
-/* Texto de ayuda para selección de fecha */
-.fecha-ayuda-texto {
-  color: #666;
-  font-size: 0.8em;
-  margin-top: 5px;
-  display: block;
-}
-
-/* Estado de carga general */
-.estado-carga-container {
-  padding: 15px;
-  background: #e3f2fd;
-  border: 1px solid #90caf9;
-  border-radius: 4px;
-  color: #1565c0;
-  margin-bottom: 15px;
-}
-
-/* Mensaje de error específico */
-.mensaje-error-container {
-  background: #fee;
-  border: 1px solid #fcc;
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 15px;
-  color: #c33;
-}
-
-/* Sección de debug info */
-.debug-info-details {
-  margin-bottom: 15px;
-  font-size: 0.8em;
-}
-
-/* Summary del debug info */
-.debug-info-summary {
-  cursor: pointer;
+  padding: 60px 20px;
   color: #666;
 }
 
-/* Contenido del debug info */
-.debug-info-contenido {
-  background: #f0f0f0;
-  padding: 10px;
-  border-radius: 4px;
-  margin-top: 5px;
+.historial-empty-state h4 {
+  margin-bottom: 10px;
+  color: var(--gray);
 }
 
-/* Botón de reprogramar con opacidad variable */
-.btn-reprogramar-disabled {
-  opacity: 0.6;
+.historial-empty-state p {
+  font-size: 0.9rem;
 }
 
-/* Celda de estado de cita en tabla */
-.cita-estado-celda {
-  color: #000;
-  text-align: center;
-}
+/* Responsive para las cards */
+@media (max-width: 768px) {
+  .historial-cards-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
 
-/* Icono dropdown con cursor pointer */
-.dropdown-icon-cita {
-  cursor: pointer;
-}
+  .historial-card-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
 
-/* ========================================
-   ESTADOS DE CITAS
-======================================== */
-
-.estado-pendiente-validacion { 
-    background: #f2c94c !important;
-    color: #000000 !important;
-}
-
-.estado-solicitada { 
-    color: #000000 !important;
-}
-
-.estado-confirmada { 
-    background: #27ae60 !important;
-    color: #000000 !important;
-}
-
-.estado-atendida { 
-    background: #6fcf97 !important;
-    color: #000000 !important;
-}
-
-.estado-cancelada { 
-    background: #f04b4b !important;
-    color: #000000 !important;
-}
-
-.estado-no-presentada { 
-    color: #000000 !important;
-}
-
-.estado-cambiar { 
-    background: #2f80eb !important;
-    color: #000000 !important;
-}
-
-.estado-cancelar { 
-    background: #eb5757 !important;
-    color: #000000 !important;
-}
-
-.estado-no-atendida { 
-    background: #9b51e0 !important;
-    color: #000000 !important;
+  .historial-card-actions {
+    flex-direction: column;
+  }
 }
 
 /* Estilos específicos para el modal de login */
@@ -3351,4 +2556,250 @@ input[type="checkbox"]:checked::after {
 
 .modal .password-toggle:hover {
   color: var(--blue);
+}
+
+/* ========================================
+    PREVISUALIZACIÓN AUTOMÁTICA TAREAS
+======================================== */
+
+/* Hacer las tarjetas de tareas clickeables */
+.tarea-slide-item {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tarea-slide-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Previsualización dentro de la tarjeta */
+.tarea-preview {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e9ecef;
+}
+
+.tarea-profesional {
+  font-size: 0.85rem;
+  color: var(--gray);
+  margin: 5px 0;
+}
+
+.tarea-descripcion {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.3;
+  margin: 5px 0;
+}
+
+.tarea-archivos {
+  font-size: 0.75rem;
+  color: var(--blue);
+  font-weight: 500;
+  margin: 5px 0 0 0;
+}
+
+/* ========================================
+    HISTORIAL CLÍNICO CARDS
+======================================== */
+.historial-summary {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+/* Container para las cards apiladas */
+.historial-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Card individual de documento */
+.historial-document-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.historial-document-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Header de la card */
+.historial-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.historial-card-date {
+  font-weight: 600;
+  color: var(--gray);
+  font-size: 0.9rem;
+}
+
+.historial-download-btn {
+  background-color: var(--blue);
+  color: black;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.historial-download-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Contenido de la card */
+.historial-card-content {
+  padding: 20px;
+}
+
+.historial-card-info p {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.historial-profesional {
+  color: var(--gray);
+}
+
+.historial-diagnostico {
+  color: #666;
+  font-style: italic;
+}
+
+.historial-filename {
+  color: #333;
+  word-break: break-word;
+}
+
+/* Preview de imagen */
+.historial-image-preview {
+  margin: 15px 0;
+  text-align: center;
+}
+
+.historial-preview-img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.historial-image-error {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Placeholder para archivos no imagen */
+.historial-file-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 15px 0;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.file-type-indicator {
+  background-color: var(--blue);
+  color: black;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+/* Acciones de la card */
+.historial-card-actions {
+  display: flex;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid #e9ecef;
+  background-color: #fafafa;
+}
+
+.historial-action-btn {
+  flex: 1;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.historial-action-btn.primary {
+  background-color: var(--blue);
+  color: black;
+}
+
+.historial-action-btn.primary:hover {
+  background-color: #0056b3;
+}
+
+.historial-action-btn.secondary {
+  background-color: #f8f9fa;
+  color: var(--gray);
+  border: 1px solid #dee2e6;
+}
+
+.historial-action-btn.secondary:hover {
+  background-color: #e9ecef;
+}
+
+/* Estado vacío */
+.historial-empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.historial-empty-state h4 {
+  margin-bottom: 10px;
+  color: var(--gray);
+}
+
+.historial-empty-state p {
+  font-size: 0.9rem;
+}
+
+/* Responsive para las cards */
+@media (max-width: 768px) {
+  .historial-cards-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .historial-card-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .historial-card-actions {
+    flex-direction: column;
+  }
 }

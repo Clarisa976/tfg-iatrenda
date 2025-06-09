@@ -16,29 +16,29 @@ moment.locale('es');
 const localizer = momentLocalizer(moment);
 
 // Verificar que el localizer se configuró correctamente
-console.log('AgendaGlobal: Configuración de moment:', {
+/*console.log('AgendaGlobal: Configuración de moment:', {
   locale: moment.locale(),
   localizerConfigured: !!localizer
-});
+});*/
 
 export default function AgendaGlobal() {
   const [profesionales, setProfesionales] = useState([]);
-  const [eventos, setEventos]             = useState([]);
-  const [busqueda, setBusqueda]           = useState('');
-  const [openModal, setOpenModal]         = useState(false);
-  const [detalle, setDetalle]             = useState(null);
-  const [detalleOpen, setDetalleOpen]     = useState(false);
-  const [loading, setLoading]             = useState(true);
+  const [eventos, setEventos] = useState([]);
+  const [busqueda, setBusqueda] = useState('');
+  const [openModal, setOpenModal] = useState(false);
+  const [detalle, setDetalle] = useState(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   /* cargar datos */
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { cargar(); }, []);  const cargar = async () => {
+  useEffect(() => { cargar(); }, []); const cargar = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       console.log('AgendaGlobal: Iniciando carga de datos...');
-      
+
       const [pRes, eRes] = await Promise.all([
         axios.get('/profesionales'),
         axios.get('/agenda/global'),
@@ -51,7 +51,7 @@ export default function AgendaGlobal() {
         setProfesionales(pRes.data.data || []);
         console.log('AgendaGlobal: Profesionales cargados:', pRes.data.data?.length || 0);
       }
-      
+
       if (eRes.data.ok) {
         const eventosFormateados = map(eRes.data.data || []);
         setEventos(eventosFormateados);
@@ -66,7 +66,7 @@ export default function AgendaGlobal() {
   };
   const map = (arr) => {
     console.log('AgendaGlobal: Mapeando eventos recibidos:', arr);
-    
+
     return arr.map((x) => {
       // Usar directamente el nombre del profesional 
       let profNombre = x.nombre_profesional || '';
@@ -74,7 +74,7 @@ export default function AgendaGlobal() {
       if (!profNombre && x.recurso) {
         profNombre = `ID: ${x.recurso}`;
       }
-      
+
       const eventoFormateado = {
         id: x.id,
         tipo: x.tipo,
@@ -86,7 +86,7 @@ export default function AgendaGlobal() {
         creadorNombre: x.creador || '—',
         title: `${x.tipo} – ${profNombre || 'Todos'}`,
       };
-      
+
       console.log('AgendaGlobal: Evento original:', x, 'Evento formateado:', eventoFormateado);
       return eventoFormateado;
     });
@@ -94,13 +94,13 @@ export default function AgendaGlobal() {
   /* filtrado */
   const eventosFiltrados = useMemo(() => {
     console.log('AgendaGlobal: Filtrando eventos. Total:', eventos.length, 'Búsqueda:', busqueda);
-    
+
     if (busqueda.trim() === '') return eventos;
     const txt = busqueda.toLowerCase();
     const ids = profesionales
       .filter(p => p.nombre.toLowerCase().includes(txt))
       .map(p => p.id);
-    
+
     const filtrados = eventos.filter(ev => ids.includes(ev.profId));
     console.log('AgendaGlobal: Eventos filtrados:', filtrados.length);
     return filtrados;
@@ -153,7 +153,7 @@ export default function AgendaGlobal() {
 
       <div className="agenda-actions">
         <a href="#nuevo" className="btn-reserva"
-           onClick={e => { e.preventDefault(); setOpenModal(true); }}>
+          onClick={e => { e.preventDefault(); setOpenModal(true); }}>
           Añadir evento
         </a>
       </div>
@@ -162,14 +162,14 @@ export default function AgendaGlobal() {
         <label htmlFor="buscarPro">Buscar profesional</label>
         <div className="agenda-buscar-input">
           <input id="buscarPro" type="search"
-                 value={busqueda}
-                 onChange={e=>setBusqueda(e.target.value)}
-                 placeholder="Nombre o apellidos…" />
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Nombre o apellidos…" />
         </div>
       </div>      <div className="cal-wrapper">
         {loading ? (
-          <div style={{ 
-            textAlign: 'center', 
+          <div style={{
+            textAlign: 'center',
             padding: '3rem',
             backgroundColor: '#f8f9fa',
             borderRadius: '8px',
@@ -180,8 +180,8 @@ export default function AgendaGlobal() {
             </p>
           </div>
         ) : eventos.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
+          <div style={{
+            textAlign: 'center',
             padding: '3rem',
             backgroundColor: '#f8f9fa',
             borderRadius: '8px',
@@ -191,37 +191,37 @@ export default function AgendaGlobal() {
               No hay eventos en la agenda para mostrar
             </p>
           </div>
-        ) : (          <Calendar
-            localizer={localizer}
-            events={eventosFiltrados}
-            startAccessor="start"
-            endAccessor="end"
-            tooltipAccessor="nota"
-            eventPropGetter={eventStyleGetter}
-            className="calendario-agenda"
-            onSelectEvent={e => { setDetalle(e); setDetalleOpen(true); }}
-            views={['month', 'week', 'day', 'agenda']}
-            defaultView="month"
-            messages={{
-              next: "Siguiente",
-              previous: "Anterior",
-              today: "Hoy",
-              month: "Mes",
-              week: "Semana", 
-              day: "Día",
-              agenda: "Agenda",
-              date: "Fecha",
-              time: "Hora",
-              event: "Evento",
-              noEventsInRange: "No hay eventos en este periodo"
-            }}
-            onNavigate={(date) => {
-              console.log('AgendaGlobal: Navegando a fecha:', date);
-            }}
-            onView={(view) => {
-              console.log('AgendaGlobal: Cambiando vista a:', view);
-            }}
-          />
+        ) : (<Calendar
+          localizer={localizer}
+          events={eventosFiltrados}
+          startAccessor="start"
+          endAccessor="end"
+          tooltipAccessor="nota"
+          eventPropGetter={eventStyleGetter}
+          className="calendario-agenda"
+          onSelectEvent={e => { setDetalle(e); setDetalleOpen(true); }}
+          views={['month', 'week', 'day', 'agenda']}
+          defaultView="month"
+          messages={{
+            next: "Siguiente",
+            previous: "Anterior",
+            today: "Hoy",
+            month: "Mes",
+            week: "Semana",
+            day: "Día",
+            agenda: "Agenda",
+            date: "Fecha",
+            time: "Hora",
+            event: "Evento",
+            noEventsInRange: "No hay eventos en este periodo"
+          }}
+          onNavigate={(date) => {
+            console.log('AgendaGlobal: Navegando a fecha:', date);
+          }}
+          onView={(view) => {
+            console.log('AgendaGlobal: Cambiando vista a:', view);
+          }}
+        />
         )}
       </div>
 

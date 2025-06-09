@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle, ChevronLeft, ChevronRight, Eye, Calendar} from 'lucide-react';
+import { CheckCircle, XCircle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import ModalVerTarea from '../../components/modals/ModalVerTarea';
 import ModalVerHistorial from '../../components/modals/ModalVerHistorial';
 import '../../styles.css';
@@ -10,7 +10,7 @@ export default function PerfilPaciente() {
 
     const [searchParams] = useSearchParams();
     const hoy = new Date().toISOString().split('T')[0];
-    
+
     const [tareaSeleccionada, setTareaSeleccionada] = useState(null);
     const [mostrarModalTarea, setMostrarModalTarea] = useState(false);
     const [documentosHistorial, setDocumentosHistorial] = useState([]);
@@ -43,13 +43,13 @@ export default function PerfilPaciente() {
         provincia: '',
         pais: 'España'
     });
-    
+
     // Datos de paciente 
     const [pacData, setPacData] = useState({
         tipo_paciente: 'ADULTO',
         observaciones_generales: ''
     });
-    
+
     // Datos de tutor
     const [tutorData, setTutorData] = useState({
         nombre: '',
@@ -61,7 +61,7 @@ export default function PerfilPaciente() {
         telefono: '',
         metodo_contacto_preferido: []
     });
-    
+
 
     const [consent, setConsent] = useState(false);
 
@@ -437,7 +437,7 @@ export default function PerfilPaciente() {
     return (
         <div className="usuarios-container perfil-paciente-container">
             <h1 className="usuarios-title">Mi Perfil</h1>
-            
+
             {/* SECCIÓN MI PERFIL */}
             <div id="section-perfil" className="modal-body">
                 <form onSubmit={handleSubmit}>
@@ -523,7 +523,7 @@ export default function PerfilPaciente() {
                         {input('ciudad', 'Ciudad')}
                         {input('provincia', 'Provincia')}
                         {input('pais', 'País')}
-                    </div>                    
+                    </div>
                     {/* Consentimiento */}
                     <h4>Consentimiento de datos</h4>
                     <div className="field checkbox-field">
@@ -534,9 +534,9 @@ export default function PerfilPaciente() {
                                 onChange={e => setConsent(e.target.checked)}
                                 disabled={!editMode}
                             />{' '}Acepto el uso y tratamiento de mis datos personales según la{' '}
-                            <a 
-                                href="/politica-privacidad" 
-                                target="_blank" 
+                            <a
+                                href="/politica-privacidad"
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ color: 'var(--blue)', textDecoration: 'underline' }}
                             > Política de Privacidad
@@ -575,8 +575,7 @@ export default function PerfilPaciente() {
                 ) : tareas.length === 0 ? (
                     <div className="tareas-sin-asignar-fondo">
                         <p className="tareas-sin-asignar-texto">No tienes tareas para casa asignadas en este momento</p>
-                    </div>
-                ) : (
+                    </div>) : (
                     <div className="tareas-container">
                         {/* Slider Container */}
                         <div className="tareas-slider-container">
@@ -588,6 +587,7 @@ export default function PerfilPaciente() {
                                     <div
                                         key={index}
                                         className="tarea-slide-item"
+                                        onClick={() => verTarea(tarea)}
                                     >
                                         <h5 className="tarea-slide-titulo">
                                             {tarea.titulo || 'Tarea sin título'}
@@ -596,13 +596,22 @@ export default function PerfilPaciente() {
                                             <Calendar size={16} />
                                             <span>{formatDate(tarea.fecha_asignacion)}</span>
                                         </div>
-                                        <button
-                                            onClick={() => verTarea(tarea)}
-                                            className="tarea-ver-btn"
-                                        >
-                                            <Eye size={16} />
-                                            Ver tarea
-                                        </button>
+                                        <div className="tarea-preview">
+                                            <p className="tarea-profesional">
+                                                Dr/a: {tarea.profesional_nombre}
+                                            </p>
+                                            <p className="tarea-descripcion">
+                                                {tarea.descripcion && tarea.descripcion.length > 100
+                                                    ? `${tarea.descripcion.substring(0, 100)}...`
+                                                    : tarea.descripcion || 'Sin descripción disponible'
+                                                }
+                                            </p>
+                                            {tarea.documentos && tarea.documentos.length > 0 && (
+                                                <p className="tarea-archivos">
+                                                    {tarea.documentos.length} archivo{tarea.documentos.length > 1 ? 's' : ''} adjunto{tarea.documentos.length > 1 ? 's' : ''}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>

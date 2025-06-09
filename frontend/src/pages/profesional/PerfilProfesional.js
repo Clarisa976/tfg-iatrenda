@@ -39,7 +39,7 @@ export default function PerfilProfesional() {
   //consentimiento
   const [consent, setConsent] = useState(false);
 
-  const [toast, setToast] = useState({ show:false, ok:true, titulo:'', msg:'' });
+  const [toast, setToast] = useState({ show: false, ok: true, titulo: '', msg: '' });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -64,14 +64,14 @@ export default function PerfilProfesional() {
         });
         if (data.token) localStorage.setItem('token', data.token);
       } catch {
-        setToast({ show:true, ok:false, titulo:'Error', msg:'No se pudo cargar el perfil' });
+        setToast({ show: true, ok: false, titulo: 'Error', msg: 'No se pudo cargar el perfil' });
       }
       try {
 
         const { data } = await axios.get('/consentimiento');
         if (data.ok) setConsent(data.consentimiento && !data.revocado);
       } catch {
-        setToast({ show:true, ok:false, titulo:'Error', msg:'No se pudo cargar el consentimiento' });
+        setToast({ show: true, ok: false, titulo: 'Error', msg: 'No se pudo cargar el consentimiento' });
       }
     }
     cargar();
@@ -80,14 +80,14 @@ export default function PerfilProfesional() {
   // Ocultar toast
   useEffect(() => {
     if (!toast.show) return;
-    const id = setTimeout(() => setToast(t=>({...t,show:false})), 5000);
+    const id = setTimeout(() => setToast(t => ({ ...t, show: false })), 5000);
     return () => clearTimeout(id);
   }, [toast.show]);
 
   // Validación antes de enviar
   const validar = () => {
     const errs = {};
-    ['nombre','apellido1','email','fecha_nacimiento'].forEach(k => {
+    ['nombre', 'apellido1', 'email', 'fecha_nacimiento'].forEach(k => {
       if (!form[k]?.toString().trim()) errs[k] = true;
     });
     setErrors(errs);
@@ -108,8 +108,8 @@ export default function PerfilProfesional() {
       .then(({ data }) => {
         if (data.ok) setForm(data.data.persona);
       })
-      .catch(()=>{
-        setToast({ show:true, ok:false, titulo:'Error', msg:'No se pudo cargar el perfil' });
+      .catch(() => {
+        setToast({ show: true, ok: false, titulo: 'Error', msg: 'No se pudo cargar el perfil' });
       });
   };
 
@@ -125,39 +125,39 @@ export default function PerfilProfesional() {
 
       // si el consentimiento cambió
       if (consent) {
-        await axios.post('/consentimiento', { canal:'WEB' });
+        await axios.post('/consentimiento', { canal: 'WEB' });
       } else {
         await axios.post('/consentimiento/revocar', {});
       }
 
-      setToast({ show:true, ok:true, titulo:'Éxito', msg:'Perfil y consentimiento actualizados' });
+      setToast({ show: true, ok: true, titulo: 'Éxito', msg: 'Perfil y consentimiento actualizados' });
       setEditMode(false);
     } catch {
-      setToast({ show:true, ok:false, titulo:'Error', msg:'No se pudo guardar' });
+      setToast({ show: true, ok: false, titulo: 'Error', msg: 'No se pudo guardar' });
     }
   };
 
-  const input = (key, label, type='text', full=false) => (
-    <div className={`field${full?' full':''}`} key={key}>
+  const input = (key, label, type = 'text', full = false) => (
+    <div className={`field${full ? ' full' : ''}`} key={key}>
       <label>{label}</label>
       <input
         type={type}
         name={key}
-        value={form[key]||''}
+        value={form[key] || ''}
         onChange={editMode ? handleChange : undefined}
         readOnly={!editMode}
-        className={editMode ? (errors[key]?'invalid':'') : 'readonly-input'}
+        className={editMode ? (errors[key] ? 'invalid' : '') : 'readonly-input'}
       />
       {editMode && errors[key] && <span className="error-msg">Obligatorio</span>}
     </div>
   );
 
-  const readOnlyField = (key, label, type='text') => (
+  const readOnlyField = (key, label, type = 'text') => (
     <div className="field" key={key}>
       <label>{label}</label>
       <input
         type={type}
-        value={profData[key]||''}
+        value={profData[key] || ''}
         readOnly
         className="readonly-input"
       />
@@ -172,36 +172,36 @@ export default function PerfilProfesional() {
           {/* Sección profesional */}
           <h4>Datos del profesional</h4>
           <div className="form-grid">
-            {readOnlyField('num_colegiado','Nº colegiado')}
-            {readOnlyField('especialidad','Especialidad')}
-            {readOnlyField('fecha_alta','Fecha alta','date')}
+            {readOnlyField('num_colegiado', 'Nº colegiado')}
+            {readOnlyField('especialidad', 'Especialidad')}
+            {readOnlyField('fecha_alta', 'Fecha alta', 'date')}
           </div>
 
           {/* Datos personales */}
           <h4>Datos personales</h4>
           <div className="form-grid">
-            {input('nombre','Nombre*')}
-            {input('apellido1','Primer apellido*')}
-            {input('apellido2','Segundo apellido')}
-            {input('fecha_nacimiento','Fecha nacimiento*','date')}
+            {input('nombre', 'Nombre*')}
+            {input('apellido1', 'Primer apellido*')}
+            {input('apellido2', 'Segundo apellido')}
+            {input('fecha_nacimiento', 'Fecha nacimiento*', 'date')}
           </div>
 
           {/* Datos de contacto */}
           <h4>Datos de contacto</h4>
           <div className="form-grid">
-            {input('email','Email*','email')}
-            {input('telefono','Teléfono')}
-            {input('tipo_via','Tipo vía')}
-            {input('nombre_calle','Nombre calle','text',true)}
-            {input('numero','Número')}
-            {input('escalera','Escalera')}
-            {input('piso','Piso')}
-            {input('puerta','Puerta')}
-            {input('codigo_postal','Código postal')}
-            {input('ciudad','Ciudad')}
-            {input('provincia','Provincia')}
-            {input('pais','País')}
-          </div>          
+            {input('email', 'Email*', 'email')}
+            {input('telefono', 'Teléfono')}
+            {input('tipo_via', 'Tipo vía')}
+            {input('nombre_calle', 'Nombre calle', 'text', true)}
+            {input('numero', 'Número')}
+            {input('escalera', 'Escalera')}
+            {input('piso', 'Piso')}
+            {input('puerta', 'Puerta')}
+            {input('codigo_postal', 'Código postal')}
+            {input('ciudad', 'Ciudad')}
+            {input('provincia', 'Provincia')}
+            {input('pais', 'País')}
+          </div>
           {/* Consentimiento */}
           <h4>Consentimiento de datos</h4>
           <div className="field checkbox-field">
@@ -209,12 +209,12 @@ export default function PerfilProfesional() {
               <input
                 type="checkbox"
                 checked={consent}
-                onChange={e=>setConsent(e.target.checked)}
+                onChange={e => setConsent(e.target.checked)}
                 disabled={!editMode}
               />{' '}Acepto el uso y tratamiento de mis datos personales según la{' '}
-              <a 
-                href="/politica-privacidad" 
-                target="_blank" 
+              <a
+                href="/politica-privacidad"
+                target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: 'var(--blue)', textDecoration: 'underline' }}
               >Política de Privacidad
@@ -232,7 +232,7 @@ export default function PerfilProfesional() {
                 <button type="submit" className="btn-save">Guardar</button>
               </>
             ) : (
-              <button type="button" className="btn-save" onClick={()=>setEditMode(true)}>
+              <button type="button" className="btn-save" onClick={() => setEditMode(true)}>
                 Editar
               </button>
             )}
@@ -242,16 +242,16 @@ export default function PerfilProfesional() {
 
       {/* Toast */}
       {toast.show && (
-<div className="toast-global centered-toast">
-    <div className={`toast-card ${toast.ok ? 'success' : 'error'}`}>
-      {toast.ok
-        ? <CheckCircle size={48} className="toast-icon success" />
-        : <XCircle size={48} className="toast-icon error" />
-      }
-      <h3 className="toast-title">{toast.titulo}</h3>
-      <p className="toast-text">{toast.msg}</p>
-    </div>
-  </div>
+        <div className="toast-global centered-toast">
+          <div className={`toast-card ${toast.ok ? 'success' : 'error'}`}>
+            {toast.ok
+              ? <CheckCircle size={48} className="toast-icon success" />
+              : <XCircle size={48} className="toast-icon error" />
+            }
+            <h3 className="toast-title">{toast.titulo}</h3>
+            <p className="toast-text">{toast.msg}</p>
+          </div>
+        </div>
       )}
     </div>
   );

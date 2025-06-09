@@ -24,8 +24,8 @@ export default function CrearContrasena() {
     if (pass.length < 8) {
       setErr('La contraseña debe tener al menos 8 caracteres');
       return;
-    } 
-    
+    }
+
     try {
       console.log('Enviando al backend:', { uid, password: '***' });
       await axios.post(

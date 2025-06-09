@@ -18,9 +18,9 @@ export default function AgendaProfesional() {
   const [perfilProf, setPerfilProf] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [detalle, setDetalle] = useState(null);
-  const [detalleOpen, setDetalleOpen] = useState(false);  
-  useEffect(() => { 
-    cargar(); 
+  const [detalleOpen, setDetalleOpen] = useState(false);
+  useEffect(() => {
+    cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -30,9 +30,9 @@ export default function AgendaProfesional() {
       console.log(`Cargando eventos para ${year}-${month} (Profesional ID: ${idProf})`);
       const token = localStorage.getItem('token');
       if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
+
       const eRes = await axios.get(`/agenda/global?profId=${idProf}&year=${year}&month=${month}`);
-      
+
       if (eRes.data.ok) {
         console.log('Eventos recibidos del servidor:', eRes.data.data);
         const eventosFormateados = map(eRes.data.data || []);
@@ -55,25 +55,25 @@ export default function AgendaProfesional() {
 
       // perfil del profesional logueado
       const perfilRes = await axios.get('/prof/perfil');
-      
+
       if (perfilRes.data.ok) {
         const perfil = perfilRes.data.data;
         console.log('Perfil del profesional cargado:', perfil);
         setPerfilProf(perfil);
-        
+
         // eventos solo de este profesional
         const idProf = perfil.persona.id_persona;
         console.log(`Obteniendo eventos para el profesional ID: ${idProf}`);
-        
+
         // mes actual
         const today = new Date();
         const currentYear = today.getFullYear();
         const currentMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
-        
+
         const eventosActuales = await cargarEventosMes(currentYear, currentMonth, idProf);
         setEventos(eventosActuales);
       }
-    } catch (e) { 
+    } catch (e) {
       console.error('Error al cargar la agenda:', e);
       toast.error('Error al cargar la agenda');
     }
@@ -97,38 +97,38 @@ export default function AgendaProfesional() {
       // Establecer el token para la solicitud
       const token = localStorage.getItem('token');
       if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
+
       // Asegurar que el evento se asigna al profesional logueado
       if (perfilProf) {
         datos.profId = perfilProf.persona.id_persona;
       }
-      
+
       // Verificar que tenemos los datos mínimos necesarios
       if (!datos.tipo || !datos.inicio || !datos.fin) {
         toast.error('Faltan datos obligatorios para el evento');
         return;
       }
-      
+
       console.log('Enviando datos de evento:', datos);
-      
+
       const response = await axios.post('/agenda/global', datos);
       console.log('Respuesta del servidor:', response.data);
-      
+
       if (response.data.ok) {
         toast.success('Evento guardado correctamente');
-        
+
         // Obtener el mes y año del evento creado para cargar los eventos correctos
         const fechaEvento = new Date(datos.inicio);
         const yearEvento = fechaEvento.getFullYear();
-        const monthEvento = fechaEvento.getMonth() + 1; 
-        
+        const monthEvento = fechaEvento.getMonth() + 1;
+
         // Cargar eventos para el mes del evento creado
         if (perfilProf) {
           const idProf = perfilProf.persona.id_persona;
           const nuevosEventos = await cargarEventosMes(yearEvento, monthEvento, idProf);
           setEventos(nuevosEventos);
         }
-        
+
         setOpenModal(false);
       } else {
         throw new Error(response.data.mensaje || 'Error desconocido');
@@ -144,7 +144,7 @@ export default function AgendaProfesional() {
     try {
       const token = localStorage.getItem('token');
       if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
+
       await axios.delete(`/agenda/global/${id}`);
       await cargar();
       setDetalleOpen(false);
@@ -157,12 +157,12 @@ export default function AgendaProfesional() {
 
   /* colores para tipos de eventos */
   const eventStyleGetter = event => {
-    const c = { 
-      VACACIONES: '#FEC400', 
-      AUSENCIA: '#FF6464', 
+    const c = {
+      VACACIONES: '#FEC400',
+      AUSENCIA: '#FF6464',
       BAJA: '#A259FF',
-      EVENTO: '#56CCF2', 
-      cita: '#2F80ED' 
+      EVENTO: '#56CCF2',
+      cita: '#2F80ED'
     };
     return { style: { backgroundColor: c[event.tipo] || '#2F80ED' } };
   };
@@ -175,10 +175,10 @@ export default function AgendaProfesional() {
 
       <div className="agenda-actions">
         <a href="#nuevo" className="btn-reserva"
-           onClick={e => { e.preventDefault(); setOpenModal(true); }}>
+          onClick={e => { e.preventDefault(); setOpenModal(true); }}>
           Añadir evento
         </a>
-      </div>      
+      </div>
       <div className="cal-wrapper">
         <Calendar
           localizer={localizer}
@@ -192,8 +192,8 @@ export default function AgendaProfesional() {
           onNavigate={(date) => {
             // Cuando el usuario navega a un mes diferente
             const year = date.getFullYear();
-            const month = date.getMonth() + 1; 
-            
+            const month = date.getMonth() + 1;
+
             if (perfilProf) {
               // Cargar eventos para el nuevo mes
               const idProf = perfilProf.persona.id_persona;
@@ -227,7 +227,7 @@ export default function AgendaProfesional() {
           nombre: `${perfilProf.persona.nombre} ${perfilProf.persona.apellido1}`
         }] : []}
         profSeleccionado={perfilProf?.persona.id_persona}
-        soloLecturaProfesional={false} 
+        soloLecturaProfesional={false}
         esProfesionalPropio={true}
         onSave={guardarEvento}
       />

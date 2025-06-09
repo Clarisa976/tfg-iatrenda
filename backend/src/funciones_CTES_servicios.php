@@ -94,7 +94,7 @@ function obtenerUltimoConsentimiento(int $idPersona): ?array
 function obtenerPerfilProfesional(int $idProfesional): array
 {
     $baseDatos = conectar();
-    
+
     // Datos de persona
     $consultaPersona = $baseDatos->prepare("
         SELECT id_persona, nombre, apellido1, apellido2, email, telefono, 
@@ -105,7 +105,7 @@ function obtenerPerfilProfesional(int $idProfesional): array
     ");
     $consultaPersona->execute([$idProfesional]);
     $persona = $consultaPersona->fetch(PDO::FETCH_ASSOC);
-    
+
     // Datos de profesional
     $consultaProfesional = $baseDatos->prepare("
         SELECT num_colegiado, especialidad, fecha_alta_profesional
@@ -113,7 +113,7 @@ function obtenerPerfilProfesional(int $idProfesional): array
     ");
     $consultaProfesional->execute([$idProfesional]);
     $profesional = $consultaProfesional->fetch(PDO::FETCH_ASSOC);
-    
+
     return [
         'persona' => $persona,
         'profesional' => $profesional
@@ -728,7 +728,7 @@ function obtenerNotificacionesPendientes(int $idUsuario, string $rol): array
 function procesarNotificacion(int $idCita, string $accion, int $idUsuario, string $rol): bool
 {
     error_log("Iniciando procesarNotificacion: ID=$idCita, Accion=$accion, Usuario=$idUsuario, Rol=$rol");
-    
+
     // Normalizar la accion
     if ($accion === 'RECHAZAR' || $accion === 'CANCELAR') {
         $nuevoEstado = 'CANCELADA';
@@ -738,7 +738,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
         error_log("Accion desconocida: $accion");
         return false;
     }
-    
+
     error_log("Nuevo estado para cita $idCita: $nuevoEstado");
     $baseDatos = conectar();
     $baseDatos->beginTransaction();
@@ -757,7 +757,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             error_log("procesarNotificacion: Cita $idCita no encontrada");
             throw new Exception('Cita inexistente');
         }
-        
+
         error_log("Datos de la cita: " . json_encode($fila));
 
         // Verificar permisos del profesional
@@ -795,21 +795,20 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             if ($bloqueExistente === 0) {
                 // Crear fechas correctamente
                 $fechaInicio = $fila['fecha_hora'];
-                
+
                 try {
 
                     $dt = new DateTime($fechaInicio, new DateTimeZone('UTC'));
                     $dtFin = clone $dt;
                     $dtFin->add(new DateInterval('PT1H')); // +1 hora
-                    
+
                     $fechaFin = $dtFin->format('Y-m-d H:i:s');
 
                     if (strpos($fechaInicio, '+') !== false || strpos($fechaInicio, 'Z') !== false) {
                         $fechaFin = $dtFin->format('Y-m-d H:i:sP');
                     }
-                    
+
                     error_log("FECHAS CORREGIDAS - Inicio: $fechaInicio, Fin: $fechaFin");
-                    
                 } catch (Exception $e) {
                     error_log("Error procesando fecha: " . $e->getMessage());
                     // Metodo alternativo sin zona horaria
@@ -827,7 +826,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
                 $nombrePaciente = $declaracionPaciente->fetchColumn() ?: 'Paciente';
 
                 error_log("Creando bloque de agenda: Prof={$fila['id_profesional']}, Inicio=$fechaInicio, Fin=$fechaFin");
-                
+
                 $stmt = $baseDatos->prepare("
                     INSERT INTO bloque_agenda (
                         id_profesional, fecha_inicio, fecha_fin, 
@@ -836,7 +835,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
                         :p, :i, :f, 'CITA', :c
                     ) RETURNING id_bloque
                 ");
-                
+
                 $resultado = $stmt->execute([
                     ':p' => $fila['id_profesional'],
                     ':i' => $fechaInicio,
@@ -864,11 +863,11 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             // Primero desvinculamos la cita del bloque
             $baseDatos->prepare("UPDATE cita SET id_bloque = NULL WHERE id_cita = ?")
                 ->execute([$idCita]);
-            
+
             // Luego eliminamos el bloque
             $baseDatos->prepare("DELETE FROM bloque_agenda WHERE id_bloque = ? AND tipo_bloque = 'CITA'")
                 ->execute([$fila['id_bloque']]);
-            
+
             error_log("Bloque de agenda {$fila['id_bloque']} eliminado por cancelacion de cita");
         }
 
@@ -955,7 +954,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
         // Enviar email
         try {
             $emailPaciente = $fila['pacienteemail'] ?? '';
-            
+
             if (!empty($emailPaciente) && filter_var($emailPaciente, FILTER_VALIDATE_EMAIL)) {
                 error_log("Intentando enviar email a $emailPaciente");
                 $emailEnviado = enviarEmail(
@@ -967,7 +966,7 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
             } else {
                 error_log("No se puede enviar email: paciente sin email valido. Email: '$emailPaciente'");
             }
-        } catch (Exception $e) {           
+        } catch (Exception $e) {
             error_log("Error enviando email para cita $idCita: " . $e->getMessage());
         }
 
@@ -975,11 +974,11 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
         try {
             $logResult = registrarActividad(
                 $idUsuario,
-                $fila['id_paciente'], 
-                'cita', 
-                'estado', 
-                $fila['estado'], 
-                $nuevoEstado, 
+                $fila['id_paciente'],
+                'cita',
+                'estado',
+                $fila['estado'],
+                $nuevoEstado,
                 'UPDATE'
             );
             if (!$logResult) {
@@ -990,7 +989,6 @@ function procesarNotificacion(int $idCita, string $accion, int $idUsuario, strin
         }
 
         return true;
-        
     } catch (Exception $e) {
         // Rollback en caso de error
         $baseDatos->rollBack();
@@ -1081,7 +1079,7 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
             $registroPrevio['reactivado'] = true;
         }
     }
-    
+
     foreach (['email', 'telefono', 'nif'] as $campo) {
         if (empty($datos[$campo])) continue;
         $consulta = "SELECT id_persona,rol FROM persona
@@ -1150,7 +1148,7 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
         // Enviar email de contraseña si no tiene password y es rol de login
         if ($esRolLogin && !empty($datos['email'])) {
             $tienePassword = !empty($registroPrevio['password_hash']);
-            
+
             if (!$tienePassword) {
                 error_log("Enviando email de activacion a persona existente ID: $id");
                 $uid   = rtrim(strtr(base64_encode((string)$id), '+/', '-_'), '=');
@@ -1160,7 +1158,7 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
                   <p>Hola {$datos['nombre']}:</p>
                   <p>Hemos completado tu registro en <strong>Clinica Petaka</strong>.</p>
                   <p>Establece tu contraseña aqui: <a href=\"$link\">Crear contraseña</a></p>";
-                
+
                 try {
                     enviarEmail($datos['email'], 'Crea tu contraseña – Petaka', $html);
                     error_log("Email de activacion enviado correctamente a {$datos['email']}");
@@ -1205,7 +1203,8 @@ function actualizarOInsertarPersona(array $datos, string $rolFinal, int $actor =
 
 
 function actualizarOInsertarProfesional(int $id, array $datosProfesional, int $actor = 0): bool
-{    $baseDatos   = conectar();
+{
+    $baseDatos   = conectar();
     $consulta   = $baseDatos->prepare('SELECT 1 FROM profesional WHERE id_profesional=?');
     $consulta->execute([$id]);
     $consultaSql = $consulta->fetch()
@@ -1229,7 +1228,8 @@ function actualizarOInsertarTutor(array $datosTutor): int
     // Check if tutor record already exists
     $baseDatos = conectar();
     $consulta = $baseDatos->prepare("SELECT 1 FROM tutor WHERE id_tutor = ?");
-    $consulta->execute([$id]);    $consultaSql = $consulta->fetch()
+    $consulta->execute([$id]);
+    $consultaSql = $consulta->fetch()
         ? "UPDATE tutor
               SET metodo_contacto_preferido = :m
             WHERE id_tutor = :id"
@@ -1436,7 +1436,7 @@ function getInformeMes(int $año, int $mes): array
 function exportLogsCsv(int $año, int $mes): string
 {
     $baseDatos = conectar();
-    
+
     try {
         error_log("exportLogsCsv: Iniciando para año=$año, mes=$mes");
 
@@ -1460,9 +1460,9 @@ function exportLogsCsv(int $año, int $mes): string
             /* Usar el mes específico */
             $fechaInicio = sprintf('%d-%02d-01 00:00:00', $año, $mes);
             $fechaFin = date('Y-m-d 23:59:59', strtotime("$fechaInicio +1 month -1 day"));
-            
+
             error_log("exportLogsCsv: Rango de fechas $fechaInicio a $fechaFin");
-            
+
             $consulta = "
               SELECT TO_CHAR(l.fecha,'DD/MM/YYYY HH24:MI') AS fecha,
                      COALESCE((actor.nombre || ' ' || actor.apellido1), 'Sistema') AS actor,
@@ -1521,7 +1521,6 @@ function exportLogsCsv(int $año, int $mes): string
 
         error_log("exportLogsCsv: CSV generado exitosamente, tamaño: " . strlen($csv));
         return $csv;
-        
     } catch (Exception $e) {
         error_log("exportLogsCsv: ERROR - " . $e->getMessage());
         error_log("exportLogsCsv: Stack trace - " . $e->getTraceAsString());
@@ -2124,7 +2123,8 @@ function obtenerHorasDisponibles(int $idProfesional, string $fecha): array
     ");
     $consultaCitas->execute([$idProfesional, $fecha]);
     $citasExistentes = $consultaCitas->fetchAll(PDO::FETCH_ASSOC);
-    $horasOcupadas = array_column($citasExistentes, 'hora');    error_log("Citas existentes: " . (empty($horasOcupadas) ? "Ninguna" : implode(', ', $horasOcupadas)));
+    $horasOcupadas = array_column($citasExistentes, 'hora');
+    error_log("Citas existentes: " . (empty($horasOcupadas) ? "Ninguna" : implode(', ', $horasOcupadas)));
 
     // Generar horas disponibles (10:00 a 17:00)
     $horasDisponibles = [];
@@ -2146,7 +2146,7 @@ function obtenerDiasBloqueados(int $idProfesional, string $fechaInicio, string $
 {
     error_log("=== INICIO obtenerDiasBloqueados ===");
     error_log("Profesional: $idProfesional, Rango: $fechaInicio a $fechaFin");
-      try {
+    try {
         $baseDatos = conectar();
 
         // Primero, obtener todos los bloques que podrían afectar al rango de fechas
@@ -2169,7 +2169,8 @@ function obtenerDiasBloqueados(int $idProfesional, string $fechaInicio, string $
             $fechaFin,
             $fechaInicio,
             $fechaFin
-        ]);$bloques = $consulta->fetchAll(PDO::FETCH_ASSOC);
+        ]);
+        $bloques = $consulta->fetchAll(PDO::FETCH_ASSOC);
         $fechasBloquedas = [];
 
         error_log("Bloques encontrados: " . count($bloques));
@@ -2202,7 +2203,8 @@ function obtenerDiasBloqueados(int $idProfesional, string $fechaInicio, string $
 
         error_log("Días bloqueados finales para profesional $idProfesional entre $fechaInicio y $fechaFin: " . (empty($fechasBloquedas) ? "Ninguno" : implode(', ', $fechasBloquedas)));
         error_log("=== FIN obtenerDiasBloqueados ===");
-        return $fechasBloquedas;    } catch (Exception $e) {
+        return $fechasBloquedas;
+    } catch (Exception $e) {
         error_log("Error obteniendo días bloqueados: " . $e->getMessage());
         error_log("=== FIN obtenerDiasBloqueados (con error) ===");
         return [];
@@ -2525,7 +2527,7 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
 {
     error_log("=== INICIO procesarSolicitudCitaPaciente ===");
     error_log("ID Cita: $idCita, Acción: '$accion', ID Paciente: $idPaciente, Nueva fecha: '$nuevaFecha'");
-    
+
     $baseDatos = conectar();
 
     try {
@@ -2543,7 +2545,7 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
             error_log("Cita no encontrada - ID: $idCita, Paciente: $idPaciente");
             throw new Exception('Cita no encontrada');
         }
-        
+
         error_log("Cita encontrada - Estado actual: " . $cita['estado']);
 
         // Verificar que la cita se puede modificar
@@ -2553,7 +2555,8 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
         }
 
         $nuevoEstado = '';
-        $mensaje = '';        switch (strtoupper($accion)) {
+        $mensaje = '';
+        switch (strtoupper($accion)) {
             case 'CANCELAR':
                 error_log("Procesando cancelación");
                 $nuevoEstado = 'CANCELAR';
@@ -2586,7 +2589,7 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
                 ");
                 $consultaDisponibilidad->execute([$cita['id_profesional'], $nuevaFecha, $idCita]);
                 $citasConflicto = $consultaDisponibilidad->fetchColumn();
-                
+
                 error_log("Citas en conflicto encontradas: $citasConflicto");
 
                 if ($citasConflicto > 0) {
@@ -2596,7 +2599,7 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
 
                 $nuevoEstado = 'CAMBIAR';
                 $mensaje = 'Solicitud de cambio enviada correctamente';
-                
+
                 error_log("Cambio procesado exitosamente - nuevo estado: $nuevoEstado");
 
                 // Actualizar la fecha en notas privadas para referencia
@@ -2624,12 +2627,11 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
 
         $baseDatos->commit();
         error_log("Solicitud procesada exitosamente");
-        
+
         return [
             'ok' => true,
             'mensaje' => $mensaje
         ];
-        
     } catch (Exception $e) {
         $baseDatos->rollBack();
         error_log("Error procesando solicitud de cita: " . $e->getMessage());

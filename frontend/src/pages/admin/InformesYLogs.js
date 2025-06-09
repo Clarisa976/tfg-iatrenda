@@ -8,11 +8,11 @@ import '../../styles.css';
 
 const now = new Date();
 const year = now.getFullYear();
-const month = now.getMonth() + 1; 
+const month = now.getMonth() + 1;
 
 
 const meses = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
@@ -32,8 +32,8 @@ export default function InformesYLogs() {
     async function fetchStats() {
       setLoading(true);
       try {
-        const url = `${process.env.REACT_APP_API_URL}/admin/informes?year=${selectedYear}&month=${selectedMonth}`;        const { data } = await axios.get(url, {
-          headers: { 
+        const url = `${process.env.REACT_APP_API_URL}/admin/informes?year=${selectedYear}&month=${selectedMonth}`; const { data } = await axios.get(url, {
+          headers: {
             Authorization: `Bearer ${token}`
           }
         });
@@ -57,8 +57,8 @@ export default function InformesYLogs() {
     setLoadingDownload(true);
     try {
       const url = `${process.env.REACT_APP_API_URL}/admin/logs?year=${selectedYear}&month=${selectedMonth}`;
-        const res = await axios.get(url, {
-        headers: { 
+      const res = await axios.get(url, {
+        headers: {
           Authorization: `Bearer ${token}`
         },
         responseType: 'blob'
@@ -74,12 +74,12 @@ export default function InformesYLogs() {
         link.click();
         link.remove();
         URL.revokeObjectURL(link.href);
-        
+
         toast.success('Logs descargados correctamente');
       } else {
         // Si no es un CSV, probablemente es un mensaje de error
         const reader = new FileReader();
-        reader.onload = function() {
+        reader.onload = function () {
           try {
             const errorData = JSON.parse(this.result);
             toast.error(errorData.mensaje || 'Error al descargar los logs');
@@ -98,9 +98,9 @@ export default function InformesYLogs() {
   };
 
   // Formatea la fecha seleccionada para mostrar
-  const fechaSeleccionada = new Date(selectedYear, selectedMonth - 1).toLocaleDateString('es-ES', 
+  const fechaSeleccionada = new Date(selectedYear, selectedMonth - 1).toLocaleDateString('es-ES',
     { month: 'long', year: 'numeric' }).replace(/^./, m => m.toUpperCase());
-    
+
   return (
     <div className="usuarios-container informes-container-wide">
       <h2 className="usuarios-title informes-title-margin">
@@ -111,8 +111,8 @@ export default function InformesYLogs() {
       <div className="informes-fecha-selector">
         <Calendar size={18} />
         <div className="informes-fecha-selects">
-          <select 
-            value={selectedMonth} 
+          <select
+            value={selectedMonth}
             onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
             className="select-field"
           >
@@ -120,9 +120,9 @@ export default function InformesYLogs() {
               <option key={index + 1} value={index + 1}>{mes}</option>
             ))}
           </select>
-          
-          <select 
-            value={selectedYear} 
+
+          <select
+            value={selectedYear}
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
             className="select-field"
           >
@@ -170,13 +170,13 @@ export default function InformesYLogs() {
         </div>
       ) : (
         <p>No hay datos disponibles para el período seleccionado</p>
-      )}      
+      )}
 
       {/* logs */}
       <h3 className="informes-logs-title">Logs</h3>
       <p>Descarga el histórico de eventos registrados para {fechaSeleccionada}:</p>
-      <button 
-        className="btn-reserva blue" 
+      <button
+        className="btn-reserva blue"
         onClick={descargarLogs}
         disabled={loadingDownload}
       >

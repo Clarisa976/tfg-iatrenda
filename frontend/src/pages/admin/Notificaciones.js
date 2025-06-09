@@ -19,7 +19,7 @@ export default function Notificaciones() {
       setLoad(true);
       const token = localStorage.getItem('token');
       const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
-      
+
       const response = await fetch(`${baseURL}/notificaciones`, {
         method: 'GET',
         headers: {
@@ -28,15 +28,15 @@ export default function Notificaciones() {
         },
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error(`Error HTTP: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       setItems(data.data || []);
-      window.dispatchEvent(new CustomEvent('noti-count', {detail: (data.data || []).length}));
+      window.dispatchEvent(new CustomEvent('noti-count', { detail: (data.data || []).length }));
     } catch (error) {
       console.error('Error cargando notificaciones:', error);
       toast.error('Error al cargar las notificaciones: ' + (error.message || 'Error desconocido'));
@@ -49,7 +49,7 @@ export default function Notificaciones() {
     try {
       const token = localStorage.getItem('token');
       const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
-      
+
       console.log(`Enviando solicitud a ${baseURL}/notificaciones/${id} con acción ${tipoAcc}`);
 
       const response = await fetch(`${baseURL}/notificaciones/${id}`, {
@@ -62,14 +62,14 @@ export default function Notificaciones() {
         body: JSON.stringify({ accion: tipoAcc }),
         credentials: 'include'
       });
-      
+
       console.log('Status de respuesta:', response.status);
       console.log('Headers de respuesta:', Object.fromEntries(response.headers.entries()));
-      
+
 
       const responseText = await response.text();
       console.log('Respuesta del servidor (texto):', responseText);
-      
+
       if (!response.ok) {
 
         throw new Error(`Error HTTP ${response.status}: ${responseText.substring(0, 200)}...`);
@@ -83,7 +83,7 @@ export default function Notificaciones() {
         console.error('Error parseando JSON:', parseError);
         throw new Error(`El servidor devolvió una respuesta no válida: ${responseText.substring(0, 200)}...`);
       }
-      
+
       if (data.ok || data.success || data.status === 'success') {
 
         let mensaje = '';
@@ -94,7 +94,7 @@ export default function Notificaciones() {
         } else {
           mensaje = data.mensaje || data.message || `Acción ${tipoAcc} procesada correctamente`;
         }
-        
+
         toast.success(mensaje, {
           position: "top-right",
           autoClose: 5000,
@@ -103,18 +103,18 @@ export default function Notificaciones() {
           pauseOnHover: true,
           draggable: true,
         });
-        
+
         // Actualizar la lista de notificaciones
         setItems(lst => {
           const nuevo = lst.filter(x => x.id !== id);
-          window.dispatchEvent(new CustomEvent('noti-count', {detail: nuevo.length}));
+          window.dispatchEvent(new CustomEvent('noti-count', { detail: nuevo.length }));
           return nuevo;
         });
 
         setTimeout(() => {
           cargar();
         }, 1000);
-        
+
       } else {
         throw new Error(data.mensaje || data.message || data.error || 'Error desconocido del servidor');
       }
@@ -157,13 +157,13 @@ export default function Notificaciones() {
                 <td className="mayusculas">{n.profesional}</td>
                 <td>{n.tipo.replace(/_/g, ' ')}</td>
                 <td>
-                  <button 
+                  <button
                     className="btn-primary"
                     onClick={() => accion(n.id, 'CONFIRMAR')}
                     style={{ marginRight: '8px' }}
                   >Confirmar
                   </button>
-                  <button 
+                  <button
                     className="btn-secondary"
                     onClick={() => accion(n.id, 'CANCELAR')}
                   >Rechazar

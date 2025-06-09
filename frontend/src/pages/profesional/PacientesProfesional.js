@@ -66,9 +66,9 @@ export default function PacientesProfesional() {
                 <td>
                   {p.proxima_cita
                     ? new Date(p.proxima_cita).toLocaleDateString('es-ES', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                      })
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })
                     : 'Sin citas programadas'}
                 </td>
                 <td className="acciones-col">
