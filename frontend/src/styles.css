@@ -3438,7 +3438,7 @@ input[type="checkbox"]:checked::after {
   display: inline-block;
   padding: 0.75rem 1.5rem;
   background-color: var(--primary);
-  color: white;
+  color: var(--black);
   text-decoration: none;
   border-radius: 6px;
   font-weight: 500;
@@ -3447,7 +3447,7 @@ input[type="checkbox"]:checked::after {
 
 .file-link-btn:hover {
   background-color: var(--primary-dark);
-  color: white;
+  color: var(--blue);
   text-decoration: none;
 }
 
