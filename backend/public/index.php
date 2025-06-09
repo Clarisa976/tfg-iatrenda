@@ -1333,88 +1333,88 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
     }
 });
 
-/* ---------- RUTAS S3 DOCUMENTOS ---------- */
+// ---------- RUTAS S3 DOCUMENTOS ----------
 
-// Health check S3
-$app->get('/api/s3/health', function (Request $request, Response $response) {
-    $controller = new App\Controllers\DocumentController();
-    return $controller->healthCheck($request, $response);
+// 1. Health-check de S3
+$app->get('/api/s3/health', function (Request $req, Response $res) {
+    $c = new DocumentController();
+    return $c->healthCheck($req, $res);
 });
-// Obtener URL firmada de un documento
 
-// Subir documento a S3
-$app->post('/api/s3/upload', function (Request $request, Response $response) {
+// 2. Subir documento (tratamiento o historial)
+$app->post('/api/s3/upload', function (Request $req, Response $res) {
     $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    if (!$val) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'No autorizado'], 401);
     }
-    
-    // Solo profesionales y admins pueden subir documentos
-    if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
     }
-    
-    $controller = new App\Controllers\DocumentController();
-    return $controller->uploadDocument($request, $response);
+    $c = new DocumentController();
+    return $c->uploadDocument($req, $res);
 });
 
-// Descargar documento desde S3
-$app->get('/api/s3/download/{id}', function (Request $request, Response $response, array $args) {
-    $controller = new App\Controllers\DocumentController();
-    return $controller->downloadDocument($request, $response, $args);
-});
-
-// Listar documentos S3
-$app->get('/api/s3/documentos', function (Request $request, Response $response) {
+// 3. Listar documentos (filtrando por historial_id, tratamiento_id o paciente_id)
+$app->get('/api/s3/documentos', function (Request $req, Response $res) {
     $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    if (!$val) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'No autorizado'], 401);
     }
-    
-    $controller = new App\Controllers\DocumentController();
-    return $controller->listDocuments($request, $response);
+    $c = new DocumentController();
+    return $c->listDocuments($req, $res);
 });
 
-// Eliminar documento S3
-$app->delete('/api/s3/documentos/{id}', function (Request $request, Response $response, array $args) {
+// 4. Obtener URL firmada de un documento (para vista previa o descarga)
+$app->get('/api/s3/documentos/{idDoc}/url', function (Request $req, Response $res, array $args) {
     $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    if (!$val) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'No autorizado'], 401);
     }
-    
-    // Solo profesionales y admins pueden eliminar documentos
-    if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
-    }
-    
-    $controller = new App\Controllers\DocumentController();
-    return $controller->deleteDocument($request, $response, $args);
+    $c = new DocumentController();
+    return $c->getDocumentUrl($req, $res, ['idDoc' => $args['idDoc']]);
 });
 
-$app->put('/api/s3/documentos/{id}', function (Request $request, Response $response, array $args) {
+// 5. Descargar documento (redirige con 302 a la URL firmada)
+$app->get('/api/s3/download/{id}', function (Request $req, Response $res, array $args) {
+    $c = new DocumentController();
+    return $c->downloadDocument($req, $res, ['id' => $args['id']]);
+});
+
+// 6. Actualizar diagnóstico final de un documento
+$app->put('/api/s3/documentos/{id}', function (Request $req, Response $res, array $args) {
     $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    if (!$val) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'No autorizado'], 401);
     }
-
-    if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
     }
-
-    $controller = new App\Controllers\DocumentController();
-    return $controller->updateDocument($request, $response, $args);
+    $c = new DocumentController();
+    return $c->updateDocument($req, $res, ['id' => $args['id']]);
 });
 
-
-$app->get('/api/s3/tratamientos/{paciente_id}', function (Request $request, Response $response, array $args) {
+// 7. Eliminar un documento (S3 + Base de datos)
+$app->delete('/api/s3/documentos/{id}', function (Request $req, Response $res, array $args) {
     $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    if (!$val) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'No autorizado'], 401);
     }
-    $controller = new App\Controllers\DocumentController();
-    return $controller->getTreatmentsWithDocuments($request, $response, $args);
+    if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+    $c = new DocumentController();
+    return $c->deleteDocument($req, $res, ['id' => $args['id']]);
 });
 
+// 8. Obtener tratamientos con sus documentos (para el modal de Tratamiento)
+$app->get('/api/s3/tratamientos/{paciente_id}', function (Request $req, Response $res, array $args) {
+    $val = verificarTokenUsuario();
+    if (!$val) {
+        return jsonResponse($res, ['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    $c = new DocumentController();
+    return $c->getTreatmentsWithDocuments($req, $res, ['paciente_id' => $args['paciente_id']]);
+});
 
 
 /* GET /prof/perfil */
