@@ -82,41 +82,47 @@ const downloadDocument = async (documento) => {
                 const isDocImage = isImage(documento.tipo);
                 
                 // Usar URL de S3 si está disponible, sino mostrar solo descarga
-                const imageUrl = documento.url_descarga && documento.url_temporal ? documento.url_descarga : null;
-
-                return (
+                const imageUrl = documento.url_descarga && documento.url_temporal ? documento.url_descarga : null;                return (
                   <div key={documento.id_documento || index} className="tarea-documento-item">
                     {isDocImage ? (
                       <div className="imagen-container-center">
                         {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={`Adjunto ${index + 1} de la tarea`}
-                            className="tarea-imagen-preview"
-                            onError={(e) => {
-                              console.error('Error al cargar imagen desde S3:', imageUrl);
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'block';
-                            }}
-                          />
+                          <div>
+                            <img
+                              src={imageUrl}
+                              alt={`Adjunto ${index + 1} de la tarea`}
+                              className="tarea-imagen-preview"
+                              onError={(e) => {
+                                console.error('Error al cargar imagen desde S3:', imageUrl);
+                                e.target.style.display = 'none';
+                                e.target.parentNode.querySelector('.tarea-imagen-error').style.display = 'block';
+                              }}
+                            />
+                            <div className="tarea-imagen-error" style={{ display: 'none' }}>
+                              <p>Error al visualizar la imagen</p>
+                              <div className="tarea-download-link">
+                                <button 
+                                  className="btn-primary btn-small"
+                                  onClick={() => downloadDocument(documento)}
+                                >
+                                  Descargar archivo original
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         ) : (
                           <div className="tarea-imagen-error">
                             <p>Vista previa no disponible</p>
+                            <div className="tarea-download-link">
+                              <button 
+                                className="btn-primary btn-small"
+                                onClick={() => downloadDocument(documento)}
+                              >
+                                Descargar imagen
+                              </button>
+                            </div>
                           </div>
                         )}
-                        
-                        {/* Div de error que se muestra si falla la imagen */}
-                        <div className="tarea-imagen-error" style={{ display: 'none' }}>
-                          <p>Error al visualizar la imagen</p>
-                        </div>
-                        
-                        <button 
-                          className="btn-primary btn-small"
-                          onClick={() => downloadDocument(documento)}
-                          style={{ marginTop: '10px' }}
-                        >
-                          Descargar archivo
-                        </button>
                       </div>
                     ) : (
                       <div className="tarea-file-link-container">

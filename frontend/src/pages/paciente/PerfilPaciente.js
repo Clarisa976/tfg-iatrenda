@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import ModalVerTarea from '../../components/modals/ModalVerTarea';
 import ModalVerHistorial from '../../components/modals/ModalVerHistorial';
 import '../../styles.css';
@@ -581,68 +581,94 @@ export default function PerfilPaciente() {
                         <div className="tareas-slider-container">                            <div
                                 className="tareas-slider"
                                 style={{ transform: `translateX(-${currentSlide * 33.333}%)` }}
-                            >
-                                {tareas.map((tarea, index) => (
-                                    <div
-                                        key={index}
-                                        className="tarea-slide-item"
-                                        onClick={() => verTarea(tarea)}
-                                    >
-                                        <div className="tarea-slide-header">
-                                            <h5 className="tarea-slide-titulo">
-                                                {tarea.titulo || 'Tarea sin título'}
-                                            </h5>
-                                            <div className="tarea-fecha-container">
-                                                <Calendar size={16} />
-                                                <span>{formatDate(tarea.fecha_asignacion)}</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="tarea-slide-content">
-                                            <p className="tarea-slide-profesional">
-                                                <strong>Asignado por:</strong> {tarea.profesional_nombre}
-                                            </p>
-                                            
-                                            <div className="tarea-slide-descripcion">
-                                                {tarea.descripcion && tarea.descripcion.length > 100
-                                                    ? `${tarea.descripcion.substring(0, 100)}...`
-                                                    : tarea.descripcion || 'Sin descripción'
-                                                }
-                                            </div>
-                                            
-                                            {tarea.documentos && tarea.documentos.length > 0 && (
-                                                <div className="tarea-slide-archivos">
-                                                    📎 {tarea.documentos.length} archivo{tarea.documentos.length !== 1 ? 's' : ''}
+                            >                                {tareas.map((tarea, index) => {
+                                    // Determinar estado de la tarea
+                                    const fechaVencimiento = new Date(tarea.fecha_vencimiento);
+                                    const hoy = new Date();
+                                    const esVencida = fechaVencimiento < hoy;
+                                    const estado = tarea.completada ? 'completada' : (esVencida ? 'vencida' : 'pendiente');
+                                    
+                                    // Determinar prioridad (si existe en los datos, sino usar media por defecto)
+                                    const prioridad = tarea.prioridad || 'media';
+                                    
+                                    return (
+                                        <div
+                                            key={index}
+                                            className="tarea-slide-item"
+                                            onClick={() => verTarea(tarea)}
+                                        >
+                                            <div className="tarea-slide-header">
+                                                <h5 className="tarea-slide-titulo">
+                                                    {tarea.titulo || 'Tarea sin título'}
+                                                </h5>
+                                                <div className="tarea-fecha-container">
+                                                    <span className="tarea-fecha-icon">📅</span>
+                                                    <p className="tarea-fecha-texto">
+                                                        {formatDate(tarea.fecha_asignacion)}
+                                                    </p>
                                                 </div>
-                                            )}
+                                            </div>
+                                            
+                                            <div className="tarea-slide-content">
+                                                <div className="tarea-slide-descripcion">
+                                                    {tarea.descripcion && tarea.descripcion.length > 120
+                                                        ? `${tarea.descripcion.substring(0, 120)}...`
+                                                        : tarea.descripcion || 'Sin descripción disponible'
+                                                    }
+                                                </div>
+                                                
+                                                <div className={`tarea-estado-badge ${estado}`}>
+                                                    {estado === 'completada' && '✅ Completada'}
+                                                    {estado === 'vencida' && '⚠️ Vencida'}
+                                                    {estado === 'pendiente' && '⏳ Pendiente'}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="tarea-slide-footer">
+                                                <div className="tarea-tipo-badge">
+                                                    Tarea para casa
+                                                </div>
+                                                <div className={`tarea-prioridad ${prioridad}`}>
+                                                    {prioridad === 'alta' && '🔴 Alta'}
+                                                    {prioridad === 'media' && '🟡 Media'}
+                                                    {prioridad === 'baja' && '🟢 Baja'}
+                                                </div>
+                                            </div>
                                         </div>
-                                        
-                                        <div className="tarea-slide-footer">
-                                            <span className="tarea-slide-click-hint">
-                                                Hacer clic para ver detalles
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
-                        </div>
-
-                        {/* Controles del Slider */}
+                        </div>                        {/* Controles del Slider */}
                         {tareas.length > 3 && (
-                            <>
+                            <div className="tareas-slider-controls">
                                 <button
                                     onClick={prevSlide}
-                                    className="tarea-nav-left"
+                                    className="slider-btn"
+                                    disabled={currentSlide === 0}
+                                    aria-label="Tareas anteriores"
                                 >
-                                    <ChevronLeft size={20} color="#495057" />
+                                    <ChevronLeft size={20} />
                                 </button>
+                                
+                                <div className="slider-dots">
+                                    {Array.from({ length: Math.ceil(tareas.length / 3) }).map((_, index) => (
+                                        <div
+                                            key={index}
+                                            className={`slider-dot ${currentSlide === index ? 'active' : ''}`}
+                                            onClick={() => setCurrentSlide(index)}
+                                        />
+                                    ))}
+                                </div>
+                                
                                 <button
                                     onClick={nextSlide}
-                                    className="tarea-nav-right"
+                                    className="slider-btn"
+                                    disabled={currentSlide >= Math.ceil(tareas.length / 3) - 1}
+                                    aria-label="Siguientes tareas"
                                 >
-                                    <ChevronRight size={20} color="#495057" />
+                                    <ChevronRight size={20} />
                                 </button>
-                            </>
+                            </div>
                         )}
                     </div>
                 )}

@@ -157,7 +157,8 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
   return (
     <header className="header">
       {/* TOP BAR */}
-      <div className="top-bar">        <div className="logo">
+      <div className="top-bar">        
+        <div className="logo">
           <Link to="/" onClick={handleLogoClick}>
             <img src={logoImg} alt="Iatrenda" />
           </Link>
