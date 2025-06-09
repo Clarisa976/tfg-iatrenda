@@ -283,21 +283,31 @@ export default function ModalCitaUniversal({
 
     try {
       const fechaHoraCompleta = format(form.fecha, 'yyyy-MM-dd HH:mm:ss');
-      const token = localStorage.getItem('token');
-
-      if (esModoCambiar) {
+      const token = localStorage.getItem('token');      if (esModoCambiar) {
         // Cambiar cita existente
-        const { data } = await axios.post(`/pac/citas/${cita.id_cita}/solicitud`, {
-          accion: 'CAMBIAR',
-          nueva_fecha: fechaHoraCompleta
-        }, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        try {
+          console.log("Enviando solicitud de cambio:", {
+            accion: 'CAMBIAR',
+            nueva_fecha: fechaHoraCompleta,
+            cita_id: cita.id_cita
+          });
+          
+          const { data } = await axios.post(`/pac/citas/${cita.id_cita}/solicitud`, {
+            accion: 'CAMBIAR',
+            nueva_fecha: fechaHoraCompleta
+          }, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
 
-        if (data.ok) {
-          onSuccess('Tu solicitud de cambio ha sido enviada correctamente');
-        } else {
-          onError(data.mensaje || 'Error al enviar la solicitud');
+          if (data.ok) {
+            onSuccess('Tu solicitud de cambio ha sido enviada correctamente');
+          } else {
+            onError(data.mensaje || 'Error al enviar la solicitud');
+          }
+        } catch (error) {
+          console.error('Error completo:', error);
+          const errorMsg = error.response?.data?.mensaje || error.message || 'Error al procesar la solicitud';
+          onError(errorMsg);
         }
       } else {
         // Nueva cita
