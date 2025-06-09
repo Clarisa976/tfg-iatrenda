@@ -676,6 +676,37 @@ class DocumentController {
         }
     }
 
+    public function updateDocument($request, $response, $args) {
+    try {
+        $id = $args['id'];
+        $params = (array)$request->getParsedBody();
+
+        // Obtener el documento (y validar si existe)
+        $document = $this->getDocumentFromDatabase($id);
+        if (!$document) {
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'Documento no encontrado'
+            ], 404);
+        }
+
+        // Lógica de actualización
+        $this->updateHistorialDiagnosticos($id, $params);
+
+        return $this->jsonResponse($response, [
+            'ok' => true,
+            'mensaje' => 'Documento actualizado correctamente'
+        ]);
+    } catch (\Exception $e) {
+        error_log('Error updating historial document: ' . $e->getMessage());
+        return $this->jsonResponse($response, [
+            'ok' => false,
+            'mensaje' => 'Error interno del servidor'
+        ], 500);
+    }
+}
+
+
     /* Guardar documento en base de datos*/
     private function saveDocumentToDatabase($data, $baseDatos = null) {
         try {

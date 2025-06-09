@@ -1389,6 +1389,22 @@ $app->delete('/api/s3/documentos/{id}', function (Request $request, Response $re
     $controller = new App\Controllers\DocumentController();
     return $controller->deleteDocument($request, $response, $args);
 });
+
+$app->put('/api/s3/documentos/{id}', function (Request $request, Response $response, array $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+
+    if (!in_array(strtolower($val['usuario']['rol']), ['profesional', 'admin'])) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+
+    $controller = new App\Controllers\DocumentController();
+    return $controller->updateDocument($request, $response, $args);
+});
+
+
 $app->get('/api/s3/tratamientos/{paciente_id}', function (Request $request, Response $response, array $args) {
     $val = verificarTokenUsuario();
     if ($val === false) {
