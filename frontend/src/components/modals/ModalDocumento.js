@@ -88,15 +88,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       console.error('Error updating diagnóstico:', e);
       setDiagError('Error al actualizar el diagnóstico. Inténtalo de nuevo.');
     } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleViewFile = async (e) => {
-    e.preventDefault();
-    const url = signedUrl || await fetchSignedUrl();
-    if (url) window.open(url, '_blank');
-    else alert('No se pudo obtener la URL del archivo');
+      setIsUpdating(false);    }
   };
 
   return (
