@@ -1,6 +1,5 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { useS3Documents } from './useS3Documents'; // Ajusta la ruta según tu estructura
 
 const isImage = (tipo) => {
   if (!tipo) return false;
@@ -8,12 +7,20 @@ const isImage = (tipo) => {
 };
 
 export default function ModalVerTarea({ tarea, onClose }) {
-  const { 
-    getDocumentUrl, 
-    isDocumentLoading, 
-    hasDocumentError, 
-    downloadDocument 
-  } = useS3Documents(tarea?.documentos || []);
+  
+  const downloadDocument = async (documento) => {
+    try {
+      const tk = localStorage.getItem('token');
+      const downloadUrl = `${process.env.REACT_APP_API_URL}/api/s3/download/${documento.id_documento}`;
+      
+      // Abrir directamente el enlace de descarga
+      window.open(downloadUrl + `?token=${encodeURIComponent(tk)}`, '_blank');
+      
+    } catch (error) {
+      console.error('Error al descargar documento:', error);
+      alert('Error al descargar el documento');
+    }
+  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -51,73 +58,57 @@ export default function ModalVerTarea({ tarea, onClose }) {
               <h4>Archivos adjuntos</h4>
               
               {tarea.documentos.map((documento, index) => {
-                const docId = documento.id_documento;
-                const documentUrl = getDocumentUrl(docId);
-                const isLoading = isDocumentLoading(docId);
-                const hasError = hasDocumentError(docId);
                 const isDocImage = isImage(documento.tipo);
+                
+                // Usar URL de S3 si está disponible, sino mostrar solo descarga
+                const imageUrl = documento.url_descarga && documento.url_temporal ? documento.url_descarga : null;
 
                 return (
                   <div key={documento.id_documento || index} className="tarea-documento-item">
                     {isDocImage ? (
                       <div className="imagen-container-center">
-                        {isLoading ? (
-                          <div className="tarea-imagen-loading">
-                            <p>Cargando imagen...</p>
-                          </div>
-                        ) : hasError || !documentUrl ? (
-                          <div className="tarea-imagen-error">
-                            <p>No se pudo cargar la imagen</p>
-                            <button 
-                              className="btn-primary btn-small"
-                              onClick={() => downloadDocument(documento)}
-                              style={{ marginTop: '10px' }}
-                            >
-                              Descargar archivo
-                            </button>
-                          </div>
-                        ) : (
+                        {imageUrl ? (
                           <img
-                            src={documentUrl}
+                            src={imageUrl}
                             alt={`Adjunto ${index + 1} de la tarea`}
                             className="tarea-imagen-preview"
                             onError={(e) => {
-                              console.error('Error al cargar imagen desde S3:', documentUrl);
+                              console.error('Error al cargar imagen desde S3:', imageUrl);
                               e.target.style.display = 'none';
                               e.target.nextSibling.style.display = 'block';
                             }}
                           />
+                        ) : (
+                          <div className="tarea-imagen-error">
+                            <p>Vista previa no disponible</p>
+                          </div>
                         )}
                         
                         {/* Div de error que se muestra si falla la imagen */}
                         <div className="tarea-imagen-error" style={{ display: 'none' }}>
                           <p>Error al visualizar la imagen</p>
-                          <button 
-                            className="btn-primary btn-small"
+                        </div>
+                        
+                        <button 
+                          className="btn-primary btn-small"
+                          onClick={() => downloadDocument(documento)}
+                          style={{ marginTop: '10px' }}
+                        >
+                          Descargar archivo
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="tarea-file-link-container">
+                        <div>
+                          <p><strong>Archivo:</strong> {documento.nombre_archivo || 'Documento'}</p>
+                          <p><strong>Tipo:</strong> {documento.tipo || 'Desconocido'}</p>
+                          <button
+                            className="tarea-download-link btn-primary"
                             onClick={() => downloadDocument(documento)}
-                            style={{ marginTop: '10px' }}
                           >
                             Descargar archivo
                           </button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="tarea-file-link-container">
-                        {isLoading ? (
-                          <p>Cargando documento...</p>
-                        ) : (
-                          <div>
-                            <p><strong>Archivo:</strong> {documento.nombre_archivo || 'Documento'}</p>
-                            <p><strong>Tipo:</strong> {documento.tipo || 'Desconocido'}</p>
-                            <button
-                              className="tarea-download-link btn-primary"
-                              onClick={() => downloadDocument(documento)}
-                              disabled={hasError}
-                            >
-                              {hasError ? 'Error al cargar' : 'Descargar archivo'}
-                            </button>
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
@@ -136,7 +127,7 @@ export default function ModalVerTarea({ tarea, onClose }) {
           )}
         </div>
 
-        {/* Footer simplificado - solo cerrar */}
+        {/* Footer simplificado */}
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>
             Cerrar
