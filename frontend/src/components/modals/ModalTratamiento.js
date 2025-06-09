@@ -38,21 +38,34 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
 
-  const del = async () => {
-    setIsDeleting(true);
-    setError('');
-    try {
-      await axios.delete(`/prof/pacientes/${idPac}/tareas/${treat.id_tratamiento}`, {
-        headers: { Authorization: `Bearer ${tk}` }
-      });
-      onChange();
-      onClose();
-    } catch (e) {
-      console.error('Error al eliminar:', e);
-      setError('Error al eliminar la tarea. Inténtalo de nuevo.');
-      setIsDeleting(false);
+const del = async () => {
+  setIsDeleting(true);
+  setError('');
+
+  try {
+    // Eliminar todos los documentos asociados
+    if (treat.documentos && treat.documentos.length > 0) {
+      for (const doc of treat.documentos) {
+        await axios.delete(`/api/s3/documentos/${doc.id_documento}`, {
+          headers: { Authorization: `Bearer ${tk}` }
+        });
+      }
     }
-  };
+
+    // Eliminar la tarea
+    await axios.delete(`/prof/pacientes/${idPac}/tareas/${treat.id_tratamiento}`, {
+      headers: { Authorization: `Bearer ${tk}` }
+    });
+
+    onChange();
+    onClose();
+  } catch (e) {
+    console.error('Error al eliminar:', e.response || e);
+    setError('Error al eliminar la tarea. Inténtalo de nuevo.');
+    setIsDeleting(false);
+  }
+};
+
 
   return (
     <>
