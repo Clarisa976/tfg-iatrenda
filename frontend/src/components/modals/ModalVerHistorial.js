@@ -1,66 +1,80 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-const getFileUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-
-  let baseUrl;
-  if (process.env.REACT_APP_API_URL) {
-    baseUrl = process.env.REACT_APP_API_URL.replace(/\/$/, '');
-  } else if (window.location.hostname === 'localhost') {
-    baseUrl = 'http://localhost:8081';
-  } else {
-    baseUrl = window.location.origin;
-  }
-
-  const finalUrl = `${baseUrl}/${path}?t=${Date.now()}`;
-  return finalUrl;
-};
-
 export default function ModalVerHistorial({ documentos, onClose }) {
+  const API = process.env.REACT_APP_API_URL;
+  const tk = localStorage.getItem('token');
+
   const descargarDocumento = async (documento) => {
     try {
-      const url = getFileUrl(documento.ruta);
-      
+      // USAR LA MISMA LÓGICA QUE EN ModalVerTarea - endpoint de S3
+      const downloadUrl = `${API}/api/s3/download/${documento.id_documento}`;
 
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Error al descargar el archivo');
-      
-      const blob = await response.blob();
-      
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = documento.nombre_archivo || 'documento';
-      
-      document.body.appendChild(link);
-      link.click();
-      
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-      
+      console.log('Descargando documento ID:', documento.id_documento);
+      console.log('URL de descarga:', downloadUrl);
+
+      // Hacer fetch con headers de autorización
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${tk}`
+        }
+      });
+
+      if (response.redirected) {
+        // Si el servidor redirige a S3, abrir esa URL
+        console.log('Redirigiendo a S3:', response.url);
+        window.open(response.url, '_blank');
+      } else if (response.ok) {
+        // Si devuelve el archivo directamente, crear blob y descargar
+        console.log('Descarga directa del archivo');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = documento.nombre_archivo || documento.ruta?.split('/').pop() || 'documento';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
     } catch (error) {
-      console.error('Error al descargar:', error);
-      window.open(getFileUrl(documento.ruta), '_blank');
+      console.error('Error al descargar documento:', error);
+      alert(`Error al descargar el documento: ${error.message}`);
+      // Método de fallback si la descarga falla
+      try {
+        console.log('Intentando método de fallback...');
+        const fallbackUrl = `${API}/${documento.ruta}`;
+        window.open(fallbackUrl, '_blank');
+      } catch (fallbackError) {
+        console.error('Fallback también falló:', fallbackError);
+      }
     }
   };
 
   return (
-  <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-ver-historial-wide" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Mi Historial Clínico</h3>
           <button className="modal-close" onClick={onClose}><X /></button>
-        </div>        <div className="modal-body">
+        </div>
+
+        <div className="modal-body">
           {documentos && documentos.length > 0 ? (
             <div>
-              <p className="historial-summary"><strong>Total de documentos:</strong> {documentos.length}</p>
-              
+              <p className="historial-summary">
+                <strong>Total de documentos:</strong> {documentos.length}
+              </p>
+
               <div className="historial-simple-cards">
                 {documentos.map((documento, index) => (
-                  <div 
-                    key={documento.id_documento || index} 
+                  <div
+                    key={documento.id_documento || index}
                     className="historial-simple-card"
                   >
                     <div className="historial-simple-info">
@@ -70,6 +84,12 @@ export default function ModalVerHistorial({ documentos, onClose }) {
                       <div className="historial-simple-doctor">
                         Dr/a: {documento.profesional_nombre}
                       </div>
+                      {/* Mostrar nombre del archivo si existe */}
+                      {documento.nombre_archivo && (
+                        <div className="historial-simple-filename">
+                          {documento.nombre_archivo}
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => descargarDocumento(documento)}
