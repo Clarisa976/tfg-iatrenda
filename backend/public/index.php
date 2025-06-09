@@ -1883,19 +1883,47 @@ $app->post('/cron/backup', function ($req) {
             return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
         }
         
+        error_log("=== BACKUP INICIADO EN BACKGROUND ===");
+        
         // Responder inmediatamente
-        fastcgi_finish_request(); // Si está disponible
-        
-        // Ejecutar backup en background
-        require_once __DIR__ . '/../src/Services/BackupService.php';
-        $backupService = new BackupService();
-        $backupService->createFullBackup();
-        
-        return jsonResponse(['ok' => true, 'mensaje' => 'Backup iniciado']);
+        return jsonResponse(['ok' => true, 'mensaje' => 'Backup iniciado en background']);
         
     } catch (Exception $e) {
+        error_log('Error iniciando backup: ' . $e->getMessage());
         return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
     }
 });
+
+// Nueva ruta para ejecutar el backup real
+$app->post('/cron/backup/execute', function ($req) {
+    try {
+        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? '';
+        if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
+        }
+        
+        error_log("=== EJECUTANDO BACKUP REAL ===");
+        
+        require_once __DIR__ . '/../src/Services/BackupService.php';
+        $backupService = new BackupService();
+        
+        $backupResult = $backupService->createFullBackup();
+        $cleanupResult = $backupService->deleteOldBackups(10);
+        
+        error_log("Backup completado exitosamente");
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Backup completado',
+            'backup' => $backupResult,
+            'cleanup' => $cleanupResult
+        ]);
+        
+    } catch (Exception $e) {
+        error_log('Error en backup: ' . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
+    }
+});
+
 /* corre la aplicación */
 $app->run();
