@@ -31,20 +31,20 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
   const fetchUrl = useCallback(async () => {
     setLoadingUrl(true);
     setUrlErr('');
-    
+
     try {
       console.log('Obteniendo URL para documento ID:', doc.id_documento);
-      
+
       const res = await axios.get(
         `${API}/api/s3/documentos/${doc.id_documento}/url`,
-        { 
+        {
           headers: { Authorization: `Bearer ${tk}` },
           timeout: 15000
         }
       );
-      
+
       console.log('Respuesta URL:', res.data);
-      
+
       if (res.data.ok && res.data.url) {
         setUrl(res.data.url);
         setUrlErr('');
@@ -53,9 +53,9 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       }
     } catch (e) {
       console.error('Error obteniendo URL:', e);
-      
+
       let errorMsg = 'No se pudo obtener la URL del archivo';
-      
+
       if (e.response?.status === 404) {
         errorMsg = 'Documento no encontrado en el servidor';
       } else if (e.response?.status === 401) {
@@ -65,7 +65,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       } else if (e.code === 'ECONNABORTED') {
         errorMsg = 'Tiempo de espera agotado';
       }
-      
+
       setUrlErr(errorMsg);
     } finally {
       setLoadingUrl(false);
@@ -80,32 +80,34 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
   const handleDelete = async () => {
     setDeleting(true);
     setDelErr('');
-    
+
     try {
       console.log('Eliminando documento ID:', doc.id_documento);
-      
+
       const res = await axios.delete(
         `${API}/api/s3/documentos/${doc.id_documento}`,
-        { 
+        {
           headers: { Authorization: `Bearer ${tk}` },
-          timeout: 30000 // 30 segundos para eliminación
+          timeout: 30000
         }
       );
-      
+
       console.log('Respuesta eliminación:', res.data);
-      
-      if (res.data.ok) {
+
+      // Verificar que la respuesta sea exitosa
+      if (res.status === 200 && res.data && res.data.ok) {
         console.log('Documento eliminado exitosamente');
         if (onChange) onChange();
         onClose();
       } else {
-        throw new Error(res.data.mensaje || 'Error al eliminar documento');
+        // Si no es explícitamente exitoso, mostrar error
+        throw new Error(res.data?.mensaje || 'Respuesta inesperada del servidor');
       }
     } catch (e) {
       console.error('Error eliminando documento:', e);
-      
+
       let errorMsg = 'Error al eliminar el documento';
-      
+
       if (e.response?.status === 404) {
         errorMsg = 'Documento no encontrado';
       } else if (e.response?.status === 401) {
@@ -114,8 +116,10 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
         errorMsg = e.response.data.mensaje;
       } else if (e.code === 'ECONNABORTED') {
         errorMsg = 'Tiempo de espera agotado al eliminar';
+      } else if (e.message) {
+        errorMsg = e.message;
       }
-      
+
       setDelErr(errorMsg);
       setDeleting(false);
     }
@@ -124,7 +128,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
   // Guardar diagnóstico final en historial
   const saveDiagnostico = async () => {
     const diagnosticoTrimmed = diagnosticoFinal.trim();
-    
+
     if (!diagnosticoTrimmed) {
       setDiagErr('El diagnóstico final no puede estar vacío');
       return;
@@ -132,24 +136,24 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
 
     setUpdating(true);
     setDiagErr('');
-    
+
     try {
       console.log('Guardando diagnóstico para historial ID:', doc.id_historial);
-      
+
       const res = await axios.put(
         `${API}/historial/${doc.id_historial}/diagnostico`,
         { diagnostico_final: diagnosticoTrimmed },
-        { 
-          headers: { 
+        {
+          headers: {
             'Authorization': `Bearer ${tk}`,
             'Content-Type': 'application/json'
           },
           timeout: 10000
         }
       );
-      
+
       console.log('Respuesta diagnóstico:', res.data);
-      
+
       if (res.data.ok) {
         setEditMode(false);
         // Actualizar el documento local
@@ -161,9 +165,9 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       }
     } catch (e) {
       console.error('Error guardando diagnóstico:', e);
-      
+
       let errorMsg = 'Error al guardar el diagnóstico';
-      
+
       if (e.response?.status === 404) {
         errorMsg = 'Historial clínico no encontrado';
       } else if (e.response?.status === 401) {
@@ -171,7 +175,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       } else if (e.response?.data?.mensaje) {
         errorMsg = e.response.data.mensaje;
       }
-      
+
       setDiagErr(errorMsg);
     } finally {
       setUpdating(false);
@@ -262,7 +266,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
                   </button>
                 )}
               </div>
-              
+
               {!editMode ? (
                 <div className="diagnostico-display">
                   {doc.diagnostico_final ? (
@@ -313,9 +317,9 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
               ) : url ? (
                 isImage(doc.nombre_archivo) ? (
                   <div className="image-container">
-                    <img 
-                      src={url} 
-                      alt={doc.nombre_archivo} 
+                    <img
+                      src={url}
+                      alt={doc.nombre_archivo}
                       className="documento-imagen"
                       onError={() => setUrlErr('Error al cargar la imagen')}
                     />
@@ -335,10 +339,10 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
                 )
               ) : (
                 <div className="documento-error">
-                  <p>⚠️ {urlErr}</p>
+                  <p>{urlErr}</p>
                   <p><small>Archivo: {doc.nombre_archivo}</small></p>
-                  <button 
-                    className="btn-retry" 
+                  <button
+                    className="btn-retry"
                     onClick={fetchUrl}
                     disabled={loadingUrl}
                   >
@@ -352,8 +356,8 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
           </div>
 
           <div className="modal-footer">
-            <button 
-              className="btn-delete" 
+            <button
+              className="btn-delete"
               onClick={() => setShowDel(true)}
               disabled={deleting}
             >
