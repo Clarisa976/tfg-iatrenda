@@ -1464,98 +1464,10 @@ $app->get('/api/s3/documentos/{idDoc}/url', function (Request $req, Response $re
     }
 });
 
-// Descargar documento (redirige con 302 a la URL firmada)
-$app->delete('/api/s3/documentos/{id}', function (Request $req, Response $res, array $args) {
-    try {
-        $val = verificarTokenUsuario();
-        if (!$val) {
-            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-        }
-        if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
-            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
-        }
-        
-        if (!class_exists('App\Controllers\DocumentController')) {
-            return jsonResponse(['ok' => false, 'mensaje' => 'DocumentController no encontrado'], 500);
-        }
-        
-        $c = new App\Controllers\DocumentController();
-        return $c->deleteDocument($req, $res, ['id' => $args['id']]);
-    } catch (Exception $e) {
-        error_log('S3 Delete error: ' . $e->getMessage());
-        return jsonResponse([
-            'ok' => false,
-            'mensaje' => 'Error eliminando documento: ' . $e->getMessage()
-        ], 500);
-    }
-});
-$app->put('/api/s3/historial/{historial_id}/diagnosticos', function (Request $req, Response $res, array $args) {
-    try {
-        $val = verificarTokenUsuario();
-        if (!$val) {
-            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
-        }
-        if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
-            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
-        }
-        
-        $historialId = (int)$args['historial_id'];
-        $data = $req->getParsedBody() ?? [];
-        
-        if ($historialId <= 0) {
-            return jsonResponse(['ok'=>false,'mensaje'=>'ID de historial inválido'], 400);
-        }
-        
-        $baseDatos = conectar();
-        
-        $updates = [];
-        $params = [];
-        
-        if (isset($data['diagnostico_preliminar'])) {
-            $updates[] = "diagnostico_preliminar = ?";
-            $params[] = trim($data['diagnostico_preliminar']);
-        }
-        
-        if (isset($data['diagnostico_final'])) {
-            $updates[] = "diagnostico_final = ?";
-            $params[] = trim($data['diagnostico_final']);
-        }
-        
-        if (empty($updates)) {
-            return jsonResponse(['ok'=>false,'mensaje'=>'No hay datos para actualizar'], 400);
-        }
-        
-        $params[] = $historialId;
-        $sql = "UPDATE historial_clinico SET " . implode(', ', $updates) . " WHERE id_historial = ?";
-        
-        error_log("Actualizando historial $historialId con SQL: $sql");
-        error_log("Parámetros: " . json_encode($params));
-        
-        $stmt = $baseDatos->prepare($sql);
-        $success = $stmt->execute($params);
-        
-        if ($success && $stmt->rowCount() > 0) {
-            return jsonResponse(['ok'=>true,'mensaje'=>'Diagnósticos actualizados correctamente']);
-        } else {
-            // Verificar si el historial existe
-            $checkStmt = $baseDatos->prepare("SELECT id_historial FROM historial_clinico WHERE id_historial = ?");
-            $checkStmt->execute([$historialId]);
-            $exists = $checkStmt->fetch();
-            
-            if (!$exists) {
-                return jsonResponse(['ok'=>false,'mensaje'=>'Historial clínico no encontrado'], 404);
-            } else {
-                return jsonResponse(['ok'=>false,'mensaje'=>'No se pudo actualizar el historial'], 500);
-            }
-        }
-        
-    } catch (Exception $e) {
-        error_log('Error updating historial diagnosticos: ' . $e->getMessage());
-        return jsonResponse([
-            'ok'=>false,
-            'mensaje'=>'Error interno: ' . $e->getMessage()
-        ], 500);
-    }
+// 5. Descargar documento (redirige con 302 a la URL firmada)
+$app->get('/api/s3/download/{id}', function (Request $req, Response $res, array $args) {
+    $c = new DocumentController();
+    return $c->downloadDocument($req, $res, ['id' => $args['id']]);
 });
 
 // 6. Actualizar diagnóstico final de un documento
