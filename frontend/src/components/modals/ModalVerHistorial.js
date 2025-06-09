@@ -115,7 +115,7 @@ export default function ModalVerHistorial({ documentos, onClose }) {
                             rel="noreferrer"
                             className="file-link-btn"
                           >
-                            Descargar {documento.nombre_archivo}
+                            Descargar
                           </a>
                         </div>
                       )
@@ -123,9 +123,9 @@ export default function ModalVerHistorial({ documentos, onClose }) {
                       // Si no tenemos URL, mostrar información del archivo
                       <div className="documento-sin-url">
                         <div className="documento-info">
-                          <p><strong>Archivo:</strong> {documento.nombre_archivo}</p>
+                          {/*<p><strong>Archivo:</strong> {documento.nombre_archivo}</p>
                           <p><strong>Tipo:</strong> {documento.tipo}</p>
-                          <p><strong>Subido:</strong> {new Date(documento.fecha_subida).toLocaleDateString()}</p>
+                          <p><strong>Subido:</strong> {new Date(documento.fecha_subida).toLocaleDateString()}</p>*/}
                         </div>
                         <div className="documento-estado">
                           <p className="documento-error-msg">
