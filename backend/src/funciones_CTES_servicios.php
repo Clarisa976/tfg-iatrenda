@@ -40,7 +40,51 @@ function conectar()
     }
 }
 
+function conectarPostgreSQL()
+{
+    try {
+        // Obtener variables de entorno
+        $host = getenv('DB_HOST');
+        $baseDatosNombre = getenv('DB_NAME');
+        $user = getenv('DB_USER');
+        $pass = getenv('DB_PASS');
+        $port = getenv('DB_PORT') ?: 5432;
 
+        // Validar que tenemos todas las variables necesarias
+        if (empty($host) || empty($baseDatosNombre) || empty($user)) {
+            error_log('Error: Faltan variables de entorno para PostgreSQL');
+            error_log("Host: {$host}, DB: {$baseDatosNombre}, User: {$user}");
+            throw new Exception('Error de configuración en la conexión a PostgreSQL');
+        }
+
+        // Construir DSN para PostgreSQL con SSL obligatorio (Supabase)
+        $dsn = "pgsql:host=$host;port=$port;dbname=$baseDatosNombre;sslmode=require";
+        
+        // Crear conexión PDO
+        $pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_TIMEOUT => 30  // Timeout de 30 segundos
+        ]);
+
+        // Configurar timezone
+        $pdo->exec("SET timezone = 'Europe/Madrid'");
+        
+        // Probar la conexión con una consulta simple
+        $pdo->query('SELECT 1');
+        
+        error_log('Conexión PostgreSQL establecida correctamente');
+        return $pdo;
+        
+    } catch (\PDOException $e) {
+        error_log('Error de conexión a PostgreSQL: ' . $e->getMessage());
+        throw new Exception('Error al conectar con PostgreSQL: ' . $e->getMessage());
+    } catch (\Exception $e) {
+        error_log('Error general en conexión PostgreSQL: ' . $e->getMessage());
+        throw $e;
+    }
+}
 function verificarTokenUsuario()
 {
     $cabeceras = apache_request_headers();
