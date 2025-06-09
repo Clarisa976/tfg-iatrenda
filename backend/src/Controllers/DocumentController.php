@@ -536,48 +536,41 @@ public function deleteDocument($request, $response, $args)
 {
     try {
         $documentId = $args['id'];
+        error_log("=== DELETEDOCUMENT START - ID: $documentId ===");
 
         // Obtener documento de la base de datos
         $document = $this->getDocumentFromDatabase($documentId);
 
         if (!$document) {
+            error_log("Documento $documentId no encontrado en BD");
             return $this->jsonResponse($response, [
                 'ok' => false,
                 'mensaje' => 'Documento no encontrado'
             ], 404);
         }
 
-        error_log("Eliminando documento ID: $documentId, S3 key: " . $document['ruta']);
+        error_log("Documento encontrado: " . json_encode($document));
+        error_log("Eliminando de S3 key: " . $document['ruta']);
 
-        // 1. PRIMERO eliminar de S3
+        // Eliminar de S3
         $deleteResult = $this->s3Service->deleteFile($document['ruta']);
 
         if (!$deleteResult['success']) {
             error_log('Error eliminando de S3: ' . $deleteResult['error']);
-            // Continuar con BD aunque falle S3
         } else {
             error_log('Archivo eliminado de S3 exitosamente');
         }
 
-        // 2. DESPUÉS eliminar de base de datos
+        // Eliminar de base de datos
         $deleted = $this->deleteDocumentFromDatabase($documentId);
 
         if (!$deleted) {
+            error_log("Error eliminando documento $documentId de BD");
             return $this->jsonResponse($response, [
                 'ok' => false,
                 'mensaje' => 'Error al eliminar el documento de la base de datos'
             ], 500);
         }
-
-        // 3. Registrar actividad
-        registrarActividad(
-            $_SESSION['user_id'] ?? 0,
-            null,
-            'documento_clinico',
-            'DELETE',
-            json_encode(['id_documento' => $documentId, 'archivo' => $document['nombre_archivo']]),
-            null
-        );
 
         error_log("Documento $documentId eliminado exitosamente");
 
@@ -590,7 +583,7 @@ public function deleteDocument($request, $response, $args)
         error_log('Stack trace: ' . $e->getTraceAsString());
         return $this->jsonResponse($response, [
             'ok' => false,
-            'mensaje' => 'Error interno del servidor: ' . $e->getMessage()
+            'mensaje' => 'Error interno del servidor'
         ], 500);
     }
 }
