@@ -601,7 +601,7 @@ export default function PerfilPaciente() {
                             </div>
                         ))}
                         </div>
-                        </div>                        
+                        </div>
                         {/* Controles del Slider */}
                         {tareas.length > 3 && (
                             <div className="tareas-slider-controls">

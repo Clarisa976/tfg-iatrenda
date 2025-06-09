@@ -62,7 +62,7 @@ Iatrenda es un sistema de gestión médica completo que permite la administraci�
 ## Entorno de Producción
 
 ### URLs de Producción
-- **Frontend:** https://iatrenda.netlify.app
+- **Frontend:** https://clinica-petaka.netlify.app
 - **Backend API:** Desplegado en Render
 - **Base de Datos:** PostgreSQL en Supabase
 - **Archivos:** AWS S3 Bucket
