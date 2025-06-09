@@ -3266,13 +3266,8 @@ input[type="checkbox"]:checked::after {
 
 /* Comportamiento responsive correcto para el menú de usuario */
 
-/* Por defecto: ambos elementos ocultos hasta que se active con userOpen */
+/* Por defecto: dropdown oculto, sidebar y overlay preparados para mostrar */
 .user-dropdown {
-  display: none;
-}
-
-.overlay,
-.sidebar {
   display: none;
 }
 
@@ -3298,12 +3293,6 @@ input[type="checkbox"]:checked::after {
     display: none !important;
   }
   
-  /* En desktop, sidebar y overlay se muestran cuando userOpen = true (manejado por JS) */
-  .overlay.show {
-    display: block;
-  }
-  
-  .sidebar.show {
-    display: block;
-  }
+  /* En desktop, overlay y sidebar mantienen su comportamiento original con clases .show */
+  /* El overlay y sidebar ya tienen su lógica de opacity/visibility y transform definida arriba */
 }

@@ -377,7 +377,7 @@ export default function PerfilPaciente() {
     };
 
     // Formatear fechas
-    const formatDate = (dateString) => {
+    /*const formatDate = (dateString) => {
         if (!dateString) return 'Sin fecha';
         const date = new Date(dateString);
         return date.toLocaleDateString('es-ES', {
@@ -385,7 +385,7 @@ export default function PerfilPaciente() {
             month: '2-digit',
             year: 'numeric'
         });
-    };
+    };*/
 
 
     const input = (key, label, type = 'text', full = false, disabled = false) => (
@@ -579,29 +579,30 @@ export default function PerfilPaciente() {
                     <div className="tareas-container">
                         {/* Slider Container */}
                         <div className="tareas-slider-container">                            <div
-                                className="tareas-slider"
-                                style={{ transform: `translateX(-${currentSlide * 33.333}%)` }}
-                            >                                {tareas.map((tarea, index) => (
-                                    <div key={index} className="tarea-slide-item">
-                                        <h5 className="tarea-slide-titulo">
-                                            {tarea.titulo || 'Tarea sin título'}
-                                        </h5>
-                                        <p className="tarea-slide-descripcion">
-                                            {tarea.descripcion && tarea.descripcion.length > 100
-                                                ? `${tarea.descripcion.substring(0, 100)}...`
-                                                : tarea.descripcion || 'Sin descripción disponible'
-                                            }
-                                        </p>
-                                        <button 
-                                            className="btn-ver-tarea"
-                                            onClick={() => verTarea(tarea)}
-                                        >
-                                            Ver tarea
-                                        </button>
-                                    </div>
-                                ))}
+                            className="tareas-slider"
+                            style={{ transform: `translateX(-${currentSlide * 33.333}%)` }}
+                        >                                {tareas.map((tarea, index) => (
+                            <div key={index} className="tarea-slide-item">
+                                <h5 className="tarea-slide-titulo">
+                                    {tarea.titulo || 'Tarea sin título'}
+                                </h5>
+                                <p className="tarea-slide-descripcion">
+                                    {tarea.descripcion && tarea.descripcion.length > 100
+                                        ? `${tarea.descripcion.substring(0, 100)}...`
+                                        : tarea.descripcion || 'Sin descripción disponible'
+                                    }
+                                </p>
+                                <button
+                                    className="btn-ver-tarea"
+                                    onClick={() => verTarea(tarea)}
+                                >
+                                    Ver tarea
+                                </button>
                             </div>
-                        </div>                        {/* Controles del Slider */}
+                        ))}
+                        </div>
+                        </div>                        
+                        {/* Controles del Slider */}
                         {tareas.length > 3 && (
                             <div className="tareas-slider-controls">
                                 <button
@@ -612,7 +613,7 @@ export default function PerfilPaciente() {
                                 >
                                     <ChevronLeft size={20} />
                                 </button>
-                                
+
                                 <div className="slider-dots">
                                     {Array.from({ length: Math.ceil(tareas.length / 3) }).map((_, index) => (
                                         <div
@@ -622,7 +623,7 @@ export default function PerfilPaciente() {
                                         />
                                     ))}
                                 </div>
-                                
+
                                 <button
                                     onClick={nextSlide}
                                     className="slider-btn"
