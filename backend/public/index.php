@@ -1491,6 +1491,20 @@ $app->get('/prof/pacientes/{id}', function(Request $req, Response $res, array $a
         return jsonResponse(['ok'=>false,'mensaje'=>'Error al cargar el paciente: ' . $e->getMessage()], 500);
     }
 });
+$app->delete('/prof/pacientes/{id}/tareas/{id_tratamiento}', function (Request $request, Response $response, array $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+
+    $tratamientoId = $args['id_tratamiento'];
+
+    $db = conectar();
+    $stmt = $db->prepare("DELETE FROM tratamiento WHERE id_tratamiento = ?");
+    $stmt->execute([$tratamientoId]);
+
+    return jsonResponse(['ok' => true]);
+});
 
 /* actualiza datos de un paciente por parte del profesional */
 $app->put('/prof/pacientes/{id}', function(Request $req, Response $res, array $args): Response {
