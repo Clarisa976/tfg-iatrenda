@@ -9,12 +9,12 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 registerLocale('es', es);
 
-export default function ModalCitaUniversal({ 
+export default function ModalCitaUniversal({
   modo = 'cambiar', // 'cambiar' | 'nueva'
-  cita, 
-  onClose, 
-  onSuccess, 
-  onError 
+  cita,
+  onClose,
+  onSuccess,
+  onError
 }) {
   const [form, setForm] = useState({
     profesional_id: '',
@@ -30,9 +30,9 @@ export default function ModalCitaUniversal({
   const [error, setError] = useState('');
   const [profesionalId, setProfesionalId] = useState(null);
   const [diasBloqueados, setDiasBloqueados] = useState([]);
-  
+
   const HORA_INICIO = 10;
-  const HORA_FIN = 17;  const esModoCambiar = modo === 'cambiar';
+  const HORA_FIN = 17; const esModoCambiar = modo === 'cambiar';
   const esModoNueva = modo === 'nueva';;
 
   // Función para cargar profesionales
@@ -82,11 +82,11 @@ export default function ModalCitaUniversal({
     if (!esModoCambiar || !cita) return;
 
     try {
-      const idProf = cita?.id_profesional || 
-                     cita?.profesional_id || 
-                     cita?.id_prof || 
-                     cita?.profesional;
-      
+      const idProf = cita?.id_profesional ||
+        cita?.profesional_id ||
+        cita?.id_prof ||
+        cita?.profesional;
+
       if (idProf) {
         setProfesionalId(idProf);
         cargarDiasBloqueados(idProf);
@@ -95,12 +95,12 @@ export default function ModalCitaUniversal({
 
       if (cita?.id_cita) {
         const token = localStorage.getItem('token');
-        
+
         try {
           const response = await axios.get(`/pac/citas`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          
+
           if (response.data.ok) {
             const citaCompleta = response.data.citas.find(c => c.id_cita === cita.id_cita);
             if (citaCompleta?.id_profesional) {
@@ -117,7 +117,7 @@ export default function ModalCitaUniversal({
       const idFallback = 1;
       setProfesionalId(idFallback);
       cargarDiasBloqueados(idFallback);
-      
+
     } catch (e) {
       console.error('Error obteniendo profesional:', e);
       setError('Error al obtener información del profesional');
@@ -137,7 +137,7 @@ export default function ModalCitaUniversal({
       setProfesionalId(parseInt(form.profesional_id));
       cargarDiasBloqueados(parseInt(form.profesional_id));
     }
-  }, [form.profesional_id, esModoNueva]);  const cargarDiasBloqueados = async (idProf) => {
+  }, [form.profesional_id, esModoNueva]); const cargarDiasBloqueados = async (idProf) => {
     if (!idProf) return;
 
     try {
@@ -151,7 +151,7 @@ export default function ModalCitaUniversal({
           fecha_fin: tresMeses
         },
         headers: { 'Authorization': `Bearer ${token}` }
-      });      if (response.data.ok) {
+      }); if (response.data.ok) {
         const diasBloqueados = response.data.dias_bloqueados || [];
         setDiasBloqueados(diasBloqueados);
       }
@@ -164,9 +164,9 @@ export default function ModalCitaUniversal({
     if (!fecha || !profesionalId) return;
 
     setCargandoHoras(true);
-    setError('');    try {
+    setError(''); try {
       const fechaStr = fecha.toISOString().split('T')[0];
-      
+
       const token = localStorage.getItem('token');
       const response = await axios.get(`/pac/profesional/${profesionalId}/horas-disponibles`, {
         params: { fecha: fechaStr },
@@ -188,12 +188,12 @@ export default function ModalCitaUniversal({
         }
 
         const ocupadas = todasLasHoras.filter(hora => !horasDisponibles.includes(hora));
-        
+
 
         if (esModoCambiar && cita?.fecha_hora) {
           const fechaCitaActual = new Date(cita.fecha_hora);
           const fechaCitaActualStr = fechaCitaActual.toISOString().split('T')[0];
-          
+
           if (fechaStr === fechaCitaActualStr) {
             const horaCitaActual = fechaCitaActual.getHours().toString().padStart(2, '0') + ':00';
             const ocupadasSinLaActual = ocupadas.filter(hora => hora !== horaCitaActual);
@@ -253,22 +253,22 @@ export default function ModalCitaUniversal({
 
   const validarFormulario = () => {
     const errores = {};
-    
+
     if (esModoNueva && !form.profesional_id) {
       errores.profesional_id = 'Seleccione un profesional';
     }
-    
+
     if (esModoNueva && !form.motivo.trim()) {
       errores.motivo = 'El motivo es obligatorio';
     }
-    
+
     if (!form.fecha) {
       errores.fecha = 'Seleccione una fecha y hora';
     }
-    
+
     setErrs(errores);
     return Object.keys(errores).length === 0;
-  };  const enviarSolicitud = async () => {
+  }; const enviarSolicitud = async () => {
     if (!validarFormulario()) {
       if (esModoNueva) {
         onError('Por favor complete todos los campos requeridos');
@@ -283,7 +283,7 @@ export default function ModalCitaUniversal({
 
     try {
       const fechaHoraCompleta = format(form.fecha, 'yyyy-MM-dd HH:mm:ss');
-      const token = localStorage.getItem('token');      if (esModoCambiar) {
+      const token = localStorage.getItem('token'); if (esModoCambiar) {
         // Cambiar cita existente
         try {
           console.log("Enviando solicitud de cambio:", {
@@ -291,7 +291,7 @@ export default function ModalCitaUniversal({
             nueva_fecha: fechaHoraCompleta,
             cita_id: cita.id_cita
           });
-          
+
           const { data } = await axios.post(`/pac/citas/${cita.id_cita}/solicitud`, {
             accion: 'CAMBIAR',
             nueva_fecha: fechaHoraCompleta
@@ -344,14 +344,14 @@ export default function ModalCitaUniversal({
   };
 
   // Determinar si mostrar DatePicker
-  const mostrarDatePicker = esModoCambiar ? 
-    Boolean(profesionalId) : 
+  const mostrarDatePicker = esModoCambiar ?
+    Boolean(profesionalId) :
     Boolean(form.profesional_id);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>       
-         <div className="modal-header">
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+        <div className="modal-header">
           <h5>{getTitulo()}</h5>
           <button className="modal-close" onClick={onClose}><X /></button>
         </div><div className="modal-body">
@@ -406,14 +406,14 @@ export default function ModalCitaUniversal({
               />
               {errs.motivo && <span className="field-error">{errs.motivo}</span>}
             </div>
-          )}          
+          )}
           {/* Selección de fecha y hora */}
           {mostrarDatePicker && (
             <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <label style={{ color: 'var(--black)', fontWeight: '500', marginBottom: '1rem' }}>
                 {esModoCambiar ? 'Nueva fecha y hora*' : 'Seleccione fecha y hora*'}
               </label>
-              
+
               {cargandoHoras && (
                 <div style={{ margin: '0.5rem 0', color: 'var(--black)' }}>
                   Cargando disponibilidad...
@@ -440,9 +440,9 @@ export default function ModalCitaUniversal({
 
           {/* Mensaje para seleccionar profesional */}
           {esModoNueva && !form.profesional_id && (
-            <div style={{ 
-              textAlign: 'center', 
-              color: 'var(--gray)', 
+            <div style={{
+              textAlign: 'center',
+              color: 'var(--gray)',
               fontStyle: 'italic',
               padding: '2rem'
             }}>
@@ -452,7 +452,7 @@ export default function ModalCitaUniversal({
 
           {/* Mensaje de error */}
           {error && (
-            <div style={{ 
+            <div style={{
               color: 'var(--red)',
               padding: '0.75rem',
               textAlign: 'center',
@@ -461,9 +461,9 @@ export default function ModalCitaUniversal({
               {error}
             </div>
           )}
-        </div>        
+        </div>
         <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
-          <button 
+          <button
             className="btn-cancel"
             onClick={onClose}
             disabled={enviando}
@@ -471,13 +471,13 @@ export default function ModalCitaUniversal({
           >
             Cancelar
           </button>
-          
-          <button 
+
+          <button
             className="btn-reserva"
             onClick={enviarSolicitud}
             disabled={
-              enviando || 
-              !form.fecha || 
+              enviando ||
+              !form.fecha ||
               cargandoHoras ||
               (esModoNueva && (!form.profesional_id || !form.motivo.trim()))
             }

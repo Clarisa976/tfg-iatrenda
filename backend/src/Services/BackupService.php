@@ -44,9 +44,9 @@ class BackupService
         try {
             $pdo = conectarPostgreSQL();
             error_log('Conexión PDO establecida correctamente');
-            
+
             $sql = $this->generateCompleteBackupSQL($pdo);
-            
+
             if (file_put_contents($filePath, $sql) === false) {
                 throw new Exception('No se pudo escribir el archivo de backup');
             }
@@ -69,7 +69,7 @@ class BackupService
     private function generateCompleteBackupSQL(PDO $pdo): string
     {
         $startTime = microtime(true);
-        
+
         $sql = "-- =============================================\n";
         $sql .= "-- IATRENDA DATABASE BACKUP\n";
         $sql .= "-- =============================================\n";
@@ -78,24 +78,24 @@ class BackupService
         $sql .= "-- Host: " . $_ENV['DB_HOST'] . "\n";
         $sql .= "-- Método: PDO (PostgreSQL 17.4)\n";
         $sql .= "-- =============================================\n\n";
-        
+
         $sql .= "-- Configuración inicial\n";
         $sql .= "SET client_encoding = 'UTF8';\n";
         $sql .= "SET timezone = 'Europe/Madrid';\n";
         $sql .= "SET datestyle = 'ISO, MDY';\n";
         $sql .= "SET default_transaction_isolation = 'read committed';\n";
         $sql .= "SET client_min_messages = warning;\n\n";
-        
+
         // Obtener información del servidor
         $version = $pdo->query("SELECT version()")->fetchColumn();
         $sql .= "-- Versión del servidor: " . substr($version, 0, 100) . "\n\n";
-        
+
         // Obtener lista de tablas ordenada
         $tables = $this->getTablesInDependencyOrder($pdo);
-        
+
         $totalTables = count($tables);
         $totalRecords = 0;
-        
+
         error_log("Procesando {$totalTables} tablas...");
 
         // Deshabilitar foreign key checks temporalmente
@@ -106,7 +106,7 @@ class BackupService
             error_log("Procesando tabla " . ($index + 1) . "/{$totalTables}: {$table}");
             $tableBackup = $this->generateTableBackup($pdo, $table);
             $sql .= $tableBackup;
-            
+
             // Contar registros para estadísticas
             try {
                 $count = $pdo->query("SELECT COUNT(*) FROM {$table}")->fetchColumn();
@@ -122,7 +122,7 @@ class BackupService
 
         $endTime = microtime(true);
         $duration = round($endTime - $startTime, 2);
-        
+
         $sql .= "-- =============================================\n";
         $sql .= "-- RESUMEN DEL BACKUP\n";
         $sql .= "-- =============================================\n";
@@ -133,7 +133,7 @@ class BackupService
         $sql .= "-- =============================================\n";
 
         error_log("Backup SQL generado: {$totalTables} tablas, {$totalRecords} registros, {$duration}s");
-        
+
         return $sql;
     }
 
@@ -155,7 +155,7 @@ class BackupService
             'log_evento_dato',  // persona
             'backup'            // Sin dependencias
         ];
-        
+
         // Verificar que todas las tablas existen
         $existingTables = $pdo->query("
             SELECT tablename 
@@ -165,14 +165,14 @@ class BackupService
         ")->fetchAll(PDO::FETCH_COLUMN);
 
         $orderedTables = [];
-        
+
         // Primero las tablas en orden de dependencias
         foreach ($dependencyOrder as $table) {
             if (in_array($table, $existingTables)) {
                 $orderedTables[] = $table;
             }
         }
-        
+
         // Agregar cualquier tabla nueva que no esté en el orden
         foreach ($existingTables as $table) {
             if (!in_array($table, $orderedTables)) {
@@ -180,7 +180,7 @@ class BackupService
                 error_log("Tabla nueva encontrada: {$table}");
             }
         }
-        
+
         return $orderedTables;
     }
 
@@ -194,18 +194,17 @@ class BackupService
             // Obtener información de la tabla
             $count = $pdo->query("SELECT COUNT(*) FROM {$table}")->fetchColumn();
             $sql .= "-- Registros: {$count}\n";
-            
+
             if ($count > 0) {
                 $sql .= "-- Timestamp: " . date('H:i:s') . "\n\n";
-                
+
                 // Limpiar tabla (TRUNCATE es más rápido que DELETE)
                 $sql .= "TRUNCATE TABLE {$table} RESTART IDENTITY CASCADE;\n\n";
-                
+
                 $sql .= $this->getTableData($pdo, $table, $count);
             } else {
                 $sql .= "-- Tabla vacía\n\n";
             }
-            
         } catch (Exception $e) {
             $sql .= "-- ERROR procesando tabla {$table}: " . $e->getMessage() . "\n\n";
             error_log("Error procesando tabla {$table}: " . $e->getMessage());
@@ -217,36 +216,36 @@ class BackupService
     private function getTableData(PDO $pdo, string $table, int $count): string
     {
         $sql = "";
-        
+
         try {
             // Para tablas grandes, procesar en lotes
             $batchSize = 1000;
             $batches = ceil($count / $batchSize);
-            
+
             if ($batches > 1) {
                 $sql .= "-- Procesando en {$batches} lotes de {$batchSize} registros\n";
             }
-            
+
             for ($batch = 0; $batch < $batches; $batch++) {
                 $offset = $batch * $batchSize;
-                
+
                 $stmt = $pdo->query("SELECT * FROM {$table} LIMIT {$batchSize} OFFSET {$offset}");
                 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
+
                 if (empty($rows)) {
                     continue;
                 }
-                
+
                 if ($batch === 0) {
                     // Primera vez, obtener columnas
                     $columns = array_keys($rows[0]);
-                    $columnList = implode(', ', array_map(function($col) {
+                    $columnList = implode(', ', array_map(function ($col) {
                         return '"' . $col . '"';
                     }, $columns));
                 }
-                
+
                 $sql .= "INSERT INTO {$table} ({$columnList}) VALUES\n";
-                
+
                 $values = [];
                 foreach ($rows as $row) {
                     $rowValues = [];
@@ -255,15 +254,14 @@ class BackupService
                     }
                     $values[] = '(' . implode(', ', $rowValues) . ')';
                 }
-                
+
                 $sql .= implode(",\n", $values) . ";\n\n";
             }
-            
         } catch (Exception $e) {
             $sql .= "-- Error obteniendo datos de {$table}: " . $e->getMessage() . "\n\n";
             error_log("Error obteniendo datos de {$table}: " . $e->getMessage());
         }
-        
+
         return $sql;
     }
 
@@ -370,7 +368,7 @@ class BackupService
         try {
             $dumpResult = $this->createDatabaseDump();
             $uploadResult = $this->uploadToS3($dumpResult['fileName'], $dumpResult['filePath']);
-            
+
             $this->logBackupToDatabase(
                 $dumpResult['fileName'],
                 $uploadResult['location'],
@@ -454,4 +452,3 @@ class BackupService
         return ['deleted' => $deletedCount, 'message' => "Eliminados {$deletedCount} backups antiguos"];
     }
 }
-

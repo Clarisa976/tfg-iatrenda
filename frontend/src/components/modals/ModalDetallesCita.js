@@ -12,8 +12,8 @@ export default function ModalDetallesCita({ cita, onClose, onSolicitar }) {
 
   const formatearHora = (fechaStr) => {
     const fecha = new Date(fechaStr);
-    return fecha.toLocaleTimeString('es-ES', { 
-      hour: '2-digit', 
+    return fecha.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
       minute: '2-digit',
       hour12: false
     });
@@ -42,18 +42,18 @@ export default function ModalDetallesCita({ cita, onClose, onSolicitar }) {
           <h3>Detalles cita</h3>
           <button className="modal-close" onClick={onClose}><X /></button>
         </div>
-        
+
         <div className="modal-body" style={{ textAlign: 'center' }}>
           <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ 
-              fontSize: '1.2rem', 
+            <div style={{
+              fontSize: '1.2rem',
               fontWeight: '600',
-              marginBottom: '1rem' 
+              marginBottom: '1rem'
             }}>
               {formatearFecha(cita.fecha_hora)} - {formatearHora(cita.fecha_hora)}
             </div>
 
-            <div style={{ 
+            <div style={{
               fontSize: '1.1rem',
               marginBottom: '1.5rem',
               color: 'var(--black)'
@@ -65,17 +65,17 @@ export default function ModalDetallesCita({ cita, onClose, onSolicitar }) {
 
         <div className="modal-footer">
           {puedeModificar() ? (
-            <>              <button 
-                style={{
-                  backgroundColor: 'var(--blue)',
-                  color: 'var(--black)'
-                }}
-                className="btn-save"
-                onClick={() => onSolicitar('CAMBIAR')}
-              >
-                Solicitar cambio
-              </button>
-              <button 
+            <>              <button
+              style={{
+                backgroundColor: 'var(--blue)',
+                color: 'var(--black)'
+              }}
+              className="btn-save"
+              onClick={() => onSolicitar('CAMBIAR')}
+            >
+              Solicitar cambio
+            </button>
+              <button
                 style={{
                   backgroundColor: 'var(--red)',
                   color: 'var(--black)'

@@ -1,4 +1,3 @@
-// hooks/useS3Documents.js
 import { useState, useEffect, useCallback } from 'react';
 
 export const useS3Documents = (documentos) => {
@@ -37,7 +36,7 @@ export const useS3Documents = (documentos) => {
     const loadUrls = async () => {
       for (const documento of documentos) {
         const docId = documento.id_documento;
-        
+
         // Si ya tenemos la URL o está cargando, continuar
         if (documentUrls[docId] || loadingUrls[docId]) continue;
 
@@ -87,15 +86,15 @@ export const useS3Documents = (documentos) => {
   const downloadDocument = useCallback(async (documento) => {
     try {
       const tk = localStorage.getItem('token');
-      
+
       // Abrir directamente el endpoint de descarga
       const downloadUrl = `${process.env.REACT_APP_API_URL}/api/s3/download/${documento.id_documento}`;
-      
+
       // Crear un enlace temporal para la descarga
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.target = '_blank';
-      
+
       // Añadir headers de autorización si es posible
       try {
         const response = await fetch(downloadUrl, {
@@ -104,7 +103,7 @@ export const useS3Documents = (documentos) => {
             'Authorization': `Bearer ${tk}`
           }
         });
-        
+
         if (response.redirected) {
           window.open(response.url, '_blank');
         } else {
@@ -114,7 +113,7 @@ export const useS3Documents = (documentos) => {
         // Fallback: usar el enlace directo
         link.click();
       }
-      
+
     } catch (error) {
       console.error('Error al descargar documento:', error);
       alert('Error al descargar el documento');

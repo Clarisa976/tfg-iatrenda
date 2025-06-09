@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Eye, EyeOff, X,  CheckCircle, XCircle } from 'lucide-react';
+import { Eye, EyeOff, X, CheckCircle, XCircle } from 'lucide-react';
 
 /* Modal para recuperar pass */
 function ModalOlvidarContrasenia({ onClose, onShowToast }) {
@@ -23,9 +23,9 @@ function ModalOlvidarContrasenia({ onClose, onShowToast }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      
+
       const data = await res.json();
-      
+
       if (data.ok) {
         onShowToast({
           ok: true,
@@ -54,7 +54,7 @@ function ModalOlvidarContrasenia({ onClose, onShowToast }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X/></button>
+        <button className="modal-close" onClick={onClose}><X /></button>
 
         {/* Título */}
         <h2 className="modal-title">Recuperar contraseña</h2>
@@ -73,9 +73,10 @@ function ModalOlvidarContrasenia({ onClose, onShowToast }) {
             {error && (
               <span className="field-error">{error}</span>
             )}
-          </div>          {/* Botón */}
-          <button 
-            type="submit" 
+          </div>
+          {/* Botón */}
+          <button
+            type="submit"
             className="btn-reserva btn-full"
             disabled={loading}
           >
@@ -126,7 +127,7 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
         body: JSON.stringify({ email, password: pass }),
       });
       const data = await res.json();
-      console.log('Respuesta login:', data);      if (data.ok) {
+      console.log('Respuesta login:', data); if (data.ok) {
         if (data.token) {
           localStorage.setItem('token', data.token);
         }
@@ -157,67 +158,67 @@ export default function LoginModal({ onClose, onLoginSuccess }) {
           </div>
         </div>
       )}
-      
+
       <div className="modal-backdrop" onClick={onClose}>
         <div className="modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X/></button>
+          <button className="modal-close" onClick={onClose}><X /></button>
 
-        {/* Título */}
-        <h2 className="modal-title">Inicia sesión</h2>
+          {/* Título */}
+          <h2 className="modal-title">Inicia sesión</h2>
 
-        {/* Error API */}
-        {errors.api && <div className="api-error">{errors.api}</div>}
+          {/* Error API */}
+          {errors.api && <div className="api-error">{errors.api}</div>}
 
-        <form onSubmit={handleSubmit}>
-          {/* Email */}
-          <div className="field">
-            <label>Email*:</label>
-            <input
-              ref={emailRef}
-              type="email"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setErrors({ ...errors, email: '' }); }}
-              className={errors.email ? 'invalid' : ''}
-            />
-            {errors.email && <span className="field-error">{errors.email}</span>}
-          </div>          
-          {/* Password */}
-          <div className="field">
-            <label>Contraseña*:</label>
-            <div className="password-field">
+          <form onSubmit={handleSubmit}>
+            {/* Email */}
+            <div className="field">
+              <label>Email*:</label>
               <input
-                type={showPassword ? "text" : "password"}
-                value={pass}
-                onChange={e => { setPass(e.target.value); setErrors({ ...errors, pass: '' }); }}
-                className={errors.pass ? 'invalid' : ''}
+                ref={emailRef}
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setErrors({ ...errors, email: '' }); }}
+                className={errors.email ? 'invalid' : ''}
               />
+              {errors.email && <span className="field-error">{errors.email}</span>}
+            </div>
+            {/* Password */}
+            <div className="field">
+              <label>Contraseña*:</label>
+              <div className="password-field">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={pass}
+                  onChange={e => { setPass(e.target.value); setErrors({ ...errors, pass: '' }); }}
+                  className={errors.pass ? 'invalid' : ''}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              {errors.pass && <span className="field-error">{errors.pass}</span>}
+            </div>
+            {/* Acciones */}
+            <div className="actions">
               <button
                 type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
+                className="forgot"
+                onClick={() => setFpOpen(true)}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                Olvidé mi contraseña
+              </button>
+
+              <button type="submit" className="btn-submit btn-full">
+                Entrar
               </button>
             </div>
-            {errors.pass && <span className="field-error">{errors.pass}</span>}
-          </div>
-          {/* Acciones */}
-          <div className="actions">
-            <button
-              type="button"
-              className="forgot"
-              onClick={() => setFpOpen(true)}
-            >
-              Olvidé mi contraseña
-            </button>
-
-            <button type="submit" className="btn-submit btn-full">
-              Entrar
-            </button>          
-            </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
     </>
   );
 }

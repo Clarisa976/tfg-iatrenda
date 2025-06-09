@@ -30,13 +30,13 @@ export default function ModalConfirmarCancelacion({ cita, onClose, onSuccess, on
           <h3>Confirmar cancelación</h3>
           <button className="modal-close" onClick={onClose}><X /></button>
         </div>
-        
+
         <div className="modal-body">
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <p style={{ 
-              color: 'var(--black)', 
-              fontSize: '1.1rem', 
-              marginBottom: '1.5rem' 
+            <p style={{
+              color: 'var(--black)',
+              fontSize: '1.1rem',
+              marginBottom: '1.5rem'
             }}>
               ¿Está seguro de que quiere cancelar la cita?
             </p>
@@ -44,18 +44,18 @@ export default function ModalConfirmarCancelacion({ cita, onClose, onSuccess, on
         </div>
 
         <div className="modal-footer">
-          <button 
+          <button
             className="btn-cancel"
             onClick={onClose}
             disabled={enviando}
           >
             Volver
           </button>
-          <button 
+          <button
             className="btn-delete"
             onClick={confirmarCancelacion}
             disabled={enviando}
-            style={{ 
+            style={{
               backgroundColor: 'var(--red)',
               color: 'var(--black)',
               opacity: enviando ? 0.6 : 1

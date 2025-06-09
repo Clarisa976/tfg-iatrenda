@@ -19,27 +19,27 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
   const validar = () => {
     const e = {};
     if (!form.nombre.trim()) e.nombre = 'Este campo no puede quedar vacío';
-    
+
     // Validación de email
     if (!form.email.trim()) {
       e.email = 'Este campo no puede quedar vacío';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       e.email = 'Introduce un email válido';
     }
-    
+
     // Validación de teléfono
     if (form.tel && form.tel.trim() && !/^[0-9]{9}$/.test(form.tel.trim())) {
       e.tel = 'Introduce un número de teléfono';
     }
-    
+
     if (!form.motivo.trim()) e.motivo = 'Este campo no puede quedar vacío';
-    
+
     if (!form.fecha) {
       e.fecha = 'Seleccione un día y hora';
     } else {
       // Validar que no sea anterior a hoy
       const hoy = new Date();
-      hoy.setHours(0,0,0,0);
+      hoy.setHours(0, 0, 0, 0);
       if (form.fecha < hoy) {
         e.fecha = 'No puedes reservar en una fecha pasada';
       }
@@ -54,10 +54,10 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
       nombreRef.current?.focus();
       return;
     }
-    
+
     setLoading(true);
-    
-    try {      
+
+    try {
       const fechaStr = format(form.fecha, 'yyyy-MM-dd HH:mm:ss');
       console.log("Enviando datos de cita:", {
         nombre: form.nombre,
@@ -66,15 +66,15 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
         motivo: form.motivo,
         fecha: fechaStr,
       });
-      console.log("Tipo de dato del teléfono:", typeof(form.tel || ''));
+      console.log("Tipo de dato del teléfono:", typeof (form.tel || ''));
       console.log("Valor exacto del teléfono:", JSON.stringify(form.tel || ''));
-      
+
       // Usar fetch con manejo adecuado de CORS
       const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
       const url = `${baseURL}/reservar-cita`;
-      
+
       console.log(`Enviando solicitud a ${url}`);
-        const response = await fetch(url, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,12 +83,12 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
         body: JSON.stringify({
           nombre: form.nombre,
           email: form.email,
-          tel: form.tel ? form.tel.trim() : '', 
+          tel: form.tel ? form.tel.trim() : '',
           motivo: form.motivo,
           fecha: fechaStr
         })
       });
-      
+
       // Manejar respuesta no-JSON
       let data;
       const contentType = response.headers.get('content-type');
@@ -105,18 +105,19 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
           throw new Error(`El servidor respondió con un formato no esperado: ${text.substring(0, 100)}`);
         }
       }
-      
+
       console.log("Respuesta del servidor:", data);
-      
+
       if (!response.ok) {
         throw new Error(data.mensaje || `Error del servidor: ${response.status}`);
       }
-      
+
       if (data.ok) {
         onSuccess('¡Reserva enviada! Te avisaremos cuando el equipo confirme tu cita');
       } else {
         throw new Error(data.mensaje || 'Error al reservar la cita');
-      }    } catch (err) {
+      }
+    } catch (err) {
       console.error("Error reservando cita:", err);
       const msg = err.message || 'Error al reservar la cita';
       onError(msg);
@@ -153,7 +154,7 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
               className={errs.email ? 'invalid' : ''}
             />
             {errs.email && <span className="field-error">{errs.email}</span>}
-          </div>          
+          </div>
           {/* Teléfono */}
           <div className="field">
             <label>Teléfono</label>
@@ -212,12 +213,12 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
             <span>
               He leído y acepto los <a href="/terminos">Términos y condiciones de uso</a>
             </span>
-          </div>          
+          </div>
           {errs.acepto && <span className="field-error">{errs.acepto}</span>}
 
-          <button 
-            type="submit" 
-            className="btn-submit btn-full" 
+          <button
+            type="submit"
+            className="btn-submit btn-full"
             disabled={loading}
           >
             {loading ? 'Procesando...' : 'Confirmar cita'}

@@ -59,7 +59,7 @@ function conectarPostgreSQL()
 
         // Construir DSN para PostgreSQL con SSL obligatorio (Supabase)
         $dsn = "pgsql:host=$host;port=$port;dbname=$baseDatosNombre;sslmode=require";
-        
+
         // Crear conexión PDO
         $pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -70,13 +70,12 @@ function conectarPostgreSQL()
 
         // Configurar timezone
         $pdo->exec("SET timezone = 'Europe/Madrid'");
-        
+
         // Probar la conexión con una consulta simple
         $pdo->query('SELECT 1');
-        
+
         error_log('Conexión PostgreSQL establecida correctamente');
         return $pdo;
-        
     } catch (\PDOException $e) {
         error_log('Error de conexión a PostgreSQL: ' . $e->getMessage());
         throw new Exception('Error al conectar con PostgreSQL: ' . $e->getMessage());

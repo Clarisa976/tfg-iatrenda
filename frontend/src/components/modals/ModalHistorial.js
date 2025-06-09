@@ -39,26 +39,26 @@ export default function ModalHistorial({ documentos, onClose }) {
     document.body.removeChild(link);
   };
 
-  return (    
-  <div className="modal-backdrop" onClick={onClose}>
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-historial-wide" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Mi Historial Clínico</h3>
           <button className="modal-close" onClick={onClose}><X /></button>
         </div>
-        
+
         <div className="modal-body">
           {documentos && documentos.length > 0 ? (
             <div>
               <p><strong>Total de documentos:</strong> {documentos.length}</p>
-                <div className="historial-documentos-section">
+              <div className="historial-documentos-section">
                 {documentos.map((documento, index) => {
                   const docFileUrl = getFileUrl(documento.ruta);
                   const isDocImage = isImage(documento.ruta);
 
                   return (
-                    <div 
-                      key={documento.id_documento || index} 
+                    <div
+                      key={documento.id_documento || index}
                       className="historial-documento-item"
                     >
                       <div className="historial-documento-info">
@@ -67,7 +67,7 @@ export default function ModalHistorial({ documentos, onClose }) {
                         {documento.diagnostico_preliminar && (
                           <p><strong>Diagnóstico:</strong> {documento.diagnostico_preliminar}</p>
                         )}
-                      </div>                      
+                      </div>
                       {isDocImage ? (
                         <div className="historial-imagen-container">
                           <img
@@ -95,8 +95,8 @@ export default function ModalHistorial({ documentos, onClose }) {
               </div>
             </div>
           ) : (
-            <div style={{ 
-              textAlign: 'center', 
+            <div style={{
+              textAlign: 'center',
               padding: '40px',
               color: '#666'
             }}>

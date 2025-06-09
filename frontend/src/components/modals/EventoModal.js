@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
 import '../../styles.css';
 
-export default function EventoModal({ 
-  open, 
-  toggle, 
-  profesionales, 
-  profSeleccionado = null, 
-  soloLecturaProfesional = false, 
-  onSave 
+export default function EventoModal({
+  open,
+  toggle,
+  profesionales,
+  profSeleccionado = null,
+  soloLecturaProfesional = false,
+  onSave
 }) {
   const [form, setForm] = useState({
     tipo: 'EVENTO',
-    profId: profSeleccionado || '', 
+    profId: profSeleccionado || '',
     inicio: '',
     fin: '',
     nota: ''
   });
-  
-  const set = (k, v) => setForm(o => ({...o, [k]: v}));
-  const guardar = () => onSave({...form});
-  
+
+  const set = (k, v) => setForm(o => ({ ...o, [k]: v }));
+  const guardar = () => onSave({ ...form });
+
   if (!open) return null;
-  
+
   return (
     <div className="modal-backdrop" onClick={toggle}>
       <div className="modal" onClick={e => e.stopPropagation()}>
@@ -29,19 +29,19 @@ export default function EventoModal({
           <h5>Nuevo evento</h5>
           <button type="button" className="modal-close" onClick={toggle}>×</button>
         </div>
-        
+
         <div className="modal-body">
           <form>
             <div className="field">
               <label>Profesional</label>
               {soloLecturaProfesional ? (
-                <input 
-                  type="text" 
-                  value="Mi agenda personal" 
+                <input
+                  type="text"
+                  value="Mi agenda personal"
                   disabled
                 />
               ) : (
-                <select 
+                <select
                   value={form.profId}
                   onChange={e => set('profId', e.target.value)}
                 >
@@ -55,10 +55,10 @@ export default function EventoModal({
                 </select>
               )}
             </div>
-            
+
             <div className="field">
               <label>Tipo de evento</label>
-              <select 
+              <select
                 value={form.tipo}
                 onChange={e => set('tipo', e.target.value)}
               >
@@ -69,7 +69,7 @@ export default function EventoModal({
                 <option value="OTROS">Otros</option>
               </select>
             </div>
-            
+
             <div className="field">
               <label>Inicio</label>
               <input
@@ -78,7 +78,7 @@ export default function EventoModal({
                 onChange={e => set('inicio', e.target.value)}
               />
             </div>
-            
+
             <div className="field">
               <label>Fin</label>
               <input
@@ -87,7 +87,7 @@ export default function EventoModal({
                 onChange={e => set('fin', e.target.value)}
               />
             </div>
-            
+
             <div className="field">
               <label>Comentario</label>
               <textarea
@@ -97,7 +97,7 @@ export default function EventoModal({
             </div>
           </form>
         </div>
-        
+
         <div className="modal-footer">
           <button className="btn-secondary" onClick={toggle}>Cancelar</button>
           <button className="btn-primary" onClick={guardar}>Guardar</button>

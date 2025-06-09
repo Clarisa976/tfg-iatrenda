@@ -22,7 +22,7 @@ export default function EventoDetalleModal({ open, toggle, event, onDelete }) {
         </div>
 
         <div className="modal-footer">
-          <button className="btn-primary"  onClick={() => onDelete(event.id)}>Eliminar</button>
+          <button className="btn-primary" onClick={() => onDelete(event.id)}>Eliminar</button>
           <button className="btn-secondary" onClick={toggle}>Cerrar</button>
         </div>
       </div>

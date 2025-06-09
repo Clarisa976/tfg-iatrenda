@@ -58,7 +58,7 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
 
     try {
       const formData = new FormData();
-      
+
       // Datos del tratamiento
       formData.append('titulo', tit);
       formData.append('notas', desc);
@@ -67,7 +67,7 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
       formData.append('frecuencia_sesiones', frecuencia || '1');
       formData.append('id_paciente', idPaciente);
       formData.append('tipo', 'tratamiento');
-      
+
       // Agregar archivo si existe
       if (file) {
         formData.append('file', file);
@@ -95,7 +95,7 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
 
       const result = await response.json();
       console.log('Respuesta del servidor:', result);
-      
+
       if (!response.ok || !result.ok) {
         throw new Error(result.mensaje || `Error ${response.status}: ${response.statusText}`);
       }
@@ -116,7 +116,7 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
 
       // Actualizar datos
       onDone();
-      
+
     } catch (e) {
       console.error('Error completo:', e);
       setGeneralError('Error al guardar tratamiento: ' + e.message);
@@ -146,7 +146,7 @@ export default function SubirTratamiento({ onDone, idPaciente }) {
               {generalError}
             </div>
           )}
-          
+
           <div className="field full">
             <label>Título*</label>
             <input

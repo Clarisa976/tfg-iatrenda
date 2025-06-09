@@ -157,7 +157,7 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
   return (
     <header className="header">
       {/* TOP BAR */}
-      <div className="top-bar">        
+      <div className="top-bar">
         <div className="logo">
           <Link to="/" onClick={handleLogoClick}>
             <img src={logoImg} alt="Iatrenda" />
@@ -188,14 +188,15 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
             <User size={24} />
           </button>
         </div>
-      </div>      {/* MENÚ PRINCIPAL */}
+      </div>
+      {/* MENÚ PRINCIPAL */}
       <div className={`menu-desplegable${navOpen ? ' open' : ''}`}>
         <nav className="nav-links">
           <a href="/" onClick={handleLogoClick}>Inicio</a>
           <a href="/#quienes-somos" onClick={e => handleNavLink(e, 'quienes-somos')}>Quiénes somos</a>
           <a href="/#servicios" onClick={e => handleNavLink(e, 'servicios')}>Servicios</a>
-          
-          {/* Solo mostrar "Reserve su cita" si NO está logueado */}
+
+          {/* Solo mostrarsi NO está logueado */}
           {!isLoggedIn && (
             <a className="btn-reserva"
               href="/reservar"
@@ -204,7 +205,8 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
             </a>
           )}
         </nav>
-      </div>      {/* MENÚ DE USUARIO */}
+      </div>
+      {/* MENÚ DE USUARIO */}
       {userOpen && (
         <>
           {/* dropdown móvil */}
@@ -217,12 +219,12 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
                       {item.label}
                     </Link>
                   ) : (
-                    <a key={index} 
-                       href={item.label === 'Mi perfil' ? '/paciente/mi-perfil' : 
-                             item.label === 'Tareas para casa' ? '/paciente/mi-perfil?section=tareas' : 
-                             item.label === 'Historial clínico' ? '/paciente/mi-perfil?section=historial' : '/'
-                       }
-                       onClick={e => { e.preventDefault(); item.action(); }}>
+                    <a key={index}
+                      href={item.label === 'Mi perfil' ? '/paciente/mi-perfil' :
+                        item.label === 'Tareas para casa' ? '/paciente/mi-perfil?section=tareas' :
+                          item.label === 'Historial clínico' ? '/paciente/mi-perfil?section=historial' : '/'
+                      }
+                      onClick={e => { e.preventDefault(); item.action(); }}>
                       {item.label}
                     </a>
                   )
@@ -249,12 +251,12 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
                         {item.label}
                       </Link>
                     ) : (
-                      <a key={index} 
-                         href={item.label === 'Mi perfil' ? '/paciente/mi-perfil' : 
-                               item.label === 'Tareas para casa' ? '/paciente/mi-perfil?section=tareas' : 
-                               item.label === 'Historial clínico' ? '/paciente/mi-perfil?section=historial' : '/'
-                         }
-                         onClick={e => { e.preventDefault(); item.action(); }}>
+                      <a key={index}
+                        href={item.label === 'Mi perfil' ? '/paciente/mi-perfil' :
+                          item.label === 'Tareas para casa' ? '/paciente/mi-perfil?section=tareas' :
+                            item.label === 'Historial clínico' ? '/paciente/mi-perfil?section=historial' : '/'
+                        }
+                        onClick={e => { e.preventDefault(); item.action(); }}>
                         {item.label}
                       </a>
                     )

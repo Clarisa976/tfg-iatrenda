@@ -21,7 +21,7 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
     const cargarUrls = async () => {
       if (treat.documentos && treat.documentos.length > 0) {
         const docsConUrls = [];
-        
+
         for (const doc of treat.documentos) {
           try {
             // Intentar obtener URL firmada del S3
@@ -29,7 +29,7 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
               `${API}/api/s3/documentos/${doc.id_documento}/url`,
               { headers: { Authorization: `Bearer ${tk}` } }
             );
-            
+
             if (response.data.ok && response.data.url) {
               docsConUrls.push({
                 ...doc,
@@ -55,7 +55,7 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
             });
           }
         }
-        
+
         setDocumentosConUrls(docsConUrls);
       }
     };

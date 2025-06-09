@@ -5,7 +5,7 @@ export default function ConfirmacionEliminacionModal({ open, toggle, onConfirm, 
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={toggle}>
-      <div className="modal" onClick={e=>e.stopPropagation()}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h5>Confirmar</h5>
           <button className="modal-close" onClick={toggle}>×</button>
@@ -15,7 +15,7 @@ export default function ConfirmacionEliminacionModal({ open, toggle, onConfirm, 
         </div>
         <div className="modal-footer">
           <button className="btn-cancel" onClick={toggle}>Cancelar</button>
-          <button className="btn-save"   onClick={()=>{ onConfirm(); }}>Eliminar</button>
+          <button className="btn-save" onClick={() => { onConfirm(); }}>Eliminar</button>
         </div>
       </div>
     </div>

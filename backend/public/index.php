@@ -16,10 +16,7 @@ error_log("REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'UNKNOWN'));
 require __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/funciones_CTES_servicios.php';
 
-error_log("=== ARCHIVOS CARGADOS ===");
-
-/*error_log('DB_USER: ' . getenv('DB_USER'));
-error_log('DB_PASS: ' . getenv('DB_PASS'));*/
+//error_log("=== ARCHIVOS CARGADOS ===");
 
 /* Permitir CORS */
 header('Access-Control-Allow-Origin: https://clinica-petaka.netlify.app');
@@ -589,7 +586,7 @@ $app->put('/admin/usuarios/{id}', function ($req, $res, $args) {
             error_log("Actualizando datos paciente: " . json_encode($xdat));
             $ok = actualizarOInsertarPaciente($idPersona, $xdat);
         } else {
-            $ok = true; 
+            $ok = true;
         }
 
         return $ok
@@ -633,7 +630,7 @@ $app->get('/admin/logs', function ($req, $res, $args) {
     $year = (int)($params['year'] ?? date('Y'));
     $month = (int)($params['month'] ?? date('m'));
 
-   // error_log("=== DEBUG LOGS CSV ===");
+    // error_log("=== DEBUG LOGS CSV ===");
     //error_log("Año: $year, Mes: $month");
     error_log("Usuario: {$val['usuario']['id_persona']} - Rol: {$val['usuario']['rol']}");
 
@@ -1354,7 +1351,7 @@ $app->post('/pac/solicitar-cita', function (Request $req): Response {
 // ---------- RUTAS S3 DOCUMENTOS ----------
 
 //  Health-check de S3
-$app->get('/api/s3/health', function (Request $req, Response $res){
+$app->get('/api/s3/health', function (Request $req, Response $res) {
     try {
         $c = new App\Controllers\DocumentController();
         return $c->healthCheck($req, $res);
@@ -1427,7 +1424,7 @@ $app->delete('/api/s3/documentos/{id}', function (Request $req, Response $res, a
         $c = new App\Controllers\DocumentController();
         $response = $c->deleteDocument($req, $res, ['id' => $args['id']]);
 
-       // error_log('Respuesta eliminación: ' . $response->getBody());
+        // error_log('Respuesta eliminación: ' . $response->getBody());
         return $response;
     } catch (Exception $e) {
         error_log('S3 Delete error: ' . $e->getMessage());
@@ -1802,7 +1799,7 @@ $app->post('/admin/backup/create', function ($req) {
         require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
         $result = $backupService->createFullBackup();
-        
+
         return jsonResponse([
             'ok' => true,
             'mensaje' => 'Backup creado exitosamente',
@@ -1829,7 +1826,7 @@ $app->get('/admin/backup/list', function ($req) {
         require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
         $backups = $backupService->listBackups();
-        
+
         return jsonResponse([
             'ok' => true,
             'data' => $backups
@@ -1854,11 +1851,11 @@ $app->post('/admin/backup/cleanup', function ($req) {
     try {
         $input = $req->getParsedBody() ?? [];
         $keep = $input['keep'] ?? 10;
-        
+
         require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
         $result = $backupService->deleteOldBackups($keep);
-        
+
         return jsonResponse([
             'ok' => true,
             'mensaje' => $result['message'],
@@ -1880,25 +1877,25 @@ $app->post('/admin/backup/cleanup', function ($req) {
 $app->map(['GET', 'POST'], '/cron/backup/run', function ($req) {
     try {
         // Obtener token desde header o query parameter
-        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? 
-                    $req->getQueryParams()['token'] ?? 
-                    '';
-                    
+        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ??
+            $req->getQueryParams()['token'] ??
+            '';
+
         if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
             return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
         }
-        
+
         $method = $req->getMethod();
         error_log("=== BACKUP AUTOMÁTICO INICIADO VIA {$method} ===");
-        
+
         require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
-        
+
         $backupResult = $backupService->createFullBackup();
         $cleanupResult = $backupService->deleteOldBackups(10);
-        
+
         error_log("Backup automático completado exitosamente via {$method}");
-        
+
         return jsonResponse([
             'ok' => true,
             'mensaje' => "Backup completado via {$method}",
@@ -1907,7 +1904,6 @@ $app->map(['GET', 'POST'], '/cron/backup/run', function ($req) {
             'method' => $method,
             'timestamp' => date('c')
         ]);
-        
     } catch (Exception $e) {
         error_log('Error en backup automático: ' . $e->getMessage());
         return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
@@ -1918,21 +1914,21 @@ $app->map(['GET', 'POST'], '/cron/backup/run', function ($req) {
 $app->get('/backup/auto/{token}', function ($req, $res, $args) {
     try {
         $token = $args['token'] ?? '';
-        
+
         if ($token !== $_ENV['CRON_SECRET_TOKEN']) {
             return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
         }
-        
+
         error_log("=== BACKUP AUTOMÁTICO SIMPLE INICIADO ===");
-        
+
         require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
-        
+
         $backupResult = $backupService->createFullBackup();
         $cleanupResult = $backupService->deleteOldBackups(10);
-        
+
         error_log("Backup automático simple completado");
-        
+
         return jsonResponse([
             'ok' => true,
             'mensaje' => 'Backup automático completado',
@@ -1940,7 +1936,6 @@ $app->get('/backup/auto/{token}', function ($req, $res, $args) {
             'cleanup' => $cleanupResult,
             'timestamp' => date('c')
         ]);
-        
     } catch (Exception $e) {
         error_log('Error en backup automático: ' . $e->getMessage());
         return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
