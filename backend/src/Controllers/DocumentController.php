@@ -645,42 +645,51 @@ public function deleteDocument($request, $response, $args)
     }
 
     /* Obtener o crear historial clínico para un paciente */
-    private function getOrCreateHistorial($pacienteId, $baseDatos = null)
-    {
-        try {
-            if (!$baseDatos) {
-                $baseDatos = conectar();
-            }
-
-            // Buscar historial existente
-            $sql = "SELECT id_historial FROM historial_clinico WHERE id_paciente = ? ORDER BY fecha_inicio DESC LIMIT 1";
-            $stmt = $baseDatos->prepare($sql);
-            $stmt->execute([$pacienteId]);
-            $historial = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($historial) {
-                error_log('Historial existente encontrado: ' . $historial['id_historial']);
-                return $historial['id_historial'];
-            }
-
-            // Crear nuevo historial (PostgreSQL)
-            $sql = "INSERT INTO historial_clinico (id_paciente, fecha_inicio) VALUES (?, CURRENT_DATE) RETURNING id_historial";
-            $stmt = $baseDatos->prepare($sql);
-            $stmt->execute([$pacienteId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($result) {
-                $newId = $result['id_historial'];
-                error_log('Nuevo historial creado: ' . $newId);
-                return $newId;
-            }
-
-            return null;
-        } catch (\Exception $e) {
-            error_log('Error getting/creating historial: ' . $e->getMessage());
-            return null;
+private function getOrCreateHistorial($pacienteId, $baseDatos = null)
+{
+    try {
+        if (!$baseDatos) {
+            $baseDatos = conectar();
         }
+
+        // Buscar historial existente ACTIVO (sin fecha_fin)
+        $sql = "SELECT id_historial 
+                FROM historial_clinico 
+                WHERE id_paciente = ? AND fecha_fin IS NULL 
+                ORDER BY fecha_inicio DESC 
+                LIMIT 1";
+        
+        $stmt = $baseDatos->prepare($sql);
+        $stmt->execute([$pacienteId]);
+        $historial = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($historial) {
+            error_log("Historial existente encontrado: ID {$historial['id_historial']} para paciente $pacienteId");
+            return $historial['id_historial'];
+        }
+        
+        // Solo crear nuevo historial si NO existe ninguno activo
+        $sql = "INSERT INTO historial_clinico (id_paciente, fecha_inicio) 
+                VALUES (?, CURRENT_DATE) 
+                RETURNING id_historial";
+        
+        $stmt = $baseDatos->prepare($sql);
+        $stmt->execute([$pacienteId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result) {
+            $nuevoId = $result['id_historial'];
+            error_log("Nuevo historial creado: ID $nuevoId para paciente $pacienteId");
+            return $nuevoId;
+        }
+        
+        return null;
+        
+    } catch (\Exception $e) {
+        error_log("Error obteniendo/creando historial para paciente $pacienteId: " . $e->getMessage());
+        return null;
     }
+}
 
     /* Guardar tratamiento en base de datos  */
     private function saveTreatmentToDatabase($data, $baseDatos = null)
