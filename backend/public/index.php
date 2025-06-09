@@ -1884,13 +1884,19 @@ $app->post('/cron/backup', function ($req) {
             return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
         }
         
-        error_log("Cron backup autorizado - ejecutando...");
+        error_log("=== BACKUP INICIADO ===");
         
         require_once __DIR__ . '/../src/Services/BackupService.php';
+        error_log("BackupService cargado");
+        
         $backupService = new BackupService();
+        error_log("BackupService instanciado");
         
         $backupResult = $backupService->createFullBackup();
+        error_log("Backup completado: " . json_encode($backupResult));
+        
         $cleanupResult = $backupService->deleteOldBackups(10);
+        error_log("Cleanup completado: " . json_encode($cleanupResult));
         
         return jsonResponse([
             'ok' => true,
@@ -1899,48 +1905,14 @@ $app->post('/cron/backup', function ($req) {
             'cleanup' => $cleanupResult
         ]);
     } catch (Exception $e) {
-        error_log('Error en backup automatico: ' . $e->getMessage());
+        error_log('=== ERROR EN BACKUP ===');
+        error_log('Mensaje: ' . $e->getMessage());
+        error_log('Archivo: ' . $e->getFile() . ':' . $e->getLine());
+        error_log('Stack trace: ' . $e->getTraceAsString());
         return jsonResponse([
             'ok' => false,
             'mensaje' => 'Error en backup automatico',
             'error' => $e->getMessage()
-        ], 500);
-    }
-});
-
-
-// RUTA DE DEBUG TEMPORAL
-$app->post('/debug/backup', function ($req) {
-    try {
-        error_log("=== DEBUG BACKUP ===");
-        
-        // Verificar variables de entorno
-        $awsKey = $_ENV['AWS_ACCESS_KEY_ID'] ?? 'NO_DEFINIDA';
-        $awsBucket = $_ENV['AWS_S3_BUCKET_NAME'] ?? 'NO_DEFINIDA';
-        error_log("AWS_ACCESS_KEY_ID: " . substr($awsKey, 0, 10) . "...");
-        error_log("AWS_S3_BUCKET_NAME: $awsBucket");
-        
-        // Verificar archivo
-        $filePath = __DIR__ . '/../src/Services/BackupService.php';
-        error_log("Archivo existe: " . (file_exists($filePath) ? 'SÍ' : 'NO'));
-        error_log("Ruta completa: $filePath");
-        
-        require_once $filePath;
-        error_log("Archivo cargado correctamente");
-        
-        $backupService = new BackupService();
-        error_log("BackupService creado");
-        
-        return jsonResponse(['ok' => true, 'mensaje' => 'Debug completado']);
-        
-    } catch (Exception $e) {
-        error_log("ERROR EN DEBUG: " . $e->getMessage());
-        error_log("STACK TRACE: " . $e->getTraceAsString());
-        
-        return jsonResponse([
-            'ok' => false, 
-            'mensaje' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
         ], 500);
     }
 });
