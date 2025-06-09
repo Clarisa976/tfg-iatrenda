@@ -578,14 +578,15 @@ export default function PerfilPaciente() {
                     </div>) : (
                     <div className="tareas-container">
                         {/* Slider Container */}
-                        <div className="tareas-slider-container">
-                            <div
+                        <div className="tareas-slider-container">                            <div
                                 className="tareas-slider"
                                 style={{ transform: `translateX(-${currentSlide * 33.333}%)` }}
-                            >                                {tareas.map((tarea, index) => (
+                            >
+                                {tareas.map((tarea, index) => (
                                     <div
                                         key={index}
-                                        className="tarea-slide-item tarea-preview-card"
+                                        className="tarea-slide-item"
+                                        onClick={() => verTarea(tarea)}
                                     >
                                         <div className="tarea-slide-header">
                                             <h5 className="tarea-slide-titulo">
@@ -597,65 +598,29 @@ export default function PerfilPaciente() {
                                             </div>
                                         </div>
                                         
-                                        <div className="tarea-preview-content">
-                                            <div className="tarea-preview-meta">
-                                                <p className="tarea-profesional">
-                                                    Asignado por: <strong>{tarea.profesional_nombre}</strong>
-                                                </p>
-                                                {tarea.fecha_inicio && (
-                                                    <p className="tarea-inicio">
-                                                        Inicio: <strong>{new Date(tarea.fecha_inicio).toLocaleDateString('es-ES')}</strong>
-                                                    </p>
-                                                )}
-                                                {tarea.fecha_fin && (
-                                                    <p className="tarea-fin">
-                                                        Fin: <strong>{new Date(tarea.fecha_fin).toLocaleDateString('es-ES')}</strong>
-                                                    </p>
-                                                )}
-                                                {tarea.frecuencia_sesiones && (
-                                                    <p className="tarea-frecuencia">
-                                                        Frecuencia: <strong>{tarea.frecuencia_sesiones} sesiones/semana</strong>
-                                                    </p>
-                                                )}
-                                            </div>
+                                        <div className="tarea-slide-content">
+                                            <p className="tarea-slide-profesional">
+                                                <strong>Asignado por:</strong> {tarea.profesional_nombre}
+                                            </p>
                                             
-                                            <div className="tarea-preview-description">
-                                                <h6>Descripción:</h6>
-                                                <p>{tarea.descripcion && tarea.descripcion.length > 150
-                                                    ? `${tarea.descripcion.substring(0, 150)}...`
-                                                    : tarea.descripcion || 'Sin descripción disponible'
-                                                }</p>
+                                            <div className="tarea-slide-descripcion">
+                                                {tarea.descripcion && tarea.descripcion.length > 100
+                                                    ? `${tarea.descripcion.substring(0, 100)}...`
+                                                    : tarea.descripcion || 'Sin descripción'
+                                                }
                                             </div>
                                             
                                             {tarea.documentos && tarea.documentos.length > 0 && (
-                                                <div className="tarea-preview-attachments">
-                                                    <h6>Archivos adjuntos:</h6>
-                                                    <div className="tarea-archivos-lista">
-                                                        {tarea.documentos.slice(0, 3).map((doc, docIndex) => (
-                                                            <span key={docIndex} className="tarea-archivo-item">
-                                                                {doc.nombre_archivo || `Documento ${docIndex + 1}`}
-                                                            </span>
-                                                        ))}
-                                                        {tarea.documentos.length > 3 && (
-                                                            <span className="tarea-archivos-mas">
-                                                                +{tarea.documentos.length - 3} más
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                <div className="tarea-slide-archivos">
+                                                    📎 {tarea.documentos.length} archivo{tarea.documentos.length !== 1 ? 's' : ''}
                                                 </div>
                                             )}
-                                            
-                                            <div className="tarea-preview-actions">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        verTarea(tarea);
-                                                    }}
-                                                    className="tarea-ver-detalle-btn"
-                                                >
-                                                    Ver detalles completos
-                                                </button>
-                                            </div>
+                                        </div>
+                                        
+                                        <div className="tarea-slide-footer">
+                                            <span className="tarea-slide-click-hint">
+                                                Hacer clic para ver detalles
+                                            </span>
                                         </div>
                                     </div>
                                 ))}

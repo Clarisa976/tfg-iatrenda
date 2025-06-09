@@ -596,6 +596,7 @@ h6 {
   margin: 0 auto 2rem;
 }
 
+/* MÓVIL: Layout en columna, todo centrado */
 .footer__grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -635,6 +636,7 @@ h6 {
   color: var(--black);
 }
 
+/* Redes sociales en footer */
 .footer__socials {
   display: flex;
   justify-content: center;
@@ -656,6 +658,7 @@ h6 {
   color: var(--green);
 }
 
+/* Enlaces generales del footer */
 .footer__links {
   list-style: none;
   padding: 0;
@@ -676,12 +679,75 @@ h6 {
   display: inline-block;
 }
 
+/* Línea de copyright */
 .footer__bottom {
   margin-top: 2rem;
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 400;
   text-align: center;
+}
+
+/* TABLET: Layout horizontal con 2 columnas */
+@media (min-width: 768px) {
+  .footer__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3rem;
+    text-align: left;
+  }
+
+  .footer__section h3 {
+    text-align: left;
+  }
+
+  .footer__item {
+    justify-content: flex-start;
+  }
+
+  .footer__item p {
+    text-align: left;
+  }
+
+  .footer__links {
+    text-align: left;
+  }
+
+  .footer__socials {
+    justify-content: flex-start;
+  }
+}
+
+/* ESCRITORIO: Layout horizontal con 3 columnas */
+@media (min-width: 1024px) {
+  .footer {
+    padding: 3rem 2rem;
+  }
+
+  .footer__grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4rem;
+    max-width: 1200px;
+  }
+
+  .footer__logo img {
+    width: 140px;
+  }
+
+  .footer__section h3 {
+    font-size: 24px;
+  }
+
+  .footer__item p {
+    font-size: 15px;
+  }
+
+  .footer__links a {
+    font-size: 13px;
+  }
+
+  .footer__bottom {
+    font-size: 13px;
+  }
 }
 
 /* ========================================
@@ -2426,7 +2492,7 @@ input[type="checkbox"]:checked::after {
 }
 
 /* ========================================
-    HISTORIAL SIMPLE 
+    HISTORIAL SIMPLE - ESTRUCTURA SIMPLIFICADA
 ======================================== */
 
 /* Container para las cards simplificadas */
