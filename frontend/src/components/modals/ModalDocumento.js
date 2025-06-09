@@ -87,16 +87,22 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
                     src={signedUrl}
                     alt={doc.nombre_archivo}
                     className="documento-imagen"
-                  />
-                ) : (
+                  />                ) : (
                   <a
                     href={signedUrl}
                     download={doc.nombre_archivo || 'documento'}
                     className="documento-descarga-archivo"
-                    target="_blank"
-                    rel="noreferrer"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      if (signedUrl) {
+                        const link = document.createElement('a');
+                        link.href = signedUrl;
+                        link.download = doc.nombre_archivo || 'documento';
+                        link.click();
+                      }
+                    }}
                   >
-                    Descargar fichero
+                    Descargar archivo
                   </a>
                 )
               ) : (
