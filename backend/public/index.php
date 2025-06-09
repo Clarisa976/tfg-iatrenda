@@ -1335,10 +1335,22 @@ $app->post('/pac/solicitar-cita', function(Request $req): Response {
 
 // ---------- RUTAS S3 DOCUMENTOS ----------
 
-// 1. Health-check de S3
+// Health-check de S3
 $app->get('/api/s3/health', function (Request $req, Response $res) {
-    $c = new DocumentController();
-    return $c->healthCheck($req, $res);
+    try {
+        if (!class_exists('App\Controllers\DocumentController')) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'DocumentController no encontrado']);
+        }
+        
+        $c = new App\Controllers\DocumentController();
+        return $c->healthCheck($req, $res);
+    } catch (Exception $e) {
+        error_log('S3 Health check error: ' . $e->getMessage());
+        return jsonResponse([
+            'ok' => false, 
+            'mensaje' => 'Error en health check: ' . $e->getMessage()
+        ], 500);
+    }
 });
 /* Actualizar diagnósticos de un historial */
 $app->put('/api/s3/historial/{historial_id}/diagnosticos', function (Request $req, Response $res, array $args) {
@@ -1391,17 +1403,32 @@ $app->put('/api/s3/historial/{historial_id}/diagnosticos', function (Request $re
     }
 });
 
-// 2. Subir documento (tratamiento o historial)
+//Subir documento (tratamiento o historial)
 $app->post('/api/s3/upload', function (Request $req, Response $res) {
-    $val = verificarTokenUsuario();
-    if (!$val) {
-        return jsonResponse($res, ['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    try {
+        $val = verificarTokenUsuario();
+        if (!$val) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        }
+        if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        }
+        
+        // Verificar que DocumentController existe
+        if (!class_exists('App\Controllers\DocumentController')) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'DocumentController no encontrado'], 500);
+        }
+        
+        $c = new App\Controllers\DocumentController();
+        return $c->uploadDocument($req, $res);
+    } catch (Exception $e) {
+        error_log('S3 Upload error: ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+        return jsonResponse([
+            'ok' => false,
+            'mensaje' => 'Error en upload: ' . $e->getMessage()
+        ], 500);
     }
-    if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
-        return jsonResponse($res, ['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
-    }
-    $c = new DocumentController();
-    return $c->uploadDocument($req, $res);
 });
 
 // 3. Listar documentos (filtrando por historial_id, tratamiento_id o paciente_id)
@@ -1414,20 +1441,121 @@ $app->get('/api/s3/documentos', function (Request $req, Response $res) {
     return $c->listDocuments($req, $res);
 });
 
-// 4. Obtener URL firmada de un documento (para vista previa o descarga)
+// Obtener URL firmada de un documento (para vista previa o descarga)
 $app->get('/api/s3/documentos/{idDoc}/url', function (Request $req, Response $res, array $args) {
-    $val = verificarTokenUsuario();
-    if (!$val) {
-        return jsonResponse($res, ['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    try {
+        $val = verificarTokenUsuario();
+        if (!$val) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        }
+        
+        if (!class_exists('App\Controllers\DocumentController')) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'DocumentController no encontrado'], 500);
+        }
+        
+        $c = new App\Controllers\DocumentController();
+        return $c->getDocumentUrl($req, $res, ['idDoc' => $args['idDoc']]);
+    } catch (Exception $e) {
+        error_log('S3 Get URL error: ' . $e->getMessage());
+        return jsonResponse([
+            'ok' => false,
+            'mensaje' => 'Error obteniendo URL: ' . $e->getMessage()
+        ], 500);
     }
-    $c = new DocumentController();
-    return $c->getDocumentUrl($req, $res, ['idDoc' => $args['idDoc']]);
 });
 
-// 5. Descargar documento (redirige con 302 a la URL firmada)
-$app->get('/api/s3/download/{id}', function (Request $req, Response $res, array $args) {
-    $c = new DocumentController();
-    return $c->downloadDocument($req, $res, ['id' => $args['id']]);
+// Descargar documento (redirige con 302 a la URL firmada)
+$app->delete('/api/s3/documentos/{id}', function (Request $req, Response $res, array $args) {
+    try {
+        $val = verificarTokenUsuario();
+        if (!$val) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        }
+        if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        }
+        
+        if (!class_exists('App\Controllers\DocumentController')) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'DocumentController no encontrado'], 500);
+        }
+        
+        $c = new App\Controllers\DocumentController();
+        return $c->deleteDocument($req, $res, ['id' => $args['id']]);
+    } catch (Exception $e) {
+        error_log('S3 Delete error: ' . $e->getMessage());
+        return jsonResponse([
+            'ok' => false,
+            'mensaje' => 'Error eliminando documento: ' . $e->getMessage()
+        ], 500);
+    }
+});
+$app->put('/api/s3/historial/{historial_id}/diagnosticos', function (Request $req, Response $res, array $args) {
+    try {
+        $val = verificarTokenUsuario();
+        if (!$val) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+        }
+        if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+        }
+        
+        $historialId = (int)$args['historial_id'];
+        $data = $req->getParsedBody() ?? [];
+        
+        if ($historialId <= 0) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'ID de historial inválido'], 400);
+        }
+        
+        $baseDatos = conectar();
+        
+        $updates = [];
+        $params = [];
+        
+        if (isset($data['diagnostico_preliminar'])) {
+            $updates[] = "diagnostico_preliminar = ?";
+            $params[] = trim($data['diagnostico_preliminar']);
+        }
+        
+        if (isset($data['diagnostico_final'])) {
+            $updates[] = "diagnostico_final = ?";
+            $params[] = trim($data['diagnostico_final']);
+        }
+        
+        if (empty($updates)) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No hay datos para actualizar'], 400);
+        }
+        
+        $params[] = $historialId;
+        $sql = "UPDATE historial_clinico SET " . implode(', ', $updates) . " WHERE id_historial = ?";
+        
+        error_log("Actualizando historial $historialId con SQL: $sql");
+        error_log("Parámetros: " . json_encode($params));
+        
+        $stmt = $baseDatos->prepare($sql);
+        $success = $stmt->execute($params);
+        
+        if ($success && $stmt->rowCount() > 0) {
+            return jsonResponse(['ok'=>true,'mensaje'=>'Diagnósticos actualizados correctamente']);
+        } else {
+            // Verificar si el historial existe
+            $checkStmt = $baseDatos->prepare("SELECT id_historial FROM historial_clinico WHERE id_historial = ?");
+            $checkStmt->execute([$historialId]);
+            $exists = $checkStmt->fetch();
+            
+            if (!$exists) {
+                return jsonResponse(['ok'=>false,'mensaje'=>'Historial clínico no encontrado'], 404);
+            } else {
+                return jsonResponse(['ok'=>false,'mensaje'=>'No se pudo actualizar el historial'], 500);
+            }
+        }
+        
+    } catch (Exception $e) {
+        error_log('Error updating historial diagnosticos: ' . $e->getMessage());
+        return jsonResponse([
+            'ok'=>false,
+            'mensaje'=>'Error interno: ' . $e->getMessage()
+        ], 500);
+    }
 });
 
 // 6. Actualizar diagnóstico final de un documento
