@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { X } from 'lucide-react';
 
-
 const isImage = (path) => {
   if (!path) return false;
   const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
@@ -10,12 +9,10 @@ const isImage = (path) => {
 };
 
 const getFileUrl = (documento) => {
-  // Si tiene URL de S3, usarla
   if (documento.url_descarga && documento.url_temporal) {
     return documento.url_descarga;
   }
-  
-  // Fallback a la URL antigua (no debería pasar)
+
   const path = documento.ruta;
   if (!path) return '';
   if (path.startsWith('http')) return path;
@@ -32,9 +29,9 @@ const getFileUrl = (documento) => {
     baseUrl = window.location.origin;
   }
 
-  const finalUrl = `${baseUrl}/uploads/${fileName}?t=${Date.now()}`;
-  return finalUrl;
+  return `${baseUrl}/uploads/${fileName}?t=${Date.now()}`;
 };
+
 export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
   const tk = localStorage.getItem('token');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -74,12 +71,13 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
             {treat.frecuencia_sesiones && (
               <p><strong>Frecuencia:</strong> {treat.frecuencia_sesiones} /semana</p>)}
             <h4>Descripción</h4>
-            <p>{treat.notas || 'Sin descripción'}</p>            {/* Sección de adjuntos múltiples */}
+            <p>{treat.notas || 'Sin descripción'}</p>
+
             {treat.documentos && treat.documentos.length > 0 && (
               <div className="tratamiento-attachment tratamiento-attachment-section">
-                <h4>📎 Archivos adjuntos ({treat.documentos.length})</h4>
+                <h4>Archivos adjuntos</h4>
                 {treat.documentos.map((documento, index) => {
-                  const docFileUrl = getFileUrl(documento.ruta);
+                  const docFileUrl = getFileUrl(documento);
                   const isDocImage = isImage(documento.ruta);
 
                   return (
@@ -89,24 +87,23 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
                       </h5>
 
                       {isDocImage ? (
-                        <div className="image-container image-container-centered">                          
-                        <img
+                        <div className="image-container image-container-centered">
+                          <img
                             src={docFileUrl}
                             alt={`Adjunto ${index + 1} de la tarea`}
                             className="documento-imagen"
                             onError={(e) => {
-                              console.error('Error al cargar imagen:', docFileUrl);
                               e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'block';
+                              e.target.parentNode.querySelector('.imagen-error-container').style.display = 'block';
                             }}
                           />
-                          <div className="imagen-error-container">
+                          <div className="imagen-error-container" style={{ display: 'none' }}>
                             <p>No se pudo visualizar la imagen</p>
                             <p><small>Ruta: {documento.ruta}</small></p>
                           </div>
                         </div>
-                      ) : (                        
-                      <div className="file-link file-link-container">
+                      ) : (
+                        <div className="file-link file-link-container">
                           <a
                             href={docFileUrl}
                             target="_blank"
@@ -122,6 +119,7 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
               </div>
             )}
           </div>
+
           <div className="modal-footer">
             <button className="btn-delete" onClick={() => setShowDeleteModal(true)}>
               Eliminar
@@ -131,8 +129,7 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
         </div>
       </div>
 
-      {/* Modal de confirmación de eliminación */}
-      {showDeleteModal && (        
+      {showDeleteModal && (
         <div className="modal-backdrop modal-delete-confirmation" onClick={() => setShowDeleteModal(false)}>
           <div className="modal modal-delete-small" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
@@ -142,30 +139,19 @@ export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
               <p>¿Estás seguro de que quieres eliminar esta tarea?</p>
               <p><strong>{treat.titulo || 'Sin título'}</strong></p>
               <p className="delete-confirmation-text">Esta acción no se puede deshacer.</p>
-              {error && (
-                <div className="delete-error-message">
-                  {error}
-                </div>
-              )}
+              {error && <div className="delete-error-message">{error}</div>}
             </div>
             <div className="modal-footer">
-              <button
-                className="btn-cancel"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-              >
+              <button className="btn-cancel" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
                 Cancelar
               </button>
-              <button
-                className={`btn-delete ${isDeleting ? 'btn-deleting' : ''}`}
-                onClick={del}
-                disabled={isDeleting}
-              >
+              <button className={`btn-delete ${isDeleting ? 'btn-deleting' : ''}`} onClick={del} disabled={isDeleting}>
                 {isDeleting ? 'Eliminando...' : 'Eliminar'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </>  );
+    </>
+  );
 }
