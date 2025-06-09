@@ -3,6 +3,7 @@ FROM php:8.2-cli
 # Instalar dependencias y Composer
 RUN apt-get update && apt-get install -y \
     libpq-dev \
+    postgresql-client \
     unzip \
     git \
     && docker-php-ext-install pdo pdo_pgsql \
