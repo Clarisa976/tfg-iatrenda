@@ -32,6 +32,29 @@ import PoliticaPrivacidad from './components/secciones/PoliticaPrivacidad';
 import TerminosCondiciones from './components/secciones/TerminosCondiciones';
 import PoliticaCookies from './components/secciones/PoliticaCookies';
 
+// Configurar interceptor global de axios para manejar errores de autenticación
+let isSessionCleanupInProgress = false;
+
+const setupAxiosInterceptors = (cleanupSessionCallback) => {
+  // Interceptor de respuestas para manejar errores de autenticación
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      // Si es un error 401 (token expirado) y no estamos ya limpiando la sesión
+      if (error.response?.status === 401 && !isSessionCleanupInProgress) {
+        isSessionCleanupInProgress = true;
+        console.warn('Token expirado detectado, limpiando sesión...');
+        cleanupSessionCallback();
+        // Reset flag después de un breve delay
+        setTimeout(() => {
+          isSessionCleanupInProgress = false;
+        }, 1000);
+      }
+      return Promise.reject(error);
+    }
+  );
+};
+
 // Componente para rutas protegidas
 function ProtectedRoute({ children, requiredRole, user, onUnauthorized, isLoading }) {
   const navigate = useNavigate();
@@ -96,79 +119,134 @@ export default function App() {
   useEffect(() => {
     const recoverSession = async () => {
       const token = localStorage.getItem('token');
+      const cachedUser = localStorage.getItem('userSession');
       
       if (!token) {
         setIsLoading(false);
         return;
       }
 
+      // Si tenemos datos de usuario en caché, los usamos temporalmente
+      if (cachedUser) {
+        try {
+          const userData = JSON.parse(cachedUser);
+          setUser(userData);
+        } catch (e) {
+          localStorage.removeItem('userSession');
+        }
+      }
+
       try {
         // Configurar el token en axios
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        // Verificar el token con el backend usando un endpoint existente
-        const response = await axios.get('/consentimiento');
+        // Crear timeout personalizado para evitar cuelgues
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('TIMEOUT')), 8000)
+        );
+        
+        // Verificar el token con el backend
+        const response = await Promise.race([
+          axios.get('/consentimiento'),
+          timeoutPromise
+        ]);
         
         if (response.data && response.data.ok) {
-          // Necesitamos obtener los datos del usuario. Vamos a usar el token renovado si existe
+          // Actualizar token si viene renovado
           if (response.data.token) {
             localStorage.setItem('token', response.data.token);
             axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
           }
           
-          // Para obtener datos completos del usuario, haremos otra llamada
-          // según el tipo de usuario. Primero intentamos como paciente.
-          try {
-            const perfilResponse = await axios.get('/pac/perfil');
-            if (perfilResponse.data && perfilResponse.data.ok) {
-              setUser({
-                ...perfilResponse.data.datos.persona,
-                role: 'paciente',
-                rol: 'paciente'
-              });
-              return;
-            }
-          } catch (err) {
-            // No es paciente, probamos profesional
-            try {
-              const perfilResponse = await axios.get('/prof/perfil');
-              if (perfilResponse.data && perfilResponse.data.ok) {
-                setUser({
-                  ...perfilResponse.data.data.persona,
-                  role: 'profesional',
-                  rol: 'profesional'
-                });
-                return;
-              }
-            } catch (err2) {
-              // No es profesional, probamos admin
-              try {
-                const adminResponse = await axios.get('/admin/usuarios');
-                if (adminResponse.data && adminResponse.data.ok) {
-                  // Para admin, necesitamos hacer una llamada adicional para obtener sus datos
-                  // pero sabemos que es admin si llegó hasta aquí
-                  setUser({
-                    id_persona: 1, // temporal
-                    role: 'admin',
-                    rol: 'admin',
-                    nombre: 'Administrador'
-                  });
+          // Intentar obtener datos del usuario en paralelo, con timeouts individuales
+          const getUserData = async () => {
+            const endpoints = [
+              { url: '/pac/perfil', role: 'paciente', dataPath: 'datos.persona' },
+              { url: '/prof/perfil', role: 'profesional', dataPath: 'data.persona' },
+              { url: '/admin/usuarios', role: 'admin', dataPath: null }
+            ];
+
+            const results = await Promise.allSettled(
+              endpoints.map(async endpoint => {
+                const timeoutPromise = new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('ENDPOINT_TIMEOUT')), 5000)
+                );
+                
+                const response = await Promise.race([
+                  axios.get(endpoint.url),
+                  timeoutPromise
+                ]);
+                
+                return { ...endpoint, response };
+              })
+            );
+
+            // Buscar el primer resultado exitoso
+            for (const result of results) {
+              if (result.status === 'fulfilled') {
+                const { response, role, dataPath } = result.value;
+                
+                if (response.data && response.data.ok) {
+                  let userData;
+                  
+                  if (role === 'admin') {
+                    userData = {
+                      id_persona: 1,
+                      role: 'admin',
+                      rol: 'admin',
+                      nombre: 'Administrador'
+                    };
+                  } else {
+                    const personData = dataPath.split('.').reduce((obj, key) => obj?.[key], response.data);
+                    userData = {
+                      ...personData,
+                      role: role,
+                      rol: role
+                    };
+                  }
+                  
+                  // Guardar en caché para futuras recargas
+                  localStorage.setItem('userSession', JSON.stringify(userData));
+                  setUser(userData);
                   return;
                 }
-              } catch (err3) {
-                // Token válido pero no podemos determinar el rol, limpiamos
-                cleanupSession();
               }
             }
-          }
+
+            // Si llegamos aquí, verificar si todos los errores son de autenticación
+            const authErrors = results.filter(result => 
+              result.status === 'rejected' && 
+              result.reason?.response?.status && 
+              [401, 403].includes(result.reason.response.status)
+            );
+
+            // Solo limpiar sesión si hay errores claros de autenticación
+            if (authErrors.length > 0) {
+              console.warn('Errores de autenticación detectados, limpiando sesión');
+              cleanupSession();
+            } else {
+              // Si no hay errores de auth, pero tampoco datos válidos, mantener la sesión pero marcar como no cargando
+              console.warn('No se pudieron obtener datos de usuario, manteniendo sesión con datos en caché');
+            }
+          };
+
+          await getUserData();
         } else {
           // Token inválido, limpiar
           cleanupSession();
         }
       } catch (error) {
         console.error('Error al verificar el token:', error);
-        // Token inválido o expirado, limpiar
-        cleanupSession();
+        
+        // Solo limpiar sesión en casos específicos
+        if (error.message === 'TIMEOUT') {
+          console.warn('Timeout al verificar token, manteniendo sesión con datos en caché');
+        } else if (error.response?.status && [401, 403].includes(error.response.status)) {
+          console.warn('Token inválido o expirado, limpiando sesión');
+          cleanupSession();
+        } else {
+          console.warn('Error de red al verificar token, manteniendo sesión con datos en caché');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -193,9 +271,15 @@ export default function App() {
   // Función para limpiar sesión
   const cleanupSession = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userSession');
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
+
+  // Configurar interceptores de axios al cargar el componente
+  useEffect(() => {
+    setupAxiosInterceptors(cleanupSession);
+  }, []);
 
   // Manejar toast
   useEffect(() => {
@@ -213,6 +297,9 @@ export default function App() {
   const handleLoginSuccess = (userData, token) => {
     setUser(userData);
     setLoginOpen(false);
+    
+    // Guardar datos de usuario en caché para futuras recargas
+    localStorage.setItem('userSession', JSON.stringify(userData));
     
     // Guardar token y configurar axios si se proporciona
     if (token) {
