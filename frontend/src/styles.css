@@ -961,12 +961,1012 @@ h6 {
 }
 
 /* ========================================
-   MODAL VER HISTORIAL CLÍNICO
+   FORMULARIOS Y CAMPOS
 ======================================== */
 
-/* Contenedor específico del modal ver historial */
-.modal-ver-historial-wide {
-  max-width: 800px !important;
+/* Campo de formulario */
+.field {
+  margin-bottom: 1rem;
+}
+
+.field.full {
+  grid-column: span 2;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.field input.invalid,
+.field select.invalid {
+  border-color: var(--red);
+}
+
+.field-error,
+.field .error-msg {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--red);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+}
+
+/* Textarea específico */
+.field textarea {
+  min-height: 80px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+/* Campos de solo lectura */
+.readonly-input {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.readonly-input:focus {
+  outline: none;
+  border-color: #ddd;
+  box-shadow: none;
+}
+
+/* Selectores */
+.select-field {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: white;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+.select-field:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Checkboxes personalizados */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--blue);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  background: #fff;
+}
+
+input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 0.1rem;
+  left: 0.3rem;
+  width: 0.25rem;
+  height: 0.5rem;
+  border: solid var(--blue);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out;
+}
+
+input[type="checkbox"]:checked::after {
+  opacity: 1;
+}
+
+/* Línea de consentimiento */
+.consent-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.consent-line a {
+  color: var(--gray);
+  text-decoration: underline;
+}
+
+.consent-line a:hover {
+  color: var(--blue);
+}
+
+/* Errores de API */
+.api-error {
+  text-align: center;
+  color: var(--red);
+  margin-bottom: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ========================================
+   BOTONES
+======================================== */
+
+/* Acciones del formulario */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.actions .forgot {
+  color: #4F4F4F;
+  text-decoration: underline;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Botón de envío */
+.btn-submit {
+  background: var(--green);
+  color: var(--black);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.btn-submit:hover {
+  filter: brightness(0.9);
+}
+
+/* Botones de acción */
+.btn-action {
+  background: var(--gray);
+  color: var(--white);
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-action:hover {
+  filter: brightness(0.9);
+}
+
+.btn-remove {
+  background: var(--red);
+}
+
+/* Botones primarios y secundarios */
+.btn-primary,
+.btn-secondary {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: var(--blue);
+  color: black;
+}
+
+.btn-secondary {
+  background-color: #f8f9fa;
+  color: var(--gray);
+}
+
+/* Botones del modal */
+.btn-cancel {
+  background: var(--gray);
+  color: var(--white);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-save {
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-save:hover {
+  filter: brightness(0.9);
+}
+
+.btn-delete {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background-color: #d32f2f;
+}
+
+/* Botón agregar */
+.btn-agregar {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--black);
+  background-color: var(--green);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.btn-agregar:hover {
+  filter: brightness(0.9);
+}
+
+/* Botón buscar */
+.btn-buscar {
+  padding: 0 1rem;
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  border-radius: 4px;
+}
+
+.btn-buscar:hover {
+  filter: brightness(0.9);
+}
+
+/* Botón ver archivo */
+.btn-view-file,
+.btn-ver-archivo {
+  display: inline-block;
+  background-color: var(--blue);
+  color: black;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn-view-file:hover,
+.btn-ver-archivo:hover {
+  background-color: #0056b3;
+  text-decoration: none;
+  color: black;
+}
+
+/* ========================================
+   NOTIFICACIONES Y TOASTS
+======================================== */
+
+/* Toast centrado */
+.centered-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10001;
+}
+
+.toast-card {
+  background: var(--white);
+  padding: 2rem;
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.toast-card.success {
+  border-top: 4px solid #27ae60;
+}
+
+.toast-card.error {
+  border-top: 4px solid var(--red);
+}
+
+.toast-icon {
+  margin-bottom: 1rem;
+}
+
+.toast-icon.success {
+  color: #27ae60;
+}
+
+.toast-icon.error {
+  color: var(--red);
+}
+
+.toast-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 20px;
+  margin: 0.5rem 0;
+}
+
+.toast-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--gray);
+  margin: 0;
+}
+
+/* ========================================
+   PÁGINAS ESPECÍFICAS - ADMINISTRACIÓN
+======================================== */
+
+/* Contenedor principal de usuarios */
+.usuarios-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Contenedor con ancho máximo personalizado */
+.usuarios-container-wide {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Cabecera de sección */
+.usuarios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.usuarios-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--blue);
+}
+
+/* Buscador */
+.usuarios-buscar,
+.agenda-buscar {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.input-buscar,
+.agenda-buscar-input {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.input-buscar input,
+.agenda-buscar-input input {
+  width: 300px;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.agenda-buscar-input button {
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  padding: 0 1rem;
+  border-radius: 4px;
+}
+
+/* Filtros */
+.usuarios-filtros {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filtro-btn {
+  padding: 0.5rem 1rem;
+  background: #f2f2f2;
+  border: none;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.filtro-btn:nth-child(2) {
+  background: #d9d9d9;
+}
+
+.filtro-btn.active {
+  border-bottom-color: var(--blue);
+}
+
+/* Tabla de usuarios */
+.usuarios-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+
+.usuarios-table th,
+.usuarios-table td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.usuarios-table thead {
+  background: #f9f9f9;
+}
+
+.usuarios-table tbody tr:nth-child(even) {
+  background: #fcfcfc;
+}
+
+.mayusculas {
+  text-transform: capitalize;
+}
+
+/* Mensaje sin resultados */
+.sin-resultados {
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--gray);
+}
+
+/* ========================================
+   ELEMENTOS DE ACCIONES Y DROPDOWNS
+======================================== */
+
+/* Columna de acciones */
+.acciones-col {
+  position: relative;
+  text-align: center;
+}
+
+/* Acciones para móvil */
+.acciones-mobile {
+  display: inline-block;
+  cursor: pointer;
+  color: var(--blue);
+  position: relative;
+}
+
+.acciones-mobile:hover .acciones-dropdown {
+  display: block;
+}
+
+/* Dropdown de acciones */
+.acciones-dropdown {
+  display: none;
+  position: absolute;
+  top: 1.5rem;
+  right: 0;
+  width: 150px;
+  background: var(--white);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.acciones-dropdown.show {
+  display: block;
+}
+
+.acciones-dropdown a,
+.acciones-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 8px 12px;
+  color: var(--gray);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.acciones-dropdown a:hover,
+.acciones-dropdown button:hover {
+  background: #f5f5f5;
+}
+
+/* Items del dropdown */
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #f2f2f2;
+}
+
+.text-red {
+  color: var(--red);
+}
+
+/* Acciones para escritorio */
+.acciones-desktop {
+  display: none;
+  gap: 0.5rem;
+  color: var(--gray);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ========================================
+   AGENDA Y CALENDARIO
+======================================== */
+
+/* Agenda global del admin */
+.agenda-wrapper {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.agenda-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.agenda-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.cal-wrapper {
+  max-width: 80%;
+  margin: 0 auto;
+}
+
+/* Controles de página */
+.page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  gap: 2rem;
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.filter-group label {
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.filter-group select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 250px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Estilos específicos para react-big-calendar */
+.rbc-calendar {
+  width: 100%;
+  height: 100% !important;
+  border: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.rbc-header {
+  padding: 10px;
+  font-weight: bold;
+  background: #f8f9fa;
+}
+
+.rbc-event {
+  padding: 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.rbc-today {
+  background-color: #f0f7ff;
+}
+
+.rbc-toolbar button {
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #333;
+  border: 1px solid #ddd;
+  background: white;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: var(--blue);
+  color: black;
+}
+
+.agenda-wrapper {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.agenda-header {
+  margin-bottom: 1rem;
+}
+
+.agenda-actions {
+  margin-bottom: 1rem;
+}
+
+.agenda-buscar {
+  margin-bottom: 1rem;
+}
+
+.cal-wrapper {
+  border-radius: 8px;
+  padding: 1rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: calc(100vh - 250px);
+  min-height: 500px;
+}
+
+/* ========================================
+   ESTADÍSTICAS E INFORMES
+======================================== */
+
+/* Grid de estadísticas */
+.stats-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.stat-number {
+  font-family: 'Montserrat';
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.stat-number.red {
+  color: var(--red);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--gray);
+  margin: 0;
+}
+
+/* Estilos específicos para InformesYLogs */
+.informes-container-wide {
+  max-width: 880px;
+}
+
+.informes-title-margin {
+  margin-bottom: 1rem;
+}
+
+.informes-fecha-selector {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.informes-fecha-selects {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.informes-logs-title {
+  margin-top: 2.5rem;
+}
+
+.informes-icono-margin {
+  margin-right: 8px;
+}
+
+/* Calendario con altura específica */
+.calendario-agenda {
+  height: 70vh;
+}
+
+/* ========================================
+   FORMULARIOS ESPECÍFICOS
+======================================== */
+
+/* Botones de selección */
+.choose-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+/* Título de sección */
+.section-title {
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+  color: var(--blue);
+}
+
+/* Sección de formulario */
+.form-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+/* Grid para formularios con campos */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive grid layouts */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ========================================
+   CREAR CONTRASEÑA
+======================================== */
+
+.crear-pass-container {
+  max-width: 360px;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+.crear-pass-title {
+  margin-bottom: 1.5rem;
+  color: var(--blue);
+}
+
+.crear-pass-input-wrapper {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.crear-pass-input {
+  width: 100%;
+  padding: 10px 40px 10px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.crear-pass-input.invalid {
+  border-color: var(--red);
+}
+
+.crear-pass-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--gray);
+}
+
+.crear-pass-toggle:hover {
+  color: var(--blue);
+}
+
+.crear-pass-error {
+  color: var(--red);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.crear-pass-success {
+  color: var(--green);
+  font-size: 1rem;
+  margin-top: 1rem;
+}
+
+.crear-pass-button {
+  margin-top: 1rem;
+}
+
+.crear-pass-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.crear-pass-message {
+  text-align: center;
+  margin-top: 3rem;
+  color: var(--red);
+  font-size: 1rem;
+}
+
+/* ========================================
+   CREAR CONTRASEÑA - ESTILOS ESPECÍFICOS
+======================================== */
+
+/* Enlace incorrecto mensaje */
+.enlace-incorrecto {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+/* Contenedor principal de crear contraseña */
+.crear-contrasena-container {
+  max-width: 360px;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+/* Contenedor del input de contraseña */
+.password-input-container {
+  position: relative;
+  margin-top: 24px;
+}
+
+/* Input de contraseña */
+.password-input {
+  width: 100%;
+  padding: 10px 40px 10px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Botón de mostrar/ocultar contraseña */
+.password-toggle-btn {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Mensaje de error */
+.error-message {
+  color: var(--red);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* Mensaje de error del backend */
+.backend-error-message {
+  color: var(--red);
+  margin-top: 8px;
+}
+
+/* Botón de guardar */
+.btn-guardar-password {
+  margin-top: 18px;
+}
+
+/* Botón deshabilitado */
+.btn-disabled {
+  opacity: 0.5;
+}
+
+/* Mensaje de éxito */
+.success-message {
+  color: var(--green);
+  margin-top: 20px;
+}
+
+/* ========================================
+   TÍTULOS Y ENCABEZADOS DE MODAL
+======================================== */
+
+.appt-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--blue);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* ========================================
+   TABS Y NAVEGACIÓN
+======================================== */
+
+.tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ========================================
+   TAREAS Y TRATAMIENTOS
+======================================== */
+
+/* Estilos para modal de ver tarea */
+.modal-ver-tarea {
+  max-width: 600px;
+}
+
+/* Contenedor específico del modal ver tarea */
+.modal-ver-tarea-container {
+  max-width: 900px !important;
   width: 95% !important;
   max-height: 90vh;
   overflow-y: auto;
@@ -975,130 +1975,172 @@ h6 {
 
 /* Media queries para responsive design */
 @media (min-width: 768px) {
-  .modal-ver-historial-wide {
+  .modal-ver-tarea-container {
     width: 85% !important;
   }
 }
 
 @media (min-width: 1200px) {
-  .modal-ver-historial-wide {
-    width: 75% !important;
-    max-width: 900px !important;
+  .modal-ver-tarea-container {
+    width: 80% !important;
+    max-width: 1000px !important;
   }
 }
 
-/* Resumen del historial */
-.historial-summary {
+/* Estilos para elementos específicos del modal VerTarea */
+.modal-ver-tarea-container .modal-body {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.modal-ver-tarea-container .tarea-documento-item {
   background-color: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  border-left: 4px solid var(--blue);
-  margin-bottom: 20px;
-  font-size: 1rem;
-}
-
-/* Contenedor de tarjetas del historial */
-.historial-simple-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Tarjeta individual del historial */
-.historial-simple-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #fff;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s ease;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.historial-simple-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.modal-ver-tarea-container .documento-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-/* Información del documento */
-.historial-simple-info {
+.modal-ver-tarea-container .documento-titulo {
+  margin: 0;
+  color: var(--blue);
+  font-size: 1.1em;
+  font-weight: 600;
+  word-break: break-word;
   flex: 1;
   min-width: 0;
 }
 
-.historial-simple-date {
-  font-weight: 600;
-  color: var(--blue);
-  font-size: 1rem;
-  margin-bottom: 4px;
+.modal-ver-tarea-container .documento-tipo {
+  background-color: #e9ecef;
+  color: #495057;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  white-space: nowrap;
 }
 
-.historial-simple-doctor {
-  color: #6c757d;
-  font-size: 0.9rem;
-  font-style: italic;
+.modal-ver-tarea-container .imagen-container-center {
+  text-align: center;
+  margin: 15px 0;
 }
 
-/* Botón de descarga */
-.historial-simple-download {
+.modal-ver-tarea-container .tarea-imagen-preview {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+
+.modal-ver-tarea-container .tarea-imagen-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.modal-ver-tarea-container .tarea-file-link-container {
+  background-color: #fff;
+  border: 1px dashed #ced4da;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.modal-ver-tarea-container .tarea-download-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 16px;
   background-color: var(--blue);
   color: white;
+  text-decoration: none;
+  border-radius: 4px;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-  margin-left: 15px;
+  font-size: 0.9em;
 }
 
-.historial-simple-download:hover {
+.modal-ver-tarea-container .tarea-download-link:hover {
   background-color: #1e6bb8;
 }
 
-/* Estado vacío del historial */
-.historial-empty-state {
+.modal-ver-tarea-container .documento-sin-url {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.modal-ver-tarea-container .documento-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.modal-ver-tarea-container .documento-estado {
+  text-align: right;
+  min-width: 150px;
+}
+
+.modal-ver-tarea-container .documento-error-msg {
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+.modal-ver-tarea-container .tarea-sin-archivos-container {
   text-align: center;
-  padding: 40px 20px;
+  padding: 20px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  border: 2px dashed #ced4da;
+  border: 1px dashed #ced4da;
+  margin: 15px 0;
 }
 
-.historial-empty-state h4 {
+.modal-ver-tarea-container .tarea-sin-archivos-texto {
   color: #6c757d;
-  margin-bottom: 10px;
-  font-size: 1.2rem;
-}
-
-.historial-empty-state p {
-  color: #6c757d;
-  margin: 0;
   font-style: italic;
+  margin: 0;
 }
 
-/* Ajustes responsivos para el historial */
+.modal-ver-tarea-container .btn-small {
+  padding: 6px 12px;
+  font-size: 0.8em;
+}
+
+/* Ajustes responsivos para elementos del modal */
 @media (max-width: 768px) {
-  .historial-simple-card {
+  .modal-ver-tarea-container .documento-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
   }
   
-  .historial-simple-download {
-    margin-left: 0;
-    align-self: stretch;
-    text-align: center;
+  .modal-ver-tarea-container .documento-sin-url {
+    flex-direction: column;
+    align-items: flex-start;
   }
   
-  .modal-ver-historial-wide {
-    width: 98% !important;
-    margin: 1% auto;
+  .modal-ver-tarea-container .documento-estado {
+    text-align: left;
+    width: 100%;
   }
 }
+
 /* ========================================
    ELEMENTOS FLOTANTES Y OVERLAYS
 ======================================== */
@@ -1310,12 +2352,1013 @@ h6 {
 }
 
 /* ========================================
-   MODAL VER HISTORIAL CLÍNICO
+   FORMULARIOS Y CAMPOS
 ======================================== */
 
-/* Contenedor específico del modal ver historial */
-.modal-ver-historial-wide {
-  max-width: 800px !important;
+/* Campo de formulario */
+.field {
+  margin-bottom: 1rem;
+}
+
+.field.full {
+  grid-column: span 2;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.field input.invalid,
+.field select.invalid {
+  border-color: var(--red);
+}
+
+.field-error,
+.field .error-msg {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--red);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+}
+
+/* Textarea específico */
+.field textarea {
+  min-height: 80px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+/* Campos de solo lectura */
+.readonly-input {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.readonly-input:focus {
+  outline: none;
+  border-color: #ddd;
+  box-shadow: none;
+}
+
+/* Selectores */
+.select-field {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: white;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+.select-field:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Checkboxes personalizados */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--blue);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  background: #fff;
+}
+
+input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 0.1rem;
+  left: 0.3rem;
+  width: 0.25rem;
+  height: 0.5rem;
+  border: solid var(--blue);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out;
+}
+
+input[type="checkbox"]:checked::after {
+  opacity: 1;
+}
+
+/* Línea de consentimiento */
+.consent-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.consent-line a {
+  color: var(--gray);
+  text-decoration: underline;
+}
+
+.consent-line a:hover {
+  color: var(--blue);
+}
+
+/* Errores de API */
+.api-error {
+  text-align: center;
+  color: var(--red);
+  margin-bottom: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ========================================
+   BOTONES
+======================================== */
+
+/* Acciones del formulario */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.actions .forgot {
+  color: #4F4F4F;
+  text-decoration: underline;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Botón de envío */
+.btn-submit {
+  background: var(--green);
+  color: var(--black);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.btn-submit:hover {
+  filter: brightness(0.9);
+}
+
+/* Botones de acción */
+.btn-action {
+  background: var(--gray);
+  color: var(--white);
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-action:hover {
+  filter: brightness(0.9);
+}
+
+.btn-remove {
+  background: var(--red);
+}
+
+/* Botones primarios y secundarios */
+.btn-primary,
+.btn-secondary {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: var(--blue);
+  color: black;
+}
+
+.btn-secondary {
+  background-color: #f8f9fa;
+  color: var(--gray);
+}
+
+/* Botones del modal */
+.btn-cancel {
+  background: var(--gray);
+  color: var(--white);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-save {
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-save:hover {
+  filter: brightness(0.9);
+}
+
+.btn-delete {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background-color: #d32f2f;
+}
+
+/* Botón agregar */
+.btn-agregar {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--black);
+  background-color: var(--green);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.btn-agregar:hover {
+  filter: brightness(0.9);
+}
+
+/* Botón buscar */
+.btn-buscar {
+  padding: 0 1rem;
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  border-radius: 4px;
+}
+
+.btn-buscar:hover {
+  filter: brightness(0.9);
+}
+
+/* Botón ver archivo */
+.btn-view-file,
+.btn-ver-archivo {
+  display: inline-block;
+  background-color: var(--blue);
+  color: black;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn-view-file:hover,
+.btn-ver-archivo:hover {
+  background-color: #0056b3;
+  text-decoration: none;
+  color: black;
+}
+
+/* ========================================
+   NOTIFICACIONES Y TOASTS
+======================================== */
+
+/* Toast centrado */
+.centered-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10001;
+}
+
+.toast-card {
+  background: var(--white);
+  padding: 2rem;
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.toast-card.success {
+  border-top: 4px solid #27ae60;
+}
+
+.toast-card.error {
+  border-top: 4px solid var(--red);
+}
+
+.toast-icon {
+  margin-bottom: 1rem;
+}
+
+.toast-icon.success {
+  color: #27ae60;
+}
+
+.toast-icon.error {
+  color: var(--red);
+}
+
+.toast-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 20px;
+  margin: 0.5rem 0;
+}
+
+.toast-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--gray);
+  margin: 0;
+}
+
+/* ========================================
+   PÁGINAS ESPECÍFICAS - ADMINISTRACIÓN
+======================================== */
+
+/* Contenedor principal de usuarios */
+.usuarios-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Contenedor con ancho máximo personalizado */
+.usuarios-container-wide {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Cabecera de sección */
+.usuarios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.usuarios-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--blue);
+}
+
+/* Buscador */
+.usuarios-buscar,
+.agenda-buscar {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.input-buscar,
+.agenda-buscar-input {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.input-buscar input,
+.agenda-buscar-input input {
+  width: 300px;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.agenda-buscar-input button {
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  padding: 0 1rem;
+  border-radius: 4px;
+}
+
+/* Filtros */
+.usuarios-filtros {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filtro-btn {
+  padding: 0.5rem 1rem;
+  background: #f2f2f2;
+  border: none;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.filtro-btn:nth-child(2) {
+  background: #d9d9d9;
+}
+
+.filtro-btn.active {
+  border-bottom-color: var(--blue);
+}
+
+/* Tabla de usuarios */
+.usuarios-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+
+.usuarios-table th,
+.usuarios-table td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.usuarios-table thead {
+  background: #f9f9f9;
+}
+
+.usuarios-table tbody tr:nth-child(even) {
+  background: #fcfcfc;
+}
+
+.mayusculas {
+  text-transform: capitalize;
+}
+
+/* Mensaje sin resultados */
+.sin-resultados {
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--gray);
+}
+
+/* ========================================
+   ELEMENTOS DE ACCIONES Y DROPDOWNS
+======================================== */
+
+/* Columna de acciones */
+.acciones-col {
+  position: relative;
+  text-align: center;
+}
+
+/* Acciones para móvil */
+.acciones-mobile {
+  display: inline-block;
+  cursor: pointer;
+  color: var(--blue);
+  position: relative;
+}
+
+.acciones-mobile:hover .acciones-dropdown {
+  display: block;
+}
+
+/* Dropdown de acciones */
+.acciones-dropdown {
+  display: none;
+  position: absolute;
+  top: 1.5rem;
+  right: 0;
+  width: 150px;
+  background: var(--white);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.acciones-dropdown.show {
+  display: block;
+}
+
+.acciones-dropdown a,
+.acciones-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 8px 12px;
+  color: var(--gray);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.acciones-dropdown a:hover,
+.acciones-dropdown button:hover {
+  background: #f5f5f5;
+}
+
+/* Items del dropdown */
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #f2f2f2;
+}
+
+.text-red {
+  color: var(--red);
+}
+
+/* Acciones para escritorio */
+.acciones-desktop {
+  display: none;
+  gap: 0.5rem;
+  color: var(--gray);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ========================================
+   AGENDA Y CALENDARIO
+======================================== */
+
+/* Agenda global del admin */
+.agenda-wrapper {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.agenda-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.agenda-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.cal-wrapper {
+  max-width: 80%;
+  margin: 0 auto;
+}
+
+/* Controles de página */
+.page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  gap: 2rem;
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.filter-group label {
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.filter-group select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 250px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Estilos específicos para react-big-calendar */
+.rbc-calendar {
+  width: 100%;
+  height: 100% !important;
+  border: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.rbc-header {
+  padding: 10px;
+  font-weight: bold;
+  background: #f8f9fa;
+}
+
+.rbc-event {
+  padding: 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.rbc-today {
+  background-color: #f0f7ff;
+}
+
+.rbc-toolbar button {
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #333;
+  border: 1px solid #ddd;
+  background: white;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: var(--blue);
+  color: black;
+}
+
+.agenda-wrapper {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.agenda-header {
+  margin-bottom: 1rem;
+}
+
+.agenda-actions {
+  margin-bottom: 1rem;
+}
+
+.agenda-buscar {
+  margin-bottom: 1rem;
+}
+
+.cal-wrapper {
+  border-radius: 8px;
+  padding: 1rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: calc(100vh - 250px);
+  min-height: 500px;
+}
+
+/* ========================================
+   ESTADÍSTICAS E INFORMES
+======================================== */
+
+/* Grid de estadísticas */
+.stats-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.stat-number {
+  font-family: 'Montserrat';
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.stat-number.red {
+  color: var(--red);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--gray);
+  margin: 0;
+}
+
+/* Estilos específicos para InformesYLogs */
+.informes-container-wide {
+  max-width: 880px;
+}
+
+.informes-title-margin {
+  margin-bottom: 1rem;
+}
+
+.informes-fecha-selector {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.informes-fecha-selects {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.informes-logs-title {
+  margin-top: 2.5rem;
+}
+
+.informes-icono-margin {
+  margin-right: 8px;
+}
+
+/* Calendario con altura específica */
+.calendario-agenda {
+  height: 70vh;
+}
+
+/* ========================================
+   FORMULARIOS ESPECÍFICOS
+======================================== */
+
+/* Botones de selección */
+.choose-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+/* Título de sección */
+.section-title {
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+  color: var(--blue);
+}
+
+/* Sección de formulario */
+.form-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+/* Grid para formularios con campos */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive grid layouts */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ========================================
+   CREAR CONTRASEÑA
+======================================== */
+
+.crear-pass-container {
+  max-width: 360px;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+.crear-pass-title {
+  margin-bottom: 1.5rem;
+  color: var(--blue);
+}
+
+.crear-pass-input-wrapper {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.crear-pass-input {
+ 
+  width: 100%;
+  padding: 10px 40px 10px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.crear-pass-input.invalid {
+  border-color: var(--red);
+}
+
+.crear-pass-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--gray);
+}
+
+.crear-pass-toggle:hover {
+  color: var(--blue);
+}
+
+.crear-pass-error {
+  color: var(--red);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.crear-pass-success {
+  color: var(--green);
+  font-size: 1rem;
+  margin-top: 1rem;
+}
+
+.crear-pass-button {
+  margin-top: 1rem;
+}
+
+.crear-pass-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.crear-pass-message {
+  text-align: center;
+  margin-top: 3rem;
+  color: var(--red);
+  font-size: 1rem;
+}
+
+/* ========================================
+   CREAR CONTRASEÑA - ESTILOS ESPECÍFICOS
+======================================== */
+
+/* Enlace incorrecto mensaje */
+.enlace-incorrecto {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+/* Contenedor principal de crear contraseña */
+.crear-contrasena-container {
+  max-width: 360px;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+/* Contenedor del input de contraseña */
+.password-input-container {
+  position: relative;
+  margin-top: 24px;
+}
+
+/* Input de contraseña */
+.password-input {
+  width: 100%;
+  padding: 10px 40px 10px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Botón de mostrar/ocultar contraseña */
+.password-toggle-btn {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Mensaje de error */
+.error-message {
+  color: var(--red);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* Mensaje de error del backend */
+.backend-error-message {
+  color: var(--red);
+  margin-top: 8px;
+}
+
+/* Botón de guardar */
+.btn-guardar-password {
+  margin-top: 18px;
+}
+
+/* Botón deshabilitado */
+.btn-disabled {
+  opacity: 0.5;
+}
+
+/* Mensaje de éxito */
+.success-message {
+  color: var(--green);
+  margin-top: 20px;
+}
+
+/* ========================================
+   TÍTULOS Y ENCABEZADOS DE MODAL
+======================================== */
+
+.appt-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--blue);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* ========================================
+   TABS Y NAVEGACIÓN
+======================================== */
+
+.tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ========================================
+   TAREAS Y TRATAMIENTOS
+======================================== */
+
+/* Estilos para modal de ver tarea */
+.modal-ver-tarea {
+  max-width: 600px;
+}
+
+/* Contenedor específico del modal ver tarea */
+.modal-ver-tarea-container {
+  max-width: 900px !important;
   width: 95% !important;
   max-height: 90vh;
   overflow-y: auto;
@@ -1324,130 +3367,172 @@ h6 {
 
 /* Media queries para responsive design */
 @media (min-width: 768px) {
-  .modal-ver-historial-wide {
+  .modal-ver-tarea-container {
     width: 85% !important;
   }
 }
 
 @media (min-width: 1200px) {
-  .modal-ver-historial-wide {
-    width: 75% !important;
-    max-width: 900px !important;
+  .modal-ver-tarea-container {
+    width: 80% !important;
+    max-width: 1000px !important;
   }
 }
 
-/* Resumen del historial */
-.historial-summary {
+/* Estilos para elementos específicos del modal VerTarea */
+.modal-ver-tarea-container .modal-body {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.modal-ver-tarea-container .tarea-documento-item {
   background-color: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  border-left: 4px solid var(--blue);
-  margin-bottom: 20px;
-  font-size: 1rem;
-}
-
-/* Contenedor de tarjetas del historial */
-.historial-simple-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Tarjeta individual del historial */
-.historial-simple-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #fff;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s ease;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.historial-simple-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.modal-ver-tarea-container .documento-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-/* Información del documento */
-.historial-simple-info {
+.modal-ver-tarea-container .documento-titulo {
+  margin: 0;
+  color: var(--blue);
+  font-size: 1.1em;
+  font-weight: 600;
+  word-break: break-word;
   flex: 1;
   min-width: 0;
 }
 
-.historial-simple-date {
-  font-weight: 600;
-  color: var(--blue);
-  font-size: 1rem;
-  margin-bottom: 4px;
+.modal-ver-tarea-container .documento-tipo {
+  background-color: #e9ecef;
+  color: #495057;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  white-space: nowrap;
 }
 
-.historial-simple-doctor {
-  color: #6c757d;
-  font-size: 0.9rem;
-  font-style: italic;
+.modal-ver-tarea-container .imagen-container-center {
+  text-align: center;
+  margin: 15px 0;
 }
 
-/* Botón de descarga */
-.historial-simple-download {
+.modal-ver-tarea-container .tarea-imagen-preview {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+
+.modal-ver-tarea-container .tarea-imagen-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.modal-ver-tarea-container .tarea-file-link-container {
+  background-color: #fff;
+  border: 1px dashed #ced4da;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.modal-ver-tarea-container .tarea-download-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 16px;
   background-color: var(--blue);
   color: white;
+  text-decoration: none;
+  border-radius: 4px;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-  margin-left: 15px;
+  font-size: 0.9em;
 }
 
-.historial-simple-download:hover {
+.modal-ver-tarea-container .tarea-download-link:hover {
   background-color: #1e6bb8;
 }
 
-/* Estado vacío del historial */
-.historial-empty-state {
+.modal-ver-tarea-container .documento-sin-url {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.modal-ver-tarea-container .documento-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.modal-ver-tarea-container .documento-estado {
+  text-align: right;
+  min-width: 150px;
+}
+
+.modal-ver-tarea-container .documento-error-msg {
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+.modal-ver-tarea-container .tarea-sin-archivos-container {
   text-align: center;
-  padding: 40px 20px;
+  padding: 20px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  border: 2px dashed #ced4da;
+  border: 1px dashed #ced4da;
+  margin: 15px 0;
 }
 
-.historial-empty-state h4 {
+.modal-ver-tarea-container .tarea-sin-archivos-texto {
   color: #6c757d;
-  margin-bottom: 10px;
-  font-size: 1.2rem;
-}
-
-.historial-empty-state p {
-  color: #6c757d;
-  margin: 0;
   font-style: italic;
+  margin: 0;
 }
 
-/* Ajustes responsivos para el historial */
+.modal-ver-tarea-container .btn-small {
+  padding: 6px 12px;
+  font-size: 0.8em;
+}
+
+/* Ajustes responsivos para elementos del modal */
 @media (max-width: 768px) {
-  .historial-simple-card {
+  .modal-ver-tarea-container .documento-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
   }
   
-  .historial-simple-download {
-    margin-left: 0;
-    align-self: stretch;
-    text-align: center;
+  .modal-ver-tarea-container .documento-sin-url {
+    flex-direction: column;
+    align-items: flex-start;
   }
   
-  .modal-ver-historial-wide {
-    width: 98% !important;
-    margin: 1% auto;
+  .modal-ver-tarea-container .documento-estado {
+    text-align: left;
+    width: 100%;
   }
 }
+
 /* ========================================
    ELEMENTOS FLOTANTES Y OVERLAYS
 ======================================== */
@@ -1659,12 +3744,1012 @@ h6 {
 }
 
 /* ========================================
-   MODAL VER HISTORIAL CLÍNICO
+   FORMULARIOS Y CAMPOS
 ======================================== */
 
-/* Contenedor específico del modal ver historial */
-.modal-ver-historial-wide {
-  max-width: 800px !important;
+/* Campo de formulario */
+.field {
+  margin-bottom: 1rem;
+}
+
+.field.full {
+  grid-column: span 2;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.field input.invalid,
+.field select.invalid {
+  border-color: var(--red);
+}
+
+.field-error,
+.field .error-msg {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--red);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+}
+
+/* Textarea específico */
+.field textarea {
+  min-height: 80px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+/* Campos de solo lectura */
+.readonly-input {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.readonly-input:focus {
+  outline: none;
+  border-color: #ddd;
+  box-shadow: none;
+}
+
+/* Selectores */
+.select-field {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: white;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+.select-field:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Checkboxes personalizados */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--blue);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  background: #fff;
+}
+
+input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 0.1rem;
+  left: 0.3rem;
+  width: 0.25rem;
+  height: 0.5rem;
+  border: solid var(--blue);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out;
+}
+
+input[type="checkbox"]:checked::after {
+  opacity: 1;
+}
+
+/* Línea de consentimiento */
+.consent-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.consent-line a {
+  color: var(--gray);
+  text-decoration: underline;
+}
+
+.consent-line a:hover {
+  color: var(--blue);
+}
+
+/* Errores de API */
+.api-error {
+  text-align: center;
+  color: var(--red);
+  margin-bottom: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ========================================
+   BOTONES
+======================================== */
+
+/* Acciones del formulario */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.actions .forgot {
+  color: #4F4F4F;
+  text-decoration: underline;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Botón de envío */
+.btn-submit {
+  background: var(--green);
+  color: var(--black);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.btn-submit:hover {
+  filter: brightness(0.9);
+}
+
+/* Botones de acción */
+.btn-action {
+  background: var(--gray);
+  color: var(--white);
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-action:hover {
+  filter: brightness(0.9);
+}
+
+.btn-remove {
+  background: var(--red);
+}
+
+/* Botones primarios y secundarios */
+.btn-primary,
+.btn-secondary {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: var(--blue);
+  color: black;
+}
+
+.btn-secondary {
+  background-color: #f8f9fa;
+  color: var(--gray);
+}
+
+/* Botones del modal */
+.btn-cancel {
+  background: var(--gray);
+  color: var(--white);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-save {
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-save:hover {
+  filter: brightness(0.9);
+}
+
+.btn-delete {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background-color: #d32f2f;
+}
+
+/* Botón agregar */
+.btn-agregar {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--black);
+  background-color: var(--green);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.btn-agregar:hover {
+  filter: brightness(0.9);
+}
+
+/* Botón buscar */
+.btn-buscar {
+  padding: 0 1rem;
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  border-radius: 4px;
+}
+
+.btn-buscar:hover {
+  filter: brightness(0.9);
+}
+
+/* Botón ver archivo */
+.btn-view-file,
+.btn-ver-archivo {
+  display: inline-block;
+  background-color: var(--blue);
+  color: black;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn-view-file:hover,
+.btn-ver-archivo:hover {
+  background-color: #0056b3;
+  text-decoration: none;
+  color: black;
+}
+
+/* ========================================
+   NOTIFICACIONES Y TOASTS
+======================================== */
+
+/* Toast centrado */
+.centered-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10001;
+}
+
+.toast-card {
+  background: var(--white);
+  padding: 2rem;
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.toast-card.success {
+  border-top: 4px solid #27ae60;
+}
+
+.toast-card.error {
+  border-top: 4px solid var(--red);
+}
+
+.toast-icon {
+  margin-bottom: 1rem;
+}
+
+.toast-icon.success {
+  color: #27ae60;
+}
+
+.toast-icon.error {
+  color: var(--red);
+}
+
+.toast-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 20px;
+  margin: 0.5rem 0;
+}
+
+.toast-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--gray);
+  margin: 0;
+}
+
+/* ========================================
+   PÁGINAS ESPECÍFICAS - ADMINISTRACIÓN
+======================================== */
+
+/* Contenedor principal de usuarios */
+.usuarios-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Contenedor con ancho máximo personalizado */
+.usuarios-container-wide {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Cabecera de sección */
+.usuarios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.usuarios-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--blue);
+}
+
+/* Buscador */
+.usuarios-buscar,
+.agenda-buscar {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.input-buscar,
+.agenda-buscar-input {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.input-buscar input,
+.agenda-buscar-input input {
+  width: 300px;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.agenda-buscar-input button {
+  background: var(--blue);
+  color: var(--black);
+  border: none;
+  padding: 0 1rem;
+  border-radius: 4px;
+}
+
+/* Filtros */
+.usuarios-filtros {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filtro-btn {
+  padding: 0.5rem 1rem;
+  background: #f2f2f2;
+  border: none;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.filtro-btn:nth-child(2) {
+  background: #d9d9d9;
+}
+
+.filtro-btn.active {
+  border-bottom-color: var(--blue);
+}
+
+/* Tabla de usuarios */
+.usuarios-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+
+.usuarios-table th,
+.usuarios-table td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.usuarios-table thead {
+  background: #f9f9f9;
+}
+
+.usuarios-table tbody tr:nth-child(even) {
+  background: #fcfcfc;
+}
+
+.mayusculas {
+  text-transform: capitalize;
+}
+
+/* Mensaje sin resultados */
+.sin-resultados {
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--gray);
+}
+
+/* ========================================
+   ELEMENTOS DE ACCIONES Y DROPDOWNS
+======================================== */
+
+/* Columna de acciones */
+.acciones-col {
+  position: relative;
+  text-align: center;
+}
+
+/* Acciones para móvil */
+.acciones-mobile {
+  display: inline-block;
+  cursor: pointer;
+  color: var(--blue);
+  position: relative;
+}
+
+.acciones-mobile:hover .acciones-dropdown {
+  display: block;
+}
+
+/* Dropdown de acciones */
+.acciones-dropdown {
+  display: none;
+  position: absolute;
+  top: 1.5rem;
+  right: 0;
+  width: 150px;
+  background: var(--white);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.acciones-dropdown.show {
+  display: block;
+}
+
+.acciones-dropdown a,
+.acciones-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 8px 12px;
+  color: var(--gray);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.acciones-dropdown a:hover,
+.acciones-dropdown button:hover {
+  background: #f5f5f5;
+}
+
+/* Items del dropdown */
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #f2f2f2;
+}
+
+.text-red {
+  color: var(--red);
+}
+
+/* Acciones para escritorio */
+.acciones-desktop {
+  display: none;
+  gap: 0.5rem;
+  color: var(--gray);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ========================================
+   AGENDA Y CALENDARIO
+======================================== */
+
+/* Agenda global del admin */
+.agenda-wrapper {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.agenda-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.agenda-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.cal-wrapper {
+  max-width: 80%;
+  margin: 0 auto;
+}
+
+/* Controles de página */
+.page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  gap: 2rem;
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.filter-group label {
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.filter-group select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 250px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Estilos específicos para react-big-calendar */
+.rbc-calendar {
+  width: 100%;
+  height: 100% !important;
+  border: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.rbc-header {
+  padding: 10px;
+  font-weight: bold;
+  background: #f8f9fa;
+}
+
+.rbc-event {
+  padding: 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.rbc-today {
+  background-color: #f0f7ff;
+}
+
+.rbc-toolbar button {
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #333;
+  border: 1px solid #ddd;
+  background: white;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: var(--blue);
+  color: black;
+}
+
+.agenda-wrapper {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.agenda-header {
+  margin-bottom: 1rem;
+}
+
+.agenda-actions {
+  margin-bottom: 1rem;
+}
+
+.agenda-buscar {
+  margin-bottom: 1rem;
+}
+
+.cal-wrapper {
+  border-radius: 8px;
+  padding: 1rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: calc(100vh - 250px);
+  min-height: 500px;
+}
+
+/* ========================================
+   ESTADÍSTICAS E INFORMES
+======================================== */
+
+/* Grid de estadísticas */
+.stats-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.stat-number {
+  font-family: 'Montserrat';
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.stat-number.red {
+  color: var(--red);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--gray);
+  margin: 0;
+}
+
+/* Estilos específicos para InformesYLogs */
+.informes-container-wide {
+  max-width: 880px;
+}
+
+.informes-title-margin {
+  margin-bottom: 1rem;
+}
+
+.informes-fecha-selector {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.informes-fecha-selects {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.informes-logs-title {
+  margin-top: 2.5rem;
+}
+
+.informes-icono-margin {
+  margin-right: 8px;
+}
+
+/* Calendario con altura específica */
+.calendario-agenda {
+  height: 70vh;
+}
+
+/* ========================================
+   FORMULARIOS ESPECÍFICOS
+======================================== */
+
+/* Botones de selección */
+.choose-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+/* Título de sección */
+.section-title {
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+  color: var(--blue);
+}
+
+/* Sección de formulario */
+.form-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+/* Grid para formularios con campos */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive grid layouts */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ========================================
+   CREAR CONTRASEÑA
+======================================== */
+
+.crear-pass-container {
+  max-width: 360px;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+.crear-pass-title {
+  margin-bottom: 1.5rem;
+  color: var(--blue);
+}
+
+.crear-pass-input-wrapper {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.crear-pass-input {
+  width: 100%;
+  padding: 10px 40px 10px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.crear-pass-input.invalid {
+  border-color: var(--red);
+}
+
+.crear-pass-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--gray);
+}
+
+.crear-pass-toggle:hover {
+  color: var(--blue);
+}
+
+.crear-pass-error {
+  color: var(--red);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.crear-pass-success {
+  color: var(--green);
+  font-size: 1rem;
+  margin-top: 1rem;
+}
+
+.crear-pass-button {
+  margin-top: 1rem;
+}
+
+.crear-pass-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.crear-pass-message {
+  text-align: center;
+  margin-top: 3rem;
+  color: var(--red);
+  font-size: 1rem;
+}
+
+/* ========================================
+   CREAR CONTRASEÑA - ESTILOS ESPECÍFICOS
+======================================== */
+
+/* Enlace incorrecto mensaje */
+.enlace-incorrecto {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+/* Contenedor principal de crear contraseña */
+.crear-contrasena-container {
+  max-width: 360px;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+/* Contenedor del input de contraseña */
+.password-input-container {
+  position: relative;
+  margin-top: 24px;
+}
+
+/* Input de contraseña */
+.password-input {
+  width: 100%;
+  padding: 10px 40px 10px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Botón de mostrar/ocultar contraseña */
+.password-toggle-btn {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Mensaje de error */
+.error-message {
+  color: var(--red);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* Mensaje de error del backend */
+.backend-error-message {
+  color: var(--red);
+  margin-top: 8px;
+}
+
+/* Botón de guardar */
+.btn-guardar-password {
+  margin-top: 18px;
+}
+
+/* Botón deshabilitado */
+.btn-disabled {
+  opacity: 0.5;
+}
+
+/* Mensaje de éxito */
+.success-message {
+  color: var(--green);
+  margin-top: 20px;
+}
+
+/* ========================================
+   TÍTULOS Y ENCABEZADOS DE MODAL
+======================================== */
+
+.appt-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--blue);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* ========================================
+   TABS Y NAVEGACIÓN
+======================================== */
+
+.tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ========================================
+   TAREAS Y TRATAMIENTOS
+======================================== */
+
+/* Estilos para modal de ver tarea */
+.modal-ver-tarea {
+  max-width: 600px;
+}
+
+/* Contenedor específico del modal ver tarea */
+.modal-ver-tarea-container {
+  max-width: 900px !important;
   width: 95% !important;
   max-height: 90vh;
   overflow-y: auto;
@@ -1673,128 +4758,169 @@ h6 {
 
 /* Media queries para responsive design */
 @media (min-width: 768px) {
-  .modal-ver-historial-wide {
+  .modal-ver-tarea-container {
     width: 85% !important;
   }
 }
 
 @media (min-width: 1200px) {
-  .modal-ver-historial-wide {
-    width: 75% !important;
-    max-width: 900px !important;
+  .modal-ver-tarea-container {
+    width: 80% !important;
+    max-width: 1000px !important;
   }
 }
 
-/* Resumen del historial */
-.historial-summary {
+/* Estilos para elementos específicos del modal VerTarea */
+.modal-ver-tarea-container .modal-body {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.modal-ver-tarea-container .tarea-documento-item {
   background-color: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  border-left: 4px solid var(--blue);
-  margin-bottom: 20px;
-  font-size: 1rem;
-}
-
-/* Contenedor de tarjetas del historial */
-.historial-simple-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Tarjeta individual del historial */
-.historial-simple-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #fff;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s ease;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.historial-simple-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.modal-ver-tarea-container .documento-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-/* Información del documento */
-.historial-simple-info {
+.modal-ver-tarea-container .documento-titulo {
+  margin: 0;
+  color: var(--blue);
+  font-size: 1.1em;
+  font-weight: 600;
+  word-break: break-word;
   flex: 1;
   min-width: 0;
 }
 
-.historial-simple-date {
-  font-weight: 600;
-  color: var(--blue);
-  font-size: 1rem;
-  margin-bottom: 4px;
+.modal-ver-tarea-container .documento-tipo {
+  background-color: #e9ecef;
+  color: #495057;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  white-space: nowrap;
 }
 
-.historial-simple-doctor {
-  color: #6c757d;
-  font-size: 0.9rem;
-  font-style: italic;
+.modal-ver-tarea-container .imagen-container-center {
+  text-align: center;
+  margin: 15px 0;
 }
 
-/* Botón de descarga */
-.historial-simple-download {
+.modal-ver-tarea-container .tarea-imagen-preview {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+
+.modal-ver-tarea-container .tarea-imagen-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.modal-ver-tarea-container .tarea-file-link-container {
+  background-color: #fff;
+  border: 1px dashed #ced4da;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.modal-ver-tarea-container .tarea-download-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 16px;
   background-color: var(--blue);
   color: white;
+  text-decoration: none;
+  border-radius: 4px;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-  margin-left: 15px;
+  font-size: 0.9em;
 }
 
-.historial-simple-download:hover {
+.modal-ver-tarea-container .tarea-download-link:hover {
   background-color: #1e6bb8;
 }
 
-/* Estado vacío del historial */
-.historial-empty-state {
+.modal-ver-tarea-container .documento-sin-url {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.modal-ver-tarea-container .documento-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.modal-ver-tarea-container .documento-estado {
+  text-align: right;
+  min-width: 150px;
+}
+
+.modal-ver-tarea-container .documento-error-msg {
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+.modal-ver-tarea-container .tarea-sin-archivos-container {
   text-align: center;
-  padding: 40px 20px;
+  padding: 20px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  border: 2px dashed #ced4da;
+  border: 1px dashed #ced4da;
+  margin: 15px 0;
 }
 
-.historial-empty-state h4 {
+.modal-ver-tarea-container .tarea-sin-archivos-texto {
   color: #6c757d;
-  margin-bottom: 10px;
-  font-size: 1.2rem;
-}
-
-.historial-empty-state p {
-  color: #6c757d;
-  margin: 0;
   font-style: italic;
+  margin: 0;
 }
 
-/* Ajustes responsivos para el historial */
+.modal-ver-tarea-container .btn-small {
+  padding: 6px 12px;
+  font-size: 0.8em;
+}
+
+/* Ajustes responsivos para elementos del modal */
 @media (max-width: 768px) {
-  .historial-simple-card {
+  .modal-ver-tarea-container .documento-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
   }
   
-  .historial-simple-download {
-    margin-left: 0;
-    align-self: stretch;
-    text-align: center;
+  .modal-ver-tarea-container .documento-sin-url {
+    flex-direction: column;
+    align-items: flex-start;
   }
   
-  .modal-ver-historial-wide {
-    width: 98% !important;
-    margin: 1% auto;
+  .modal-ver-tarea-container .documento-estado {
+    text-align: left;
+    width: 100%;
   }
 }
 
@@ -1952,13 +5078,10 @@ h6 {
 
 @media (min-width: 1024px) {
   .form-grid {
-    grid-template-columns: repeat(3, 1fr); /* Desktop: 3 columnas */
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .field.full {
-    grid-column: span 3;
-  }
-}
     grid-column: span 3;
   }
 }
@@ -2297,6 +5420,12 @@ h6 {
 .password-toggle:hover {
   color: var(--blue);
   background-color: rgba(47, 128, 237, 0.1);
+}
+
+.password-toggle:focus {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Asegurar que funcione en todos los dispositivos */
