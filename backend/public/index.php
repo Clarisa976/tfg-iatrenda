@@ -1909,5 +1909,41 @@ $app->post('/cron/backup', function ($req) {
 });
 
 
+// RUTA DE DEBUG TEMPORAL
+$app->post('/debug/backup', function ($req) {
+    try {
+        error_log("=== DEBUG BACKUP ===");
+        
+        // Verificar variables de entorno
+        $awsKey = $_ENV['AWS_ACCESS_KEY_ID'] ?? 'NO_DEFINIDA';
+        $awsBucket = $_ENV['AWS_S3_BUCKET_NAME'] ?? 'NO_DEFINIDA';
+        error_log("AWS_ACCESS_KEY_ID: " . substr($awsKey, 0, 10) . "...");
+        error_log("AWS_S3_BUCKET_NAME: $awsBucket");
+        
+        // Verificar archivo
+        $filePath = __DIR__ . '/../src/Services/BackupService.php';
+        error_log("Archivo existe: " . (file_exists($filePath) ? 'SÍ' : 'NO'));
+        error_log("Ruta completa: $filePath");
+        
+        require_once $filePath;
+        error_log("Archivo cargado correctamente");
+        
+        $backupService = new BackupService();
+        error_log("BackupService creado");
+        
+        return jsonResponse(['ok' => true, 'mensaje' => 'Debug completado']);
+        
+    } catch (Exception $e) {
+        error_log("ERROR EN DEBUG: " . $e->getMessage());
+        error_log("STACK TRACE: " . $e->getTraceAsString());
+        
+        return jsonResponse([
+            'ok' => false, 
+            'mensaje' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 /* corre la aplicación */
 $app->run();
