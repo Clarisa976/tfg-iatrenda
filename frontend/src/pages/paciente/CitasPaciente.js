@@ -230,10 +230,10 @@ export default function CitasPaciente() {
             setCitaSeleccionada(null);
           }}
           onSolicitar={(tipo) => {
-            if (tipo === 'cambiar') {
+            if (tipo === 'CAMBIAR') {
               setMostrarDetalles(false);
               setMostrarCambiar(true);
-            } else if (tipo === 'cancelar') {
+            } else if (tipo === 'CANCELAR') {
               setMostrarDetalles(false);
               setMostrarCancelar(true);
             }
