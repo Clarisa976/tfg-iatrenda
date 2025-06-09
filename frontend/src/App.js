@@ -38,7 +38,6 @@ function ProtectedRoute({ children, requiredRole, user, onUnauthorized }) {
   const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-
     if (hasRedirected) return;
 
     if (!user) {
@@ -59,7 +58,7 @@ function ProtectedRoute({ children, requiredRole, user, onUnauthorized }) {
 
   useEffect(() => {
     setHasRedirected(false);
-  }, [user, requiredRole]);
+  }, [user?.id, requiredRole]); 
 
   if (!user) return null;
 
@@ -77,7 +76,7 @@ export default function App() {
 
   // Función para mostrar mensajes de error de permisos
   const showUnauthorizedMessage = (message) => {
-
+    // Prevenir mensajes duplicados
     if (toast.show && toast.type === 'unauthorized') return;
     
     setToast({ 
@@ -88,100 +87,53 @@ export default function App() {
     });
   };
 
-  // Limpiar sesión solo en recarga forzada (Ctrl+F5)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Detectar Ctrl+F5 o Ctrl+Shift+R (recarga forzada)
-      if ((e.ctrlKey && e.key === 'F5') || (e.ctrlKey && e.shiftKey && e.key === 'R')) {
-        console.log('Recarga forzada detectada - limpiando sesión');
-        localStorage.removeItem('token');
-        delete axios.defaults.headers.common['Authorization'];
-        setUser(null);
-      }
-    };
+  // Función para limpiar sesión
+  const cleanupSession = () => {
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    setUser(null);
+  };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const cleanupSession = () => {
-      localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
-      setUser(null);
-    };
-
-    const handleBeforeUnload = () => {
-      cleanupSession();
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    const token = localStorage.getItem('token');
-    if (!token) {
-      cleanupSession();
-      return;
-    }
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.exp * 1000 <= Date.now()) {
-        cleanupSession();
-        return;
-      }
-
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      axios.get(`${process.env.REACT_APP_API_URL}/status`)
-        .then(response => {
-          if (response.data.ok) {
-            setUser({id: payload.sub, rol: payload.rol, role: payload.rol});
-          } else {
-            cleanupSession();
-          }
-        })
-        .catch(() => {
-          cleanupSession();
-        });
-    } catch (error) {
-      cleanupSession();
-    }
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
-
-  // Oculta el toast tras 2s para errores de permisos, 5s para otros
+  // Manejar toast
   useEffect(() => {
     if (!toast.show) return;
     
-    // Reduced timeout for unauthorized messages
-    const timeout = toast.type === 'unauthorized' ? 2000 : 5000;
+    const timeout = toast.type === 'unauthorized' ? 3000 : 5000;
     
-    // Use a ref to keep track of the timeout
     const timeoutId = setTimeout(() => {
       setToast(t => ({ ...t, show: false }));
     }, timeout);
     
-    // Clear the timeout when component unmounts or toast changes
-    return () => {
-      clearTimeout(timeoutId);
-    };
+    return () => clearTimeout(timeoutId);
   }, [toast.show, toast.type]);
 
   const handleLoginSuccess = userData => {
     setUser(userData);
     setLoginOpen(false);
   };
+
+  const handleLogout = () => {
+    cleanupSession();
+  };
   
   const abrirCita = () => setReservarCita(true);
-  const onCitaSuccess = msg => { setReservarCita(false); setToast({ show: true, ok: true, msg, type: 'cita' }); };
-  const onCitaError = msg => { setReservarCita(false); setToast({ show: true, ok: false, msg, type: 'cita' }); };
+  const onCitaSuccess = msg => { 
+    setReservarCita(false); 
+    setToast({ show: true, ok: true, msg, type: 'cita' }); 
+  };
+  const onCitaError = msg => { 
+    setReservarCita(false); 
+    setToast({ show: true, ok: false, msg, type: 'cita' }); 
+  };
 
   return (
     <BrowserRouter>
-      <Header user={user} onAccessClick={() => setLoginOpen(true)} onReservarCita={abrirCita} onLogout={() => setUser(null)} />
+      <Header 
+        user={user} 
+        onAccessClick={() => setLoginOpen(true)} 
+        onReservarCita={abrirCita} 
+        onLogout={handleLogout} 
+      />
 
       <main className="app-main">
         <Routes>
@@ -285,8 +237,19 @@ export default function App() {
       </main>
 
       {/* Modales */}
-      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLoginSuccess={handleLoginSuccess} />}
-      {reservarCita && <ReservarCitaModal onClose={() => setReservarCita(false)} onSuccess={onCitaSuccess} onError={onCitaError} />}
+      {loginOpen && (
+        <LoginModal 
+          onClose={() => setLoginOpen(false)} 
+          onLoginSuccess={handleLoginSuccess} 
+        />
+      )}
+      {reservarCita && (
+        <ReservarCitaModal 
+          onClose={() => setReservarCita(false)} 
+          onSuccess={onCitaSuccess} 
+          onError={onCitaError} 
+        />
+      )}
 
       {/* Toast Global*/}
       {toast.show && (

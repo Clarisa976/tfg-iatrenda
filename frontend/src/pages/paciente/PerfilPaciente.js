@@ -581,62 +581,25 @@ export default function PerfilPaciente() {
                         <div className="tareas-slider-container">                            <div
                                 className="tareas-slider"
                                 style={{ transform: `translateX(-${currentSlide * 33.333}%)` }}
-                            >                                {tareas.map((tarea, index) => {
-                                    // Determinar estado de la tarea
-                                    const fechaVencimiento = new Date(tarea.fecha_vencimiento);
-                                    const hoy = new Date();
-                                    const esVencida = fechaVencimiento < hoy;
-                                    const estado = tarea.completada ? 'completada' : (esVencida ? 'vencida' : 'pendiente');
-                                    
-                                    // Determinar prioridad (si existe en los datos, sino usar media por defecto)
-                                    const prioridad = tarea.prioridad || 'media';
-                                    
-                                    return (
-                                        <div
-                                            key={index}
-                                            className="tarea-slide-item"
+                            >                                {tareas.map((tarea, index) => (
+                                    <div key={index} className="tarea-slide-item">
+                                        <h5 className="tarea-slide-titulo">
+                                            {tarea.titulo || 'Tarea sin título'}
+                                        </h5>
+                                        <p className="tarea-slide-descripcion">
+                                            {tarea.descripcion && tarea.descripcion.length > 100
+                                                ? `${tarea.descripcion.substring(0, 100)}...`
+                                                : tarea.descripcion || 'Sin descripción disponible'
+                                            }
+                                        </p>
+                                        <button 
+                                            className="btn-ver-tarea"
                                             onClick={() => verTarea(tarea)}
                                         >
-                                            <div className="tarea-slide-header">
-                                                <h5 className="tarea-slide-titulo">
-                                                    {tarea.titulo || 'Tarea sin título'}
-                                                </h5>
-                                                <div className="tarea-fecha-container">
-                                                    <span className="tarea-fecha-icon">📅</span>
-                                                    <p className="tarea-fecha-texto">
-                                                        {formatDate(tarea.fecha_asignacion)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="tarea-slide-content">
-                                                <div className="tarea-slide-descripcion">
-                                                    {tarea.descripcion && tarea.descripcion.length > 120
-                                                        ? `${tarea.descripcion.substring(0, 120)}...`
-                                                        : tarea.descripcion || 'Sin descripción disponible'
-                                                    }
-                                                </div>
-                                                
-                                                <div className={`tarea-estado-badge ${estado}`}>
-                                                    {estado === 'completada' && '✅ Completada'}
-                                                    {estado === 'vencida' && '⚠️ Vencida'}
-                                                    {estado === 'pendiente' && '⏳ Pendiente'}
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="tarea-slide-footer">
-                                                <div className="tarea-tipo-badge">
-                                                    Tarea para casa
-                                                </div>
-                                                <div className={`tarea-prioridad ${prioridad}`}>
-                                                    {prioridad === 'alta' && '🔴 Alta'}
-                                                    {prioridad === 'media' && '🟡 Media'}
-                                                    {prioridad === 'baja' && '🟢 Baja'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                            Ver tarea
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         </div>                        {/* Controles del Slider */}
                         {tareas.length > 3 && (
