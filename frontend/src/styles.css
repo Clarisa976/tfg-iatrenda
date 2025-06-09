@@ -3352,3 +3352,190 @@ input[type="checkbox"]:checked::after {
 .modal .password-toggle:hover {
   color: var(--blue);
 }
+
+/* ========================================
+   MODAL DE TRATAMIENTO - ESTILOS ESPECÍFICOS
+======================================== */
+
+/* Modal de tratamiento con ancho responsivo */
+.modal-tratamiento-wide {
+  width: 95%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Contenedor de archivos adjuntos */
+.tratamiento-attachment-section {
+  margin-top: 1.5rem;
+}
+
+.tratamiento-attachment-section h4 {
+  margin-bottom: 1rem;
+  color: var(--primary);
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.5rem;
+}
+
+/* Contenedor de documento individual */
+.documento-item-container {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+.documento-titulo {
+  margin-bottom: 0.75rem;
+  color: var(--text-dark);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Contenedor de imagen centrado */
+.image-container-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Imagen de documento */
+.documento-imagen {
+  max-width: 100%;
+  max-height: 400px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.documento-imagen:hover {
+  transform: scale(1.02);
+}
+
+/* Contenedor de error de imagen */
+.imagen-error-container {
+  padding: 2rem;
+  background-color: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* Contenedor de enlace de archivo */
+.file-link-container {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.file-link-btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary);
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.file-link-btn:hover {
+  background-color: var(--primary-dark);
+  color: white;
+  text-decoration: none;
+}
+
+/* Modal de confirmación de eliminación */
+.modal-delete-small {
+  max-width: 450px;
+}
+
+.delete-confirmation-text {
+  color: #dc3545;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.delete-error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+  border: 1px solid #f5c6cb;
+}
+
+/* Estados del botón de eliminar */
+.btn-deleting {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN PARA MODAL DE TRATAMIENTO
+======================================== */
+
+/* Móviles pequeños */
+@media (max-width: 480px) {
+  .modal-tratamiento-wide {
+    width: 98%;
+    padding: 1rem;
+    margin: 1rem auto;
+  }
+  
+  .documento-imagen {
+    max-height: 250px;
+  }
+  
+  .documento-item-container {
+    padding: 0.75rem;
+  }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  .modal-tratamiento-wide {
+    width: 90%;
+    max-width: 700px;
+  }
+  
+  .documento-imagen {
+    max-height: 350px;
+  }
+}
+
+/* Desktop pequeño */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .modal-tratamiento-wide {
+    width: 85%;
+    max-width: 800px;
+  }
+}
+
+/* Desktop grande */
+@media (min-width: 1025px) {
+  .modal-tratamiento-wide {
+    width: 80%;
+    max-width: 900px;
+  }
+  
+  /* En pantallas grandes, permitir más contenido sin scroll */
+  .modal-tratamiento-wide {
+    max-height: 85vh;
+  }
+}
+
+/* Pantallas muy grandes */
+@media (min-width: 1400px) {
+  .modal-tratamiento-wide {
+    width: 70%;
+    max-width: 1000px;
+    max-height: 80vh;
+  }
+}
