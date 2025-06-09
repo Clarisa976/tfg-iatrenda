@@ -19,7 +19,7 @@ class BackupService
 
         $this->s3Client = new S3Client([
             'version' => 'latest',
-            'region' => $_ENV['AWS_REGION'] ?? 'eu-west-3',
+            'region' => $_ENV['AWS_REGION'],
             'credentials' => [
                 'key' => $_ENV['AWS_ACCESS_KEY_ID'],
                 'secret' => $_ENV['AWS_SECRET_ACCESS_KEY'],
@@ -32,6 +32,24 @@ class BackupService
         $timestamp = date('Y-m-d-H-i-s');
         return "iatrenda_backup_{$timestamp}.sql";
     }
+
+    private function buildDatabaseUrl(): string
+    {
+        // Si existe DATABASE_URL, usarla directamente
+        if (!empty($_ENV['DATABASE_URL'])) {
+            return $_ENV['DATABASE_URL'];
+        }
+        
+        // Si no, construir desde variables separadas
+        $host = $_ENV['DB_HOST'];
+        $user = $_ENV['DB_USER'];
+        $pass = $_ENV['DB_PASS'];
+        $name = $_ENV['DB_NAME'];
+        $port = $_ENV['DB_PORT'] ?? 5432;
+        
+        return "postgresql://{$user}:{$pass}@{$host}:{$port}/{$name}";
+    }
+
     public function createDatabaseDump(): array
     {
         $fileName = $this->generateFileName();
@@ -39,26 +57,29 @@ class BackupService
 
         error_log('Creando dump de la base de datos...');
 
-        // Usar URL completa y forzar SSL
-        $databaseUrl = $_ENV['DATABASE_URL'];
-
+        $databaseUrl = $this->buildDatabaseUrl();
+        
         // Agregar parámetros SSL si no están
         if (strpos($databaseUrl, 'sslmode=') === false) {
             $separator = strpos($databaseUrl, '?') !== false ? '&' : '?';
             $databaseUrl .= $separator . 'sslmode=require';
         }
 
-        // Comando con configuración explícita para conexión remota
-        $command = "PGPASSWORD=password pg_dump \"" . $databaseUrl . "\" --no-owner --no-privileges --verbose > \"" . $filePath . "\" 2>&1";
+        // Comando mejorado para Supabase
+        $command = sprintf(
+            'pg_dump "%s" --no-owner --no-privileges --verbose --format=plain > "%s" 2>&1',
+            $databaseUrl,
+            $filePath
+        );
 
-        error_log("Ejecutando comando: pg_dump con URL remota");
+        error_log("Ejecutando pg_dump...");
 
         $output = [];
         $returnCode = 0;
         exec($command, $output, $returnCode);
 
         if ($returnCode !== 0) {
-            error_log("pg_dump output: " . implode("\n", $output));
+            error_log("pg_dump falló. Output: " . implode("\n", $output));
             throw new Exception('Error ejecutando pg_dump: ' . implode("\n", $output));
         }
 
@@ -67,7 +88,7 @@ class BackupService
         }
 
         $size = filesize($filePath);
-        error_log("Dump creado: {$fileName} ({$size} bytes)");
+        error_log("Dump creado exitosamente: {$fileName} ({$size} bytes)");
 
         return [
             'fileName' => $fileName,
@@ -90,16 +111,17 @@ class BackupService
                 'Key' => $s3Key,
                 'Body' => $fileContent,
                 'ContentType' => 'application/sql',
+                'ServerSideEncryption' => 'AES256', // Encriptar en S3
                 'Metadata' => [
                     'backup-date' => date('c'),
-                    'database' => 'supabase-iatrenda',
+                    'database' => $_ENV['DB_NAME'],
                     'type' => 'full-backup',
                     'checksum' => $checksum
                 ]
             ]);
 
             $location = $result['ObjectURL'] ?? "s3://{$this->bucketName}/{$s3Key}";
-            error_log("Backup subido a S3: {$s3Key}");
+            error_log("Backup subido exitosamente a S3: {$s3Key}");
 
             return [
                 'location' => $location,
@@ -116,7 +138,6 @@ class BackupService
     public function logBackupToDatabase(string $fileName, string $s3Location, string $checksum, int $size): void
     {
         try {
-            // Usar tu función conectar() existente
             $baseDatos = conectar();
 
             $sql = "INSERT INTO backup (path_al_fichero, checksum_sha256, tamano_bytes, encriptado) 
@@ -127,12 +148,13 @@ class BackupService
                 $s3Location,
                 $checksum,
                 $size,
-                false  // No encriptado por nosotros
+                true  // Encriptado en S3
             ]);
 
-            error_log('Backup registrado en BD');
+            error_log('Backup registrado en BD exitosamente');
         } catch (Exception $e) {
-            error_log('No se pudo registrar backup en BD: ' . $e->getMessage());
+            error_log('Error registrando backup en BD: ' . $e->getMessage());
+            // No lanzar excepción aquí para no fallar todo el backup
         }
     }
 
@@ -150,12 +172,16 @@ class BackupService
 
     public function createFullBackup(): array
     {
-        error_log('Iniciando backup completo...');
+        error_log('=== INICIANDO BACKUP COMPLETO ===');
 
         try {
+            // 1. Crear dump
             $dumpResult = $this->createDatabaseDump();
+            
+            // 2. Subir a S3
             $uploadResult = $this->uploadToS3($dumpResult['fileName'], $dumpResult['filePath']);
 
+            // 3. Registrar en BD
             $this->logBackupToDatabase(
                 $dumpResult['fileName'],
                 $uploadResult['location'],
@@ -163,9 +189,10 @@ class BackupService
                 $uploadResult['size']
             );
 
+            // 4. Limpiar archivo temporal
             $this->cleanupLocalFile($dumpResult['filePath']);
 
-            error_log('Backup completado exitosamente');
+            error_log('=== BACKUP COMPLETADO EXITOSAMENTE ===');
 
             return [
                 'success' => true,
@@ -176,7 +203,7 @@ class BackupService
                 'timestamp' => date('c')
             ];
         } catch (Exception $e) {
-            error_log('Error en backup: ' . $e->getMessage());
+            error_log('=== ERROR EN BACKUP: ' . $e->getMessage() . ' ===');
             throw $e;
         }
     }
@@ -201,6 +228,7 @@ class BackupService
                 }
             }
 
+            // Ordenar por fecha, más recientes primero
             usort($backups, function ($a, $b) {
                 return strtotime($b['lastModified']) - strtotime($a['lastModified']);
             });
@@ -231,7 +259,7 @@ class BackupService
                     'Key' => $backup['s3Key']
                 ]);
 
-                error_log("Eliminado: {$backup['fileName']}");
+                error_log("Backup eliminado: {$backup['fileName']}");
                 $deletedCount++;
             } catch (AwsException $e) {
                 error_log("Error eliminando {$backup['fileName']}: " . $e->getMessage());
