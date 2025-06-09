@@ -1340,6 +1340,56 @@ $app->get('/api/s3/health', function (Request $req, Response $res) {
     $c = new DocumentController();
     return $c->healthCheck($req, $res);
 });
+/* Actualizar diagnósticos de un historial */
+$app->put('/api/s3/historial/{historial_id}/diagnosticos', function (Request $req, Response $res, array $args) {
+    $val = verificarTokenUsuario();
+    if (!$val) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    if (!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'], 403);
+    }
+    
+    $historialId = (int)$args['historial_id'];
+    $data = $req->getParsedBody() ?? [];
+    
+    try {
+        $baseDatos = conectar();
+        
+        $updates = [];
+        $params = [];
+        
+        if (isset($data['diagnostico_preliminar'])) {
+            $updates[] = "diagnostico_preliminar = ?";
+            $params[] = $data['diagnostico_preliminar'];
+        }
+        
+        if (isset($data['diagnostico_final'])) {
+            $updates[] = "diagnostico_final = ?";
+            $params[] = $data['diagnostico_final'];
+        }
+        
+        if (empty($updates)) {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No hay datos para actualizar'], 400);
+        }
+        
+        $params[] = $historialId;
+        $sql = "UPDATE historial_clinico SET " . implode(', ', $updates) . " WHERE id_historial = ?";
+        
+        $stmt = $baseDatos->prepare($sql);
+        $success = $stmt->execute($params);
+        
+        if ($success && $stmt->rowCount() > 0) {
+            return jsonResponse(['ok'=>true,'mensaje'=>'Diagnósticos actualizados correctamente']);
+        } else {
+            return jsonResponse(['ok'=>false,'mensaje'=>'No se pudo actualizar'], 500);
+        }
+        
+    } catch (Exception $e) {
+        error_log('Error updating historial diagnosticos: ' . $e->getMessage());
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error interno'], 500);
+    }
+});
 
 // 2. Subir documento (tratamiento o historial)
 $app->post('/api/s3/upload', function (Request $req, Response $res) {
