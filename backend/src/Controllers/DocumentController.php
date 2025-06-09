@@ -258,173 +258,198 @@ class DocumentController
     }
 
     /* Manejar subida de documento al historial  */
-    private function handleDocumentUpload($data, $uploadedFiles, $response)
-    {
-        $baseDatos = null;
-        $uploadedToS3 = false;
-        $s3Key = null;
+private function handleDocumentUpload($data, $uploadedFiles, $response)
+{
+    $baseDatos = null;
+    $uploadedToS3 = false;
+    $s3Key = null;
 
-        try {
-            // Validar que se subió un archivo
-            if (!isset($uploadedFiles['file'])) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'No se ha subido ningún archivo'
-                ], 400);
-            }
-
-            $uploadedFile = $uploadedFiles['file'];
-
-            // Validar errores de upload
-            if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'Error en la subida del archivo'
-                ], 400);
-            }
-
-            // Validar datos requeridos
-            if (!isset($data['id_paciente'])) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'ID del paciente es requerido'
-                ], 400);
-            }
-
-            // Obtener ID del profesional desde el token (ya validado en la ruta)
-            $val = verificarTokenUsuario();
-            $profesionalId = $val['usuario']['id_persona'];
-
-            // Validar tipo de archivo
-            $allowedTypes = [
-                'application/pdf',
-                'image/jpeg',
-                'image/jpg',
-                'image/png',
-                'image/gif',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'text/plain'
-            ];
-
-            $fileType = $uploadedFile->getClientMediaType();
-            if (!in_array($fileType, $allowedTypes)) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'Tipo de archivo no permitido. Permitidos: PDF, JPG, PNG, GIF, DOC, DOCX, TXT'
-                ], 400);
-            }
-
-            // Validar tamaño (max 10MB)
-            $maxSize = 10 * 1024 * 1024; // 10MB
-            if ($uploadedFile->getSize() > $maxSize) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'El archivo es demasiado grande. Máximo 10MB'
-                ], 400);
-            }
-
-            // Iniciar transacción
-            $baseDatos = conectar();
-            $baseDatos->beginTransaction();
-
-            // 1. Crear historial clínico si no existe
-            $historialId = $this->getOrCreateHistorial($data['id_paciente'], $baseDatos);
-            if (!$historialId) {
-                $baseDatos->rollBack();
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'Error al crear/obtener historial clínico'
-                ], 500);
-            }
-
-            // 2. Subir a S3
-            $fileContent = $uploadedFile->getStream()->getContents();
-            $fileName = $uploadedFile->getClientFilename();
-
-            $uploadResult = $this->s3Service->uploadFile(
-                $fileContent,
-                $fileName,
-                $fileType,
-                [
-                    'profesional-id' => $profesionalId,
-                    'historial-id' => $historialId,
-                    'tipo-documento' => 'historial'
-                ]
-            );
-
-            if (!$uploadResult['success']) {
-                $baseDatos->rollBack();
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => $uploadResult['error']
-                ], 500);
-            }
-
-            $uploadedToS3 = true;
-            $s3Key = $uploadResult['key'];
-
-            // 3. Actualizar historial con diagnósticos si se proporcionaron
-            if (!empty($data['diagnostico_preliminar']) || !empty($data['diagnostico_final'])) {
-                $this->updateHistorialDiagnosticos($historialId, $data, $baseDatos);
-            }
-
-            // 4. Guardar documento en base de datos
-            $documentData = [
-                'id_historial' => $historialId,
-                'id_tratamiento' => null,
-                'id_profesional' => $profesionalId,
-                'ruta' => $uploadResult['key'],
-                'tipo' => $fileType,
-                'nombre_archivo' => $fileName
-            ];
-
-            $documentId = $this->saveDocumentToDatabase($documentData, $baseDatos);
-
-            if (!$documentId) {
-                // Si falla guardar en BD, eliminar de S3
-                $this->s3Service->deleteFile($s3Key);
-                $baseDatos->rollBack();
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'Error al guardar documento en base de datos'
-                ], 500);
-            }
-
-            // Todo OK, confirmar transacción
-            $baseDatos->commit();
-
-            return $this->jsonResponse($response, [
-                'ok' => true,
-                'mensaje' => 'Documento subido correctamente',
-                'data' => [
-                    'id' => $documentId,
-                    'id_historial' => $historialId,
-                    's3_key' => $uploadResult['key'],
-                    'nombre' => $fileName,
-                    'tipo' => $fileType,
-                    'tamano' => $uploadedFile->getSize()
-                ]
-            ], 201);
-        } catch (\Exception $e) {
-            error_log('Error uploading document to S3: ' . $e->getMessage());
-
-            // Rollback de la base de datos
-            if ($baseDatos && $baseDatos->inTransaction()) {
-                $baseDatos->rollBack();
-            }
-
-            // Si se subió algo a S3, eliminarlo
-            if ($uploadedToS3 && $s3Key) {
-                $this->s3Service->deleteFile($s3Key);
-            }
-
+    try {
+        // Validar que se subió un archivo
+        if (!isset($uploadedFiles['file'])) {
             return $this->jsonResponse($response, [
                 'ok' => false,
-                'mensaje' => 'Error interno del servidor'
+                'mensaje' => 'No se ha subido ningún archivo'
+            ], 400);
+        }
+
+        $uploadedFile = $uploadedFiles['file'];
+
+        // Validar errores de upload
+        if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'Error en la subida del archivo: ' . $uploadedFile->getError()
+            ], 400);
+        }
+
+        // Validar datos requeridos
+        if (!isset($data['id_paciente'])) {
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'ID del paciente es requerido'
+            ], 400);
+        }
+
+        // Obtener ID del profesional desde el token
+        $val = verificarTokenUsuario();
+        $profesionalId = $val['usuario']['id_persona'];
+
+        // Validar tipo de archivo
+        $allowedTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/jpg', 
+            'image/png',
+            'image/gif',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain'
+        ];
+
+        $fileType = $uploadedFile->getClientMediaType();
+        if (!in_array($fileType, $allowedTypes)) {
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'Tipo de archivo no permitido. Permitidos: PDF, JPG, PNG, GIF, DOC, DOCX, TXT'
+            ], 400);
+        }
+
+        // Validar tamaño (max 10MB)
+        $maxSize = 10 * 1024 * 1024; // 10MB
+        if ($uploadedFile->getSize() > $maxSize) {
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'El archivo es demasiado grande. Máximo 10MB'
+            ], 400);
+        }
+
+        // Iniciar transacción
+        $baseDatos = conectar();
+        $baseDatos->beginTransaction();
+
+        // 1. Obtener o crear historial clínico
+        $historialId = $this->getOrCreateHistorial($data['id_paciente'], $baseDatos);
+        if (!$historialId) {
+            $baseDatos->rollBack();
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'Error al crear/obtener historial clínico'
             ], 500);
         }
+
+        error_log("Historial ID obtenido/creado: " . $historialId);
+
+        // 2. Actualizar historial con diagnósticos si se proporcionaron
+        if (!empty($data['diagnostico_preliminar']) || !empty($data['diagnostico_final'])) {
+            $this->updateHistorialDiagnosticos($historialId, $data, $baseDatos);
+        }
+
+        // 3. Subir archivo a S3
+        $fileContent = $uploadedFile->getStream()->getContents();
+        $fileName = $uploadedFile->getClientFilename();
+        
+        // Generar nombre único para evitar conflictos
+        $uniqueFileName = time() . '_' . $fileName;
+
+        $uploadResult = $this->s3Service->uploadFile(
+            $fileContent,
+            $uniqueFileName,
+            $fileType,
+            [
+                'profesional-id' => $profesionalId,
+                'historial-id' => $historialId,
+                'paciente-id' => $data['id_paciente'],
+                'tipo-documento' => 'historial'
+            ]
+        );
+
+        if (!$uploadResult['success']) {
+            $baseDatos->rollBack();
+            error_log('Error subida S3: ' . $uploadResult['error']);
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'Error al subir archivo: ' . $uploadResult['error']
+            ], 500);
+        }
+
+        $uploadedToS3 = true;
+        $s3Key = $uploadResult['key'];
+        error_log('Archivo subido a S3 con clave: ' . $s3Key);
+
+        // 4. Guardar documento en base de datos
+        $documentData = [
+            'id_historial' => $historialId,
+            'id_tratamiento' => null, // Es un documento de historial, no de tratamiento
+            'id_profesional' => $profesionalId,
+            'ruta' => $uploadResult['key'],
+            'tipo' => $fileType,
+            'nombre_archivo' => $fileName, // Nombre original
+            'diagnostico_final' => $data['diagnostico_final'] ?? null
+        ];
+
+        $documentId = $this->saveDocumentToDatabase($documentData, $baseDatos);
+
+        if (!$documentId) {
+            // Si falla guardar en BD, eliminar de S3
+            error_log('Error al guardar documento en BD, eliminando de S3...');
+            $this->s3Service->deleteFile($s3Key);
+            $baseDatos->rollBack();
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'Error al guardar documento en base de datos'
+            ], 500);
+        }
+
+        // 5. Registrar actividad en logs
+        registrarActividad(
+            $profesionalId, 
+            $data['id_paciente'], 
+            'documento_clinico', 
+            'INSERT', 
+            null, 
+            json_encode(['id_documento' => $documentId, 'archivo' => $fileName])
+        );
+
+        // Todo OK, confirmar transacción
+        $baseDatos->commit();
+        error_log('Documento guardado exitosamente con ID: ' . $documentId);
+
+        return $this->jsonResponse($response, [
+            'ok' => true,
+            'mensaje' => 'Documento subido correctamente al historial clínico',
+            'data' => [
+                'id_documento' => $documentId,
+                'id_historial' => $historialId,
+                's3_key' => $uploadResult['key'],
+                'nombre_archivo' => $fileName,
+                'tipo' => $fileType,
+                'tamano' => $uploadedFile->getSize(),
+                'url_descarga' => null // Se generará bajo demanda
+            ]
+        ], 201);
+
+    } catch (\Exception $e) {
+        error_log('Error uploading document to historial: ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+
+        // Rollback de la base de datos
+        if ($baseDatos && $baseDatos->inTransaction()) {
+            $baseDatos->rollBack();
+        }
+
+        // Si se subió algo a S3, eliminarlo
+        if ($uploadedToS3 && $s3Key) {
+            error_log('Eliminando archivo de S3: ' . $s3Key);
+            $this->s3Service->deleteFile($s3Key);
+        }
+
+        return $this->jsonResponse($response, [
+            'ok' => false,
+            'mensaje' => 'Error interno del servidor: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /* Descargar documento desde S3 */
     public function downloadDocument($request, $response, $args)
@@ -745,42 +770,45 @@ public function updateDocument($request, $response, $args) {
 
 
     /* Guardar documento en base de datos*/
-    private function saveDocumentToDatabase($data, $baseDatos = null)
-    {
-        try {
-            if (!$baseDatos) {
-                $baseDatos = conectar();
-            }
-
-            // PostgreSQL - usar RETURNING
-            $sql = "INSERT INTO documento_clinico 
-                    (id_historial, id_tratamiento, id_profesional, ruta, tipo, nombre_archivo) 
-                    VALUES (?, ?, ?, ?, ?, ?) RETURNING id_documento";
-            $params = [
-                $data['id_historial'],
-                $data['id_tratamiento'],
-                $data['id_profesional'],
-                $data['ruta'],
-                $data['tipo'],
-                $data['nombre_archivo']
-            ];
-
-            $stmt = $baseDatos->prepare($sql);
-            $stmt->execute($params);
-
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($result) {
-                return $result['id_documento'];
-            }
-
-            return null;
-        } catch (\Exception $e) {
-            error_log('Error saving S3 document to DB: ' . $e->getMessage());
-            error_log('SQL params: ' . print_r($params, true));
-            throw $e;
+private function saveDocumentToDatabase($data, $baseDatos = null)
+{
+    try {
+        if (!$baseDatos) {
+            $baseDatos = conectar();
         }
-    }
 
+        // PostgreSQL - usar RETURNING (ajustado al esquema real)
+        $sql = "INSERT INTO documento_clinico 
+                (id_historial, id_tratamiento, id_profesional, ruta, tipo, nombre_archivo, diagnostico_final) 
+                VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id_documento";
+        
+        $params = [
+            $data['id_historial'],
+            $data['id_tratamiento'],
+            $data['id_profesional'],
+            $data['ruta'],
+            $data['tipo'],
+            $data['nombre_archivo'],
+            $data['diagnostico_final'] ?? null
+        ];
+
+        error_log('Insertando documento con parámetros: ' . json_encode($params));
+        
+        $stmt = $baseDatos->prepare($sql);
+        $stmt->execute($params);
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($result) {
+            return $result['id_documento'];
+        }
+
+        return null;
+    } catch (\Exception $e) {
+        error_log('Error saving document to DB: ' . $e->getMessage());
+        error_log('SQL params: ' . print_r($params, true));
+        throw $e;
+    }
+}
     /* Obtener documento de la base de datos */
     private function getDocumentFromDatabase($documentId)
     {
