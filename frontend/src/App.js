@@ -63,7 +63,7 @@ function ProtectedRoute({ children, requiredRole, user, onUnauthorized, isLoadin
   useEffect(() => {
     // Si aún se está cargando la sesión, no hacer nada
     if (isLoading) return;
-    
+
     if (hasRedirected) return;
 
     if (!user) {
@@ -83,15 +83,15 @@ function ProtectedRoute({ children, requiredRole, user, onUnauthorized, isLoadin
 
   useEffect(() => {
     setHasRedirected(false);
-  }, [user?.id, requiredRole]); 
+  }, [user?.id, requiredRole]);
 
   // Mostrar loading mientras se verifica la sesión
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '60vh',
         fontSize: '1.2rem'
       }}>
@@ -120,7 +120,7 @@ export default function App() {
     const recoverSession = async () => {
       const token = localStorage.getItem('token');
       const cachedUser = localStorage.getItem('userSession');
-      
+
       if (!token) {
         setIsLoading(false);
         return;
@@ -139,25 +139,25 @@ export default function App() {
       try {
         // Configurar el token en axios
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
+
         // Crear timeout personalizado para evitar cuelgues
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('TIMEOUT')), 8000)
         );
-        
+
         // Verificar el token con el backend
         const response = await Promise.race([
           axios.get('/consentimiento'),
           timeoutPromise
         ]);
-        
+
         if (response.data && response.data.ok) {
           // Actualizar token si viene renovado
           if (response.data.token) {
             localStorage.setItem('token', response.data.token);
             axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
           }
-          
+
           // Intentar obtener datos del usuario en paralelo, con timeouts individuales
           const getUserData = async () => {
             const endpoints = [
@@ -168,15 +168,15 @@ export default function App() {
 
             const results = await Promise.allSettled(
               endpoints.map(async endpoint => {
-                const timeoutPromise = new Promise((_, reject) => 
+                const timeoutPromise = new Promise((_, reject) =>
                   setTimeout(() => reject(new Error('ENDPOINT_TIMEOUT')), 5000)
                 );
-                
+
                 const response = await Promise.race([
                   axios.get(endpoint.url),
                   timeoutPromise
                 ]);
-                
+
                 return { ...endpoint, response };
               })
             );
@@ -185,10 +185,10 @@ export default function App() {
             for (const result of results) {
               if (result.status === 'fulfilled') {
                 const { response, role, dataPath } = result.value;
-                
+
                 if (response.data && response.data.ok) {
                   let userData;
-                  
+
                   if (role === 'admin') {
                     userData = {
                       id_persona: 1,
@@ -204,7 +204,7 @@ export default function App() {
                       rol: role
                     };
                   }
-                  
+
                   // Guardar en caché para futuras recargas
                   localStorage.setItem('userSession', JSON.stringify(userData));
                   setUser(userData);
@@ -214,9 +214,9 @@ export default function App() {
             }
 
             // Si llegamos aquí, verificar si todos los errores son de autenticación
-            const authErrors = results.filter(result => 
-              result.status === 'rejected' && 
-              result.reason?.response?.status && 
+            const authErrors = results.filter(result =>
+              result.status === 'rejected' &&
+              result.reason?.response?.status &&
               [401, 403].includes(result.reason.response.status)
             );
 
@@ -237,7 +237,7 @@ export default function App() {
         }
       } catch (error) {
         console.error('Error al verificar el token:', error);
-        
+
         // Solo limpiar sesión en casos específicos
         if (error.message === 'TIMEOUT') {
           console.warn('Timeout al verificar token, manteniendo sesión con datos en caché');
@@ -259,12 +259,12 @@ export default function App() {
   const showUnauthorizedMessage = (message) => {
     // Prevenir mensajes duplicados
     if (toast.show && toast.type === 'unauthorized') return;
-    
-    setToast({ 
-      show: true, 
-      ok: false, 
-      msg: message, 
-      type: 'unauthorized' 
+
+    setToast({
+      show: true,
+      ok: false,
+      msg: message,
+      type: 'unauthorized'
     });
   };
 
@@ -284,23 +284,23 @@ export default function App() {
   // Manejar toast
   useEffect(() => {
     if (!toast.show) return;
-    
+
     const timeout = toast.type === 'unauthorized' ? 3000 : 5000;
-    
+
     const timeoutId = setTimeout(() => {
       setToast(t => ({ ...t, show: false }));
     }, timeout);
-    
+
     return () => clearTimeout(timeoutId);
   }, [toast.show, toast.type]);
 
   const handleLoginSuccess = (userData, token) => {
     setUser(userData);
     setLoginOpen(false);
-    
+
     // Guardar datos de usuario en caché para futuras recargas
     localStorage.setItem('userSession', JSON.stringify(userData));
-    
+
     // Guardar token y configurar axios si se proporciona
     if (token) {
       localStorage.setItem('token', token);
@@ -311,24 +311,24 @@ export default function App() {
   const handleLogout = () => {
     cleanupSession();
   };
-  
+
   const abrirCita = () => setReservarCita(true);
-  const onCitaSuccess = msg => { 
-    setReservarCita(false); 
-    setToast({ show: true, ok: true, msg, type: 'cita' }); 
+  const onCitaSuccess = msg => {
+    setReservarCita(false);
+    setToast({ show: true, ok: true, msg, type: 'cita' });
   };
-  const onCitaError = msg => { 
-    setReservarCita(false); 
-    setToast({ show: true, ok: false, msg, type: 'cita' }); 
+  const onCitaError = msg => {
+    setReservarCita(false);
+    setToast({ show: true, ok: false, msg, type: 'cita' });
   };
 
   return (
     <BrowserRouter>
-      <Header 
-        user={user} 
-        onAccessClick={() => setLoginOpen(true)} 
-        onReservarCita={abrirCita} 
-        onLogout={handleLogout} 
+      <Header
+        user={user}
+        onAccessClick={() => setLoginOpen(true)}
+        onReservarCita={abrirCita}
+        onLogout={handleLogout}
       />
 
       <main className="app-main">
@@ -342,89 +342,89 @@ export default function App() {
           <Route path="/cookies" element={<PoliticaCookies />} />
 
           {/* Rutas Admin - Protegidas */}
-          <Route 
-            path="/admin/usuarios" 
+          <Route
+            path="/admin/usuarios"
             element={
               <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <Usuarios />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin/notificaciones" 
+          <Route
+            path="/admin/notificaciones"
             element={
               <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <Notificaciones />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin/agenda-global" 
+          <Route
+            path="/admin/agenda-global"
             element={
               <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <AgendaGlobal />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin/informes" 
+          <Route
+            path="/admin/informes"
             element={
               <ProtectedRoute requiredRole="admin" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <InformesYLogs />
               </ProtectedRoute>
-            } 
+            }
           />
 
           {/* Rutas Profesional - Protegidas */}
-          <Route 
-            path="/profesional/mi-perfil" 
+          <Route
+            path="/profesional/mi-perfil"
             element={
               <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <PerfilProfesional />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/profesional/pacientes" 
+          <Route
+            path="/profesional/pacientes"
             element={
               <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <PacientesProfesional />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/profesional/paciente/:id" 
+          <Route
+            path="/profesional/paciente/:id"
             element={
               <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <PerfilPacienteProfesional />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/profesional/agenda" 
+          <Route
+            path="/profesional/agenda"
             element={
               <ProtectedRoute requiredRole="profesional" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <AgendaProfesional />
               </ProtectedRoute>
-            } 
+            }
           />
 
           {/* Rutas Paciente - Protegidas */}
-          <Route 
-            path="/paciente/mi-perfil" 
+          <Route
+            path="/paciente/mi-perfil"
             element={
               <ProtectedRoute requiredRole="paciente" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <PerfilPaciente />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/paciente/mis-citas" 
+          <Route
+            path="/paciente/mis-citas"
             element={
               <ProtectedRoute requiredRole="paciente" user={user} onUnauthorized={showUnauthorizedMessage} isLoading={isLoading}>
                 <CitasPaciente />
               </ProtectedRoute>
-            } 
+            }
           />
 
           {/* Ruta para páginas no encontradas */}
@@ -434,16 +434,16 @@ export default function App() {
 
       {/* Modales */}
       {loginOpen && (
-        <LoginModal 
-          onClose={() => setLoginOpen(false)} 
-          onLoginSuccess={handleLoginSuccess} 
+        <LoginModal
+          onClose={() => setLoginOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
         />
       )}
       {reservarCita && (
-        <ReservarCitaModal 
-          onClose={() => setReservarCita(false)} 
-          onSuccess={onCitaSuccess} 
-          onError={onCitaError} 
+        <ReservarCitaModal
+          onClose={() => setReservarCita(false)}
+          onSuccess={onCitaSuccess}
+          onError={onCitaError}
         />
       )}
 
@@ -457,24 +457,24 @@ export default function App() {
             }
             <h3 className="toast-title">
               {toast.type === 'unauthorized' ? '¡Acceso denegado!' :
-               toast.type === 'cita' && toast.ok ? '¡Reserva enviada!' :
-               toast.type === 'cita' && !toast.ok ? '¡Lo sentimos!' :
-               toast.ok ? '¡Éxito!' : '¡Error!'
+                toast.type === 'cita' && toast.ok ? '¡Reserva enviada!' :
+                  toast.type === 'cita' && !toast.ok ? '¡Lo sentimos!' :
+                    toast.ok ? '¡Éxito!' : '¡Error!'
               }
             </h3>
             <p className="toast-text">
-              {toast.msg || 
-               (toast.type === 'cita' && toast.ok ? 'Te avisaremos cuando el equipo confirme tu cita.' :
-                toast.type === 'cita' && !toast.ok ? 'El día o la hora que has seleccionado no están disponibles. Elige otra fecha.' :
-                toast.type === 'unauthorized' ? 'No tienes permisos para acceder a esta página.' :
-                toast.ok ? 'Operación completada correctamente.' : 'Ha ocurrido un error.'
-               )
+              {toast.msg ||
+                (toast.type === 'cita' && toast.ok ? 'Te avisaremos cuando el equipo confirme tu cita.' :
+                  toast.type === 'cita' && !toast.ok ? 'El día o la hora que has seleccionado no están disponibles. Elige otra fecha.' :
+                    toast.type === 'unauthorized' ? 'No tienes permisos para acceder a esta página.' :
+                      toast.ok ? 'Operación completada correctamente.' : 'Ha ocurrido un error.'
+                )
               }
             </p>
           </div>
         </div>
       )}
-      
+
       <ScrollArriba />
       <Footer />
     </BrowserRouter>

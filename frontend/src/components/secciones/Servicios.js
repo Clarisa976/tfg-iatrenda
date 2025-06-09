@@ -37,7 +37,7 @@ const services = [
 
 export default function Servicios({ onReservarCita, user }) {
   const userRole = user?.rol || user?.role || null;
-  const isLoggedIn = !!userRole; 
+  const isLoggedIn = !!userRole;
 
   return (
     <section id="servicios" className="services">
@@ -53,9 +53,9 @@ export default function Servicios({ onReservarCita, user }) {
           </div>
         ))}      </div>
       <div className="services__cta">
-        {/* Solo mostrar "Reserve su cita" si NO está logueado */}
+        {/* Solo mostrar si NO está logueado */}
         {!isLoggedIn && (
-          <a href="#reserva" className="btn-reserva"  onClick={e => { e.preventDefault(); onReservarCita(); }}>Reserve su cita</a>
+          <a href="#reserva" className="btn-reserva" onClick={e => { e.preventDefault(); onReservarCita(); }}>Reserve su cita</a>
         )}
       </div>
     </section>
