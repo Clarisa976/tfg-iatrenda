@@ -1389,6 +1389,17 @@ $app->delete('/api/s3/documentos/{id}', function (Request $request, Response $re
     $controller = new App\Controllers\DocumentController();
     return $controller->deleteDocument($request, $response, $args);
 });
+$app->get('/api/s3/tratamientos/{paciente_id}', function (Request $request, Response $response, array $args) {
+    $val = verificarTokenUsuario();
+    if ($val === false) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    }
+    $controller = new App\Controllers\DocumentController();
+    return $controller->getTreatmentsWithDocuments($request, $response, $args);
+});
+
+
+
 
 /* GET /prof/perfil */
 $app->get('/prof/perfil', function(Request $req, Response $res): Response {
