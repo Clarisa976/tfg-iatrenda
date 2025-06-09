@@ -164,41 +164,41 @@ const BloqueTutor = memo(({ pTut, hTut, edit }) => (
       <InputField obj={pTut} onChange={hTut} fieldKey="telefono" label="Teléfono*" edit={edit} />      <div className="field full">
         <label>Método contacto*</label>
         <div className="datos-perfil-flex">          <label>
-            <input
-              type="checkbox"
-              disabled={!edit}              checked={pTut.metodo_contacto_preferido?.includes('TEL') || false}
-              onChange={e => {
-                // FIXED: Get current methods as array regardless of source format
-                // This fixes inconsistencies in how metodo_contacto_preferido was handled
-                let metodosActuales = [];
-                if (pTut.metodo_contacto_preferido) {
-                  metodosActuales = typeof pTut.metodo_contacto_preferido === 'string' 
-                    ? pTut.metodo_contacto_preferido.split(',') 
-                    : [...pTut.metodo_contacto_preferido];
-                }
-                
-                if (e.target.checked) {
-                  const newMethods = [...metodosActuales, 'TEL'].filter(m => m);
-                  hTut('metodo_contacto_preferido', newMethods);
-                } else {
-                  const newMethods = metodosActuales.filter(m => m !== 'TEL');
-                  hTut('metodo_contacto_preferido', newMethods);
-                }
-              }}
-            /> Teléfono
-          </label>
+          <input
+            type="checkbox"
+            disabled={!edit} checked={pTut.metodo_contacto_preferido?.includes('TEL') || false}
+            onChange={e => {
+              // FIXED: Get current methods as array regardless of source format
+              // This fixes inconsistencies in how metodo_contacto_preferido was handled
+              let metodosActuales = [];
+              if (pTut.metodo_contacto_preferido) {
+                metodosActuales = typeof pTut.metodo_contacto_preferido === 'string'
+                  ? pTut.metodo_contacto_preferido.split(',')
+                  : [...pTut.metodo_contacto_preferido];
+              }
+
+              if (e.target.checked) {
+                const newMethods = [...metodosActuales, 'TEL'].filter(m => m);
+                hTut('metodo_contacto_preferido', newMethods);
+              } else {
+                const newMethods = metodosActuales.filter(m => m !== 'TEL');
+                hTut('metodo_contacto_preferido', newMethods);
+              }
+            }}
+          /> Teléfono
+        </label>
           <label>
             <input
               type="checkbox"
-              disabled={!edit}              checked={pTut.metodo_contacto_preferido?.includes('EMAIL') || false}              onChange={e => {
+              disabled={!edit} checked={pTut.metodo_contacto_preferido?.includes('EMAIL') || false} onChange={e => {
                 // Get current methods as array
                 let metodosActuales = [];
                 if (pTut.metodo_contacto_preferido) {
-                  metodosActuales = typeof pTut.metodo_contacto_preferido === 'string' 
-                    ? pTut.metodo_contacto_preferido.split(',') 
+                  metodosActuales = typeof pTut.metodo_contacto_preferido === 'string'
+                    ? pTut.metodo_contacto_preferido.split(',')
                     : [...pTut.metodo_contacto_preferido];
                 }
-                
+
                 if (e.target.checked) {
                   const newMethods = [...metodosActuales, 'EMAIL'].filter(m => m);
                   hTut('metodo_contacto_preferido', newMethods);
@@ -267,14 +267,14 @@ export default function PerfilPacienteProfesional() {
   const [pTut, setPTut] = useState({});
   const [rgpd, setRgpd] = useState(false);
 
-const cancelEdit = () => {
-  // Restaurar datos originales
-  setPPer(data.persona || {});
-  setPPac(data.paciente || {});
-  setPTut(data.tutor || {});
-  setRgpd(data.consentimiento_activo || false);
-  setEdit(false);
-};
+  const cancelEdit = () => {
+    // Restaurar datos originales
+    setPPer(data.persona || {});
+    setPPac(data.paciente || {});
+    setPTut(data.tutor || {});
+    setRgpd(data.consentimiento_activo || false);
+    setEdit(false);
+  };
 
   useEffect(() => {
     axios.defaults.baseURL = process.env.REACT_APP_API_URL;
@@ -282,43 +282,43 @@ const cancelEdit = () => {
     if (tk) axios.defaults.headers.common.Authorization = `Bearer ${tk}`;
   }, []);
 
-const fetchData = useCallback(async () => {
-  try {
-    console.log('Fetching updated patient data...');
-    const tk = localStorage.getItem('token');
-    
-    // Cargar datos básicos del paciente
-    const r = await axios.get(`/prof/pacientes/${id}`);
-    if (!r.data?.ok) throw new Error(r.data?.mensaje || 'Error API');
-    const d = r.data.data;
-    
-    // Cargar tratamientos con documentos S3
+  const fetchData = useCallback(async () => {
     try {
-      const treatmentsResponse = await axios.get(`/api/s3/tratamientos/${id}`, {
-        headers: { 'Authorization': `Bearer ${tk}` }
-      });
-      
-      if (treatmentsResponse.data?.ok) {
-        d.tratamientos = treatmentsResponse.data.tratamientos;
-        console.log('Tratamientos cargados desde S3:', treatmentsResponse.data.tratamientos);
+      console.log('Fetching updated patient data...');
+      const tk = localStorage.getItem('token');
+
+      // Cargar datos básicos del paciente
+      const r = await axios.get(`/prof/pacientes/${id}`);
+      if (!r.data?.ok) throw new Error(r.data?.mensaje || 'Error API');
+      const d = r.data.data;
+
+      // Cargar tratamientos con documentos S3
+      try {
+        const treatmentsResponse = await axios.get(`/api/s3/tratamientos/${id}`, {
+          headers: { 'Authorization': `Bearer ${tk}` }
+        });
+
+        if (treatmentsResponse.data?.ok) {
+          d.tratamientos = treatmentsResponse.data.tratamientos;
+          console.log('Tratamientos cargados desde S3:', treatmentsResponse.data.tratamientos);
+        }
+      } catch (s3Error) {
+        console.warn('Error cargando desde S3, usando datos originales:', s3Error);
       }
-    } catch (s3Error) {
-      console.warn('Error cargando desde S3, usando datos originales:', s3Error);
+
+      console.log('Patient data updated:', d);
+      setData(d);
+      setPPer(d.persona || {});
+      setPPac(d.paciente || {});
+      setPTut(d.tutor || {});
+      setRgpd(d.consentimiento_activo || false);
+      if (r.data.token) localStorage.setItem('token', r.data.token);
+    } catch (e) {
+      console.error(e);
+      msg(false, 'Error', e.message);
+      setData({ tratamientos: [], documentos: [], citas: [] });
     }
-    
-    console.log('Patient data updated:', d);
-    setData(d);
-    setPPer(d.persona || {});
-    setPPac(d.paciente || {});
-    setPTut(d.tutor || {});
-    setRgpd(d.consentimiento_activo || false);
-    if (r.data.token) localStorage.setItem('token', r.data.token);
-  } catch (e) {
-    console.error(e);
-    msg(false, 'Error', e.message);
-    setData({ tratamientos: [], documentos: [], citas: [] });
-  }
-}, [id]);
+  }, [id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -349,7 +349,7 @@ const fetchData = useCallback(async () => {
   const hPac = useCallback((k, v) => setPPac(s => ({ ...s, [k]: v })), []);
   const hTut = useCallback((k, v) => setPTut(s => ({ ...s, [k]: v })), []);
 
- 
+
   const savePerfil = async () => {
     try {
       await axios.put(`/prof/pacientes/${id}`, {
@@ -362,7 +362,7 @@ const fetchData = useCallback(async () => {
     } catch (e) { msg(false, 'Error', e.response?.data?.mensaje || 'El paciente no se ha podido actualizar'); }
   };
 
-const doAccion = async (idCita, accion, fecha = null) => {
+  const doAccion = async (idCita, accion, fecha = null) => {
     try {
       const response = await axios.post(`/prof/citas/${idCita}/accion`, { accion, ...(fecha ? { fecha } : {}) });
       if (response.data?.token) {
@@ -428,7 +428,7 @@ const doAccion = async (idCita, accion, fecha = null) => {
             </li>
           ))}
         </ul>}
-      <SubirTratamiento onDone={fetchData} idPaciente={id}/>
+      <SubirTratamiento onDone={fetchData} idPaciente={id} />
       {selT && (
         <ModalTratamiento idPac={id} treat={selT}
           onClose={() => setSelT(null)}
@@ -462,7 +462,7 @@ const doAccion = async (idCita, accion, fecha = null) => {
             </div>
           ))}
         </div>}
-      <SubirDocumento onDone={fetchData}  idPaciente={id}/>
+      <SubirDocumento onDone={fetchData} idPaciente={id} />
       {selDoc && (
         <ModalDocumento
           idPac={id}
@@ -532,7 +532,7 @@ const doAccion = async (idCita, accion, fecha = null) => {
             fecha_inicio: hoy,
             fecha_fin: tresMeses
           }
-        });        if (response.data.ok) {
+        }); if (response.data.ok) {
           const diasBloqueados = response.data.dias_bloqueados || [];
           console.log('Días bloqueados recibidos:', diasBloqueados);
           setDiasBloqueados(diasBloqueados);
@@ -586,17 +586,17 @@ const doAccion = async (idCita, accion, fecha = null) => {
 
           // Las horas ocupadas son las que NO están disponibles
           const ocupadas = todasLasHoras.filter(hora => !horasDisponibles.includes(hora));
-          
+
           // Si la fecha seleccionada es la misma que la cita actual, no bloquear la hora de la cita actual ya que esa misma hora debe estar disponible para reprogramación
           if (repro.citaActual?.fecha_hora) {
             const fechaCitaActual = new Date(repro.citaActual.fecha_hora);
             const fechaCitaActualStr = fechaCitaActual.toISOString().split('T')[0];
-            
+
             if (fechaStr === fechaCitaActualStr) {
               // Obtener la hora de la cita actual
               const horaCitaActual = fechaCitaActual.getHours().toString().padStart(2, '0') + ':00';
               console.log('Hora de cita actual que no se bloqueará:', horaCitaActual);
-              
+
               // Filtrar la hora de la cita actual de las horas ocupadas
               const ocupadasSinLaActual = ocupadas.filter(hora => hora !== horaCitaActual);
               setHorasOcupadas(ocupadasSinLaActual);
@@ -683,11 +683,11 @@ const doAccion = async (idCita, accion, fecha = null) => {
       try {
         const fechaHoraCompleta = fechaNueva.toISOString().slice(0, 19).replace('T', ' '); // format to YYYY-MM-DD HH:mm:ss
 
-console.log('Datos que se envían al backend:', {
-  accion: 'REPROGRAMAR',
-  fecha: fechaHoraCompleta,
-  citaId: repro.citaId
-});
+        console.log('Datos que se envían al backend:', {
+          accion: 'REPROGRAMAR',
+          fecha: fechaHoraCompleta,
+          citaId: repro.citaId
+        });
 
         const response = await axios.post(
           `/prof/citas/${repro.citaId}/accion`,
@@ -722,15 +722,15 @@ console.log('Datos que se envían al backend:', {
 
     if (!repro.show) return null;
 
-   /* const fechaActualCita = repro.citaActual?.fecha_hora ?
-      new Date(repro.citaActual.fecha_hora).toLocaleString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        weekday: 'long'
-      }) : '';*/
+    /* const fechaActualCita = repro.citaActual?.fecha_hora ?
+       new Date(repro.citaActual.fecha_hora).toLocaleString('es-ES', {
+         year: 'numeric',
+         month: 'long',
+         day: 'numeric',
+         hour: '2-digit',
+         minute: '2-digit',
+         weekday: 'long'
+       }) : '';*/
 
     return (
       <div className="modal-backdrop" onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}>
@@ -742,7 +742,7 @@ console.log('Datos que se envían al backend:', {
           </div>
 
           <div className="modal-body">
-           
+
             {/* Información importante */}
             <div className="horario-atencion-info">
               <strong>Horario de atención:</strong>
@@ -751,7 +751,7 @@ console.log('Datos que se envían al backend:', {
                 <li>Solo se muestran horas realmente disponibles</li>
                 <li>Las horas ocupadas aparecen deshabilitadas</li>
               </ul>
-            </div>            
+            </div>
             {/* Selección de nueva fecha y hora con DatePicker */}
             <div className="field fecha-seleccion-field">
               <label className="fecha-seleccion-label">
@@ -775,7 +775,7 @@ console.log('Datos que se envían al backend:', {
                 filterDate={filterDate}
                 filterTime={filterTime}
                 placeholderText="Seleccione fecha y hora"
-                disabled={cargandoHoras || !profesionalId}              />
+                disabled={cargandoHoras || !profesionalId} />
               <small className="fecha-ayuda-texto">
                 Solo días laborables (lunes a viernes) y horas disponibles
               </small>
@@ -791,7 +791,7 @@ console.log('Datos que se envían al backend:', {
               <div className="mensaje-error-container">
                 {error}
               </div>
-            )}            
+            )}
 
           </div>
 
@@ -801,7 +801,7 @@ console.log('Datos que se envían al backend:', {
               onClick={() => setRepro({ show: false, citaId: null, citaActual: null })}
               disabled={isLoading}
             >Cancelar
-            </button>            
+            </button>
             <button
               className={`btn-save ${(isLoading || !fechaNueva || cargandoHoras) ? 'btn-reprogramar-disabled' : ''}`}
               onClick={reprogramar}
@@ -822,47 +822,47 @@ console.log('Datos que se envían al backend:', {
         <thead><tr><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
           {(data.citas || []).map(c => (<tr key={c.id_cita}>
-              <td>{new Date(c.fecha_hora).toLocaleString('es-ES')}</td>
-              <td className={`cita-estado-celda ${getEstadoClass(c.estado)}`}>{c.estado}</td>
-              <td className="acciones-col">
-                <EllipsisVertical size={20} className="dropdown-toggle dropdown-icon-cita"
-                  onClick={() => setDrop(drop === c.id_cita ? null : c.id_cita)} />
-                <div className={`acciones-dropdown ${drop === c.id_cita ? 'show' : ''}`}>
-                  {c.estado === 'CONFIRMADA' && <>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_ATENDIDA'); }}>Marcar como atendida</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_NO_ATENDIDA'); }}>Marcar como no atendida</a>
-                    <a href="#!" onClick={e => {
-                      e.preventDefault();
-                      setRepro({
-                        show: true,
-                        citaId: c.id_cita,
-                        citaActual: c
-                      });
-                      setDrop(null);
-                    }}>Reprogramar</a>
-                  </>}
-                  {c.estado === 'PENDIENTE_VALIDACION' && <>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'CONFIRMAR_CITA'); }}>Confirmar cita</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'RECHAZAR_CITA'); }}>Rechazar cita</a>
-                  </>}
-                  {c.estado === 'CAMBIAR' && <>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'ACEPTAR_CAMBIO'); }}>Aceptar cambio</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MANTENER_ESTADO_PREVIO'); }}>Volver al estado previo</a>
-                  </>}
-                  {c.estado === 'CANCELAR' && <>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'ACEPTAR_CANCELACION'); }}>Aceptar cancelación</a>
-                    <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MANTENER_CITA'); }}>Mantener cita</a>
-                  </>}
-                </div>
-              </td>
-            </tr>
+            <td>{new Date(c.fecha_hora).toLocaleString('es-ES')}</td>
+            <td className={`cita-estado-celda ${getEstadoClass(c.estado)}`}>{c.estado}</td>
+            <td className="acciones-col">
+              <EllipsisVertical size={20} className="dropdown-toggle dropdown-icon-cita"
+                onClick={() => setDrop(drop === c.id_cita ? null : c.id_cita)} />
+              <div className={`acciones-dropdown ${drop === c.id_cita ? 'show' : ''}`}>
+                {c.estado === 'CONFIRMADA' && <>
+                  <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_ATENDIDA'); }}>Marcar como atendida</a>
+                  <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MARCAR_NO_ATENDIDA'); }}>Marcar como no atendida</a>
+                  <a href="#!" onClick={e => {
+                    e.preventDefault();
+                    setRepro({
+                      show: true,
+                      citaId: c.id_cita,
+                      citaActual: c
+                    });
+                    setDrop(null);
+                  }}>Reprogramar</a>
+                </>}
+                {c.estado === 'PENDIENTE_VALIDACION' && <>
+                  <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'CONFIRMAR_CITA'); }}>Confirmar cita</a>
+                  <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'RECHAZAR_CITA'); }}>Rechazar cita</a>
+                </>}
+                {c.estado === 'CAMBIAR' && <>
+                  <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'ACEPTAR_CAMBIO'); }}>Aceptar cambio</a>
+                  <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MANTENER_ESTADO_PREVIO'); }}>Volver al estado previo</a>
+                </>}
+                {c.estado === 'CANCELAR' && <>
+                  <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'ACEPTAR_CANCELACION'); }}>Aceptar cancelación</a>
+                  <a href="#!" onClick={e => { e.preventDefault(); doAccion(c.id_cita, 'MANTENER_CITA'); }}>Mantener cita</a>
+                </>}
+              </div>
+            </td>
+          </tr>
           ))}
         </tbody>
       </table>
       <ReprogramarCitaModal />
     </>
   );
-  
+
   return (
     <div className="usuarios-container perfil-paciente-profesional-container">
       <h2 className="usuarios-title">{pPer.nombre} {pPer.apellido1}</h2>

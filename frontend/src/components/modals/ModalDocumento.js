@@ -10,18 +10,19 @@ const isImage = (filePath) => {
 
 export default function ModalDocumento({ doc, onClose, onChange }) {
   const API = process.env.REACT_APP_API_URL;
-  const tk = localStorage.getItem('token');
+  const tk  = localStorage.getItem('token');
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
-  const [editMode, setEditMode] = useState(false);
+  const [isDeleting,       setIsDeleting]       = useState(false);
+  const [error,            setError]            = useState('');
+  const [editMode,         setEditMode]         = useState(false);
   const [diagnosticoFinal, setDiagnosticoFinal] = useState(doc.diagnostico_final || '');
-  const [diagError, setDiagError] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [signedUrl, setSignedUrl] = useState(null);
-  const [imgError, setImgError] = useState(false);
+  const [diagError,        setDiagError]        = useState('');
+  const [isUpdating,       setIsUpdating]       = useState(false);
+  const [signedUrl,        setSignedUrl]        = useState(null);
+  const [imgError,         setImgError]         = useState(false);
 
+  const isDocImage = isImage(doc.ruta);
 
   const fetchSignedUrl = async () => {
     try {
@@ -43,10 +44,10 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
   };
 
   useEffect(() => {
-    if (isImage(doc.ruta)) {
+    if (isDocImage) {
       fetchSignedUrl();
     }
-  }, []);
+  }, []); // solo al montar
 
   const deleteDocument = async () => {
     setIsDeleting(true);
@@ -72,7 +73,6 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
     setIsUpdating(true);
     setDiagError('');
     setError('');
-
     try {
       const res = await axios.put(
         `/api/s3/documentos/${doc.id_documento}`,
@@ -99,8 +99,6 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
     if (url) window.open(url, '_blank');
     else alert('No se pudo obtener la URL del archivo');
   };
-
-  const isDocImage = isImage(doc.ruta);
 
   return (
     <>
@@ -145,9 +143,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
                     value={diagnosticoFinal}
                     onChange={e => {
                       setDiagnosticoFinal(e.target.value);
-                      if (e.target.value.trim()) {
-                        setDiagError('');
-                      }
+                      if (e.target.value.trim()) setDiagError('');
                     }}
                     placeholder="Introduce el diagnóstico final..."
                     rows={4}
@@ -189,25 +185,35 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
             <div className="documento-preview">
               <h4>Vista previa</h4>
 
-              {isDocImage && signedUrl && !imgError ? (
+              {isDocImage && signedUrl && !imgError && (
                 <img
                   src={signedUrl}
                   alt={`Documento ${doc.id_documento}`}
                   className="documento-imagen"
                   onError={() => setImgError(true)}
                 />
-              ) : (
-                <div className="documento-enlace-container">
-                  <a
-                    href="#"
-                    onClick={handleViewFile}
-                    className="documento-enlace-archivo"
-                  >
-                    Ver archivo
-                  </a>
-                </div>
               )}
 
+              <div className="documento-enlace-container">
+                <button
+                  type="button"
+                  className="documento-enlace-archivo"
+                  onClick={handleViewFile}
+                >
+                  Ver archivo
+                </button>
+                {signedUrl && (
+                  <a
+                    href={signedUrl}
+                    download={doc.nombre_archivo || 'documento'}
+                    className="documento-descarga-archivo"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Descargar archivo
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
@@ -226,14 +232,17 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       </div>
 
       {showDeleteModal && (
-        <div className="modal-backdrop modal-backdrop-confirmacion" onClick={() => setShowDeleteModal(false)}>
+        <div
+          className="modal-backdrop modal-backdrop-confirmacion"
+          onClick={() => setShowDeleteModal(false)}
+        >
           <div className="modal modal-confirmacion-eliminar" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Confirmar eliminación</h3>
             </div>
             <div className="modal-body">
               <p>¿Estás seguro de que quieres eliminar este documento?</p>
-              <p><strong>{doc.diagnostico_preliminar || doc.nombre_original}</strong></p>
+              <p><strong>{doc.diagnostico_preliminar || doc.nombre_archivo}</strong></p>
               <p className="texto-advertencia-pequeno">
                 Esta acción no se puede deshacer.
               </p>
