@@ -35,7 +35,10 @@ const services = [
   }
 ];
 
-export default function Servicios({ onReservarCita }) {
+export default function Servicios({ onReservarCita, user }) {
+  const userRole = user?.rol || user?.role || null;
+  const isLoggedIn = !!userRole; 
+
   return (
     <section id="servicios" className="services">
       <h2 className="services__header">Nuestras especialidades</h2>
@@ -48,10 +51,12 @@ export default function Servicios({ onReservarCita }) {
               <p className="service-text__desc">{svc.desc}</p>
             </div>
           </div>
-        ))}
-      </div>
+        ))}      </div>
       <div className="services__cta">
-        <a href="#reserva" className="btn-reserva"  onClick={e => { e.preventDefault(); onReservarCita(); }}>Reserve su cita</a>
+        {/* Solo mostrar "Reserve su cita" si NO está logueado */}
+        {!isLoggedIn && (
+          <a href="#reserva" className="btn-reserva"  onClick={e => { e.preventDefault(); onReservarCita(); }}>Reserve su cita</a>
+        )}
       </div>
     </section>
   );

@@ -333,7 +333,7 @@ export default function App() {
 
       <main className="app-main">
         <Routes>
-          <Route path="/" element={<Inicio onReservarCita={abrirCita} />} />
+          <Route path="/" element={<Inicio onReservarCita={abrirCita} user={user} />} />
           <Route path="/crear-contrasena" element={<CrearContrasena />} />
 
           {/* Páginas legales */}

@@ -5,14 +5,14 @@ import QuienesSomos from '../components/secciones/QuienesSomos';
 import Resenas from '../components/secciones/Resenas';
 import Servicios from '../components/secciones/Servicios';
 
-export default function Inicio({ onReservarCita }) {
+export default function Inicio({ onReservarCita, user }) {
   return (
     <>
       <CookieBanner />
-      <Hero onReservarCita={onReservarCita} />
+      <Hero onReservarCita={onReservarCita} user={user} />
       <QuienesSomos />
       <Resenas />
-      <Servicios onReservarCita={onReservarCita} />
+      <Servicios onReservarCita={onReservarCita} user={user} />
     </>
   );
 }
