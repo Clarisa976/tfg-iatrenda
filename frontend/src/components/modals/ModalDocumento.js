@@ -191,27 +191,26 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
                   className="documento-imagen"
                   onError={() => setImgError(true)}
                 />
-              )}
-
-              <div className="documento-enlace-container">
-                <button
-                  type="button"
-                  className="documento-enlace-archivo"
-                  onClick={handleViewFile}
+              )}              <div className="documento-enlace-container">
+                <a
+                  href={signedUrl || '#'}
+                  download={doc.nombre_archivo || 'documento'}
+                  className="documento-descarga-archivo"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    const url = signedUrl || await fetchSignedUrl();
+                    if (url) {
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = doc.nombre_archivo || 'documento';
+                      link.click();
+                    } else {
+                      alert('No se pudo obtener la URL del archivo');
+                    }
+                  }}
                 >
-                  Ver archivo
-                </button>
-                {signedUrl && (
-                  <a
-                    href={signedUrl}
-                    download={doc.nombre_archivo || 'documento'}
-                    className="documento-descarga-archivo"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Descargar archivo
-                  </a>
-                )}
+                  Descargar archivo
+                </a>
               </div>
             </div>
           </div>

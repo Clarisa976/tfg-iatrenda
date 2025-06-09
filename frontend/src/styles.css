@@ -3674,3 +3674,96 @@ input[type="checkbox"]:checked::after {
     width: 100%;
   }
 }
+
+/* ========================================
+   ESTILOS PARA BOTÓN DE DESCARGA DE DOCUMENTOS
+======================================== */
+
+/* Contenedor del enlace de documento */
+.documento-enlace-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+/* Botón de descarga principal */
+.documento-descarga-archivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #2f80ed, #3498db);
+  color: white !important;
+  text-decoration: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 6px rgba(47, 128, 237, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.documento-descarga-archivo:hover {
+  background: linear-gradient(135deg, #2574d8, #2980b9);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(47, 128, 237, 0.3);
+  text-decoration: none;
+  color: white !important;
+}
+
+.documento-descarga-archivo:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 6px rgba(47, 128, 237, 0.2);
+}
+
+/* Efecto de ondas al hacer clic */
+.documento-descarga-archivo::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: width 0.6s, height 0.6s;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.documento-descarga-archivo:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Icono del botón de descarga */
+.documento-descarga-archivo::after {
+  content: '⬇';
+  font-size: 1.1em;
+  margin-left: 8px;
+  z-index: 1;
+  position: relative;
+}
+
+/* Responsive para móviles */
+@media (max-width: 480px) {
+  .documento-descarga-archivo {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 20px;
+    font-size: 1.1rem;
+  }
+  
+  .documento-enlace-container {
+    padding: 15px;
+    margin-top: 15px;
+  }
+}
