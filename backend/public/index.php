@@ -267,7 +267,7 @@ $app->get('/admin/usuarios', function (Request $req) {
     ], 200);
 });
 
-/* /admin/usuarios/buscar - DEBE IR ANTES QUE {id} */
+/* /admin/usuarios/buscar  */
 $app->get('/admin/usuarios/buscar', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'admin')
@@ -589,7 +589,7 @@ $app->put('/admin/usuarios/{id}', function ($req, $res, $args) {
             error_log("Actualizando datos paciente: " . json_encode($xdat));
             $ok = actualizarOInsertarPaciente($idPersona, $xdat);
         } else {
-            $ok = true; // Para ADMIN no hay datos extra
+            $ok = true; 
         }
 
         return $ok
@@ -633,8 +633,8 @@ $app->get('/admin/logs', function ($req, $res, $args) {
     $year = (int)($params['year'] ?? date('Y'));
     $month = (int)($params['month'] ?? date('m'));
 
-    error_log("=== DEBUG LOGS CSV ===");
-    error_log("Año: $year, Mes: $month");
+   // error_log("=== DEBUG LOGS CSV ===");
+    //error_log("Año: $year, Mes: $month");
     error_log("Usuario: {$val['usuario']['id_persona']} - Rol: {$val['usuario']['rol']}");
 
     try {
@@ -787,8 +787,6 @@ $app->get('/pac/perfil', function (Request $req): Response {
             return jsonResponse(['ok' => false, 'mensaje' => 'No se encontraron datos del paciente'], 404);
         }
 
-
-
         if (isset($data['persona']['fecha_nacimiento'])) {
             $data['persona']['fecha_nacimiento'] = date('Y-m-d', strtotime($data['persona']['fecha_nacimiento']));
         }
@@ -852,12 +850,9 @@ $app->put('/pac/perfil', function (Request $req): Response {
         if (!empty($data['paciente'])) {
             error_log("Paciente ID $idPaciente actualizando datos de paciente: " . json_encode($data['paciente']));
 
-            // FIXED: Proper handling of paciente updates
             actualizarOInsertarPaciente($idPaciente, $data['paciente']);
         }
 
-        // FIXED: Improved handling of tutor data when patients update their own profile
-        // Process tutor data if needed
         if (!empty($data['tutor']) && isset($data['paciente']['tipo_paciente']) && $data['paciente']['tipo_paciente'] !== 'ADULTO') {
             error_log("Paciente ID $idPaciente actualizando datos de tutor: " . json_encode($data['tutor']));
 
@@ -1057,7 +1052,7 @@ $app->post('/pac/citas/{id}/solicitud', function (Request $req, Response $res, a
     }
 });
 
-/* GET /pac/profesional/{id}/dias-bloqueados — obtener días bloqueados para pacientes */
+/* /pac/profesional/{id}/dias-bloqueados — obtener días bloqueados para pacientes */
 $app->get('/pac/profesional/{id}/dias-bloqueados', function (Request $req, Response $res, array $args) {
     $val = verificarTokenUsuario();
     if ($val === false || $val['usuario']['rol'] !== 'PACIENTE') {
@@ -1358,8 +1353,8 @@ $app->post('/pac/solicitar-cita', function (Request $req): Response {
 
 // ---------- RUTAS S3 DOCUMENTOS ----------
 
-// 1. Health-check de S3
-$app->get('/api/s3/health', function (Request $req, Response $res) {
+//  Health-check de S3
+$app->get('/api/s3/health', function (Request $req, Response $res){
     try {
         $c = new App\Controllers\DocumentController();
         return $c->healthCheck($req, $res);
@@ -1372,7 +1367,7 @@ $app->get('/api/s3/health', function (Request $req, Response $res) {
     }
 });
 
-// 2. Subir documento
+//  Subir documento
 $app->post('/api/s3/upload', function (Request $req, Response $res) {
     try {
         $val = verificarTokenUsuario();
@@ -1395,7 +1390,7 @@ $app->post('/api/s3/upload', function (Request $req, Response $res) {
     }
 });
 
-// 3. Obtener URL firmada
+//  Obtener URL firmada
 $app->get('/api/s3/documentos/{idDoc}/url', function (Request $req, Response $res, array $args) {
     try {
         $val = verificarTokenUsuario();
@@ -1414,7 +1409,7 @@ $app->get('/api/s3/documentos/{idDoc}/url', function (Request $req, Response $re
     }
 });
 
-// 4. Eliminar documento
+// Eliminar documento
 $app->delete('/api/s3/documentos/{id}', function (Request $req, Response $res, array $args) {
     try {
         $val = verificarTokenUsuario();
@@ -1425,14 +1420,14 @@ $app->delete('/api/s3/documentos/{id}', function (Request $req, Response $res, a
             return jsonResponse(['ok' => false, 'mensaje' => 'Acceso denegado'], 403);
         }
 
-        error_log('=== ELIMINANDO DOCUMENTO S3 ===');
-        error_log('ID documento: ' . $args['id']);
-        error_log('Usuario: ' . $val['usuario']['id_persona']);
+        //error_log('=== ELIMINANDO DOCUMENTO S3 ===');
+        //error_log('ID documento: ' . $args['id']);
+        //error_log('Usuario: ' . $val['usuario']['id_persona']);
 
         $c = new App\Controllers\DocumentController();
         $response = $c->deleteDocument($req, $res, ['id' => $args['id']]);
 
-        error_log('Respuesta eliminación: ' . $response->getBody());
+       // error_log('Respuesta eliminación: ' . $response->getBody());
         return $response;
     } catch (Exception $e) {
         error_log('S3 Delete error: ' . $e->getMessage());
@@ -1444,7 +1439,7 @@ $app->delete('/api/s3/documentos/{id}', function (Request $req, Response $res, a
     }
 });
 
-// 5. Listar documentos
+//  Listar documentos
 $app->get('/api/s3/documentos', function (Request $req, Response $res) {
     try {
         $val = verificarTokenUsuario();
@@ -1463,7 +1458,7 @@ $app->get('/api/s3/documentos', function (Request $req, Response $res) {
     }
 });
 
-// 6. Obtener tratamientos con documentos
+//Obtener tratamientos con documentos
 $app->get('/api/s3/tratamientos/{paciente_id}', function (Request $req, Response $res, array $args) {
     try {
         $val = verificarTokenUsuario();
@@ -1537,7 +1532,7 @@ $app->put('/historial/{historial_id}/diagnostico', function (Request $req, Respo
     }
 });
 
-/* GET /prof/perfil */
+/* /prof/perfil */
 $app->get('/prof/perfil', function (Request $req, Response $res): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -1562,7 +1557,7 @@ $app->get('/prof/perfil', function (Request $req, Response $res): Response {
     }
 });
 
-/* PUT /prof/perfil */
+/* /prof/perfil */
 $app->put('/prof/perfil', function (Request $req, Response $res): Response {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -1626,6 +1621,7 @@ $app->get('/prof/pacientes/{id}', function (Request $req, Response $res, array $
         return jsonResponse(['ok' => false, 'mensaje' => 'Error al cargar el paciente: ' . $e->getMessage()], 500);
     }
 });
+
 $app->delete('/prof/pacientes/{id}/tareas/{id_tratamiento}', function (Request $request, Response $response, array $args) {
     $val = verificarTokenUsuario();
     if ($val === false) {
@@ -1675,7 +1671,6 @@ $app->put('/prof/pacientes/{id}', function (Request $req, Response $res, array $
             actualizarOInsertarPersona($data['persona'], 'PACIENTE', $idProfesional, $idPaciente);
         }
 
-        // FIXED: Properly handle tutor data when updating patient information
         // Actualizar datos de paciente
         if (!empty($data['paciente'])) {
             error_log("Actualizando datos de paciente ID: $idPaciente por profesional ID: $idProfesional");
@@ -1752,7 +1747,7 @@ $app->get('/prof/pacientes', function (Request $req): Response {
     }
 });
 
-/* API para procesar acciones en citas por profesionales */
+/* procesar acciones en citas por profesionales */
 $app->post('/prof/citas/{id}/accion', function (Request $req, Response $res, array $args): Response {
     try {
         $val = verificarTokenUsuario();
@@ -1792,6 +1787,8 @@ $app->post('/prof/citas/{id}/accion', function (Request $req, Response $res, arr
         return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
     }
 });
+
+
 
 
 /* corre la aplicación */
