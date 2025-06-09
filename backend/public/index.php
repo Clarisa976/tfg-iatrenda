@@ -1789,10 +1789,9 @@ $app->post('/prof/citas/{id}/accion', function (Request $req, Response $res, arr
 });
 
 
-
 // ========== RUTAS DE BACKUP ==========
 
-/* crear backup manual*/
+/* crear backup manual para admins */
 $app->post('/admin/backup/create', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
@@ -1819,7 +1818,7 @@ $app->post('/admin/backup/create', function ($req) {
     }
 });
 
-/* listar backups*/
+/* listar backups para admins */
 $app->get('/admin/backup/list', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
@@ -1845,7 +1844,7 @@ $app->get('/admin/backup/list', function ($req) {
     }
 });
 
-/* limpiar backups antiguos*/
+/* limpiar backups antiguos para admins */
 $app->post('/admin/backup/cleanup', function ($req) {
     $val = verificarTokenUsuario();
     if ($val === false || strtolower($val['usuario']['rol']) !== 'admin') {
@@ -1875,92 +1874,10 @@ $app->post('/admin/backup/cleanup', function ($req) {
     }
 });
 
-/* backup automatico para cron */
-$app->post('/cron/backup', function ($req) {
-    try {
-        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? '';
-        if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
-        }
-        
-        error_log("=== BACKUP INICIADO EN BACKGROUND ===");
-        
-        // Responder inmediatamente
-        return jsonResponse(['ok' => true, 'mensaje' => 'Backup iniciado en background']);
-        
-    } catch (Exception $e) {
-        error_log('Error iniciando backup: ' . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
-    }
-});
+/* ===== RUTAS PARA CRON AUTOMÁTICO ===== */
 
-
-
-
-// Ruta GET para servicios de cron externos que no soportan POST
-$app->get('/cron/backup/execute', function ($req) {
-    try {
-        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? $req->getQueryParams()['token'] ?? '';
-        if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
-        }
-        
-        error_log("=== BACKUP INICIADO VIA GET (cron-job.org) ===");
-        
-        require_once __DIR__ . '/../src/Services/BackupService.php';
-        $backupService = new BackupService();
-        
-        $backupResult = $backupService->createFullBackup();
-        $cleanupResult = $backupService->deleteOldBackups(10);
-        
-        error_log("Backup completado exitosamente via GET");
-        
-        return jsonResponse([
-            'ok' => true,
-            'mensaje' => 'Backup completado via GET',
-            'backup' => $backupResult,
-            'cleanup' => $cleanupResult
-        ]);
-        
-    } catch (Exception $e) {
-        error_log('Error en backup via GET: ' . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
-    }
-});
-
-// Ruta POST existente
-$app->post('/cron/backup/execute', function ($req) {
-    try {
-        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? '';
-        if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
-            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
-        }
-        
-        error_log("=== BACKUP INICIADO VIA POST ===");
-        
-        require_once __DIR__ . '/../src/Services/BackupService.php';
-        $backupService = new BackupService();
-        
-        $backupResult = $backupService->createFullBackup();
-        $cleanupResult = $backupService->deleteOldBackups(10);
-        
-        error_log("Backup completado exitosamente via POST");
-        
-        return jsonResponse([
-            'ok' => true,
-            'mensaje' => 'Backup completado via POST',
-            'backup' => $backupResult,
-            'cleanup' => $cleanupResult
-        ]);
-        
-    } catch (Exception $e) {
-        error_log('Error en backup via POST: ' . $e->getMessage());
-        return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
-    }
-});
-
-// Ruta combinada que acepta tanto GET como POST
-$app->map(['GET', 'POST'], '/cron/backup', function ($req) {
+// Ruta única que acepta GET y POST para máxima compatibilidad
+$app->map(['GET', 'POST'], '/cron/backup/run', function ($req) {
     try {
         // Obtener token desde header o query parameter
         $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? 
@@ -1972,7 +1889,7 @@ $app->map(['GET', 'POST'], '/cron/backup', function ($req) {
         }
         
         $method = $req->getMethod();
-        error_log("=== BACKUP INICIADO VIA {$method} ===");
+        error_log("=== BACKUP AUTOMÁTICO INICIADO VIA {$method} ===");
         
         require_once __DIR__ . '/../src/Services/BackupService.php';
         $backupService = new BackupService();
@@ -1980,20 +1897,56 @@ $app->map(['GET', 'POST'], '/cron/backup', function ($req) {
         $backupResult = $backupService->createFullBackup();
         $cleanupResult = $backupService->deleteOldBackups(10);
         
-        error_log("Backup completado exitosamente via {$method}");
+        error_log("Backup automático completado exitosamente via {$method}");
         
         return jsonResponse([
             'ok' => true,
             'mensaje' => "Backup completado via {$method}",
             'backup' => $backupResult,
             'cleanup' => $cleanupResult,
-            'method' => $method
+            'method' => $method,
+            'timestamp' => date('c')
         ]);
         
     } catch (Exception $e) {
-        error_log('Error en backup: ' . $e->getMessage());
+        error_log('Error en backup automático: ' . $e->getMessage());
         return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
     }
 });
+
+// Ruta alternativa más simple para cron-job.org
+$app->get('/backup/auto/{token}', function ($req, $res, $args) {
+    try {
+        $token = $args['token'] ?? '';
+        
+        if ($token !== $_ENV['CRON_SECRET_TOKEN']) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
+        }
+        
+        error_log("=== BACKUP AUTOMÁTICO SIMPLE INICIADO ===");
+        
+        require_once __DIR__ . '/../src/Services/BackupService.php';
+        $backupService = new BackupService();
+        
+        $backupResult = $backupService->createFullBackup();
+        $cleanupResult = $backupService->deleteOldBackups(10);
+        
+        error_log("Backup automático simple completado");
+        
+        return jsonResponse([
+            'ok' => true,
+            'mensaje' => 'Backup automático completado',
+            'backup' => $backupResult,
+            'cleanup' => $cleanupResult,
+            'timestamp' => date('c')
+        ]);
+        
+    } catch (Exception $e) {
+        error_log('Error en backup automático: ' . $e->getMessage());
+        return jsonResponse(['ok' => false, 'mensaje' => $e->getMessage()], 500);
+    }
+});
+
+
 /* corre la aplicación */
 $app->run();
