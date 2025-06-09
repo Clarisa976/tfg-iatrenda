@@ -762,56 +762,61 @@ class DocumentController {
     }
 
     /* Obtener documentos de la base de datos */
-    private function getDocumentsFromDatabase($historialId, $tratamientoId, $pacienteId = null) {
-        try {
-            $baseDatos = conectar();
-            
-            $conditions = [];
-            $params = [];
-            
-            if ($historialId) {
-                $conditions[] = "dc.id_historial = ?";
-                $params[] = $historialId;
-            }
-            
-            if ($tratamientoId) {
-                $conditions[] = "dc.id_tratamiento = ?";
-                $params[] = $tratamientoId;
-            }
-            
-            if ($pacienteId) {
-                $conditions[] = "h.id_paciente = ?";
-                $params[] = $pacienteId;
-            }
-            
-            if (empty($conditions)) {
-                return [];
-            }
-            
-            $whereClause = implode(' OR ', $conditions);
-            
-            $sql = "SELECT dc.id_documento, 
-                           COALESCE(dc.nombre_archivo, 'documento') as nombre_original,
-                           dc.tipo, 
-                           dc.fecha_subida,
-                           dc.ruta,
-                           dc.id_tratamiento,
-                           (p.nombre || ' ' || p.apellido1) as profesional_nombre
-                    FROM documento_clinico dc
-                    LEFT JOIN historial_clinico h ON dc.id_historial = h.id_historial
-                    LEFT JOIN persona p ON dc.id_profesional = p.id_persona
-                    WHERE {$whereClause}
-                    ORDER BY dc.fecha_subida DESC";
-            
-            $stmt = $baseDatos->prepare($sql);
-            $stmt->execute($params);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-        } catch (\Exception $e) {
-            error_log('Error getting S3 documents from DB: ' . $e->getMessage());
+ private function getDocumentsFromDatabase($historialId, $tratamientoId, $pacienteId = null) {
+    try {
+        $baseDatos = conectar();
+        
+        $conditions = [];
+        $params     = [];
+        
+        if ($historialId) {
+            $conditions[] = "dc.id_historial = ?";
+            $params[]     = $historialId;
+        }
+        
+        if ($tratamientoId) {
+            $conditions[] = "dc.id_tratamiento = ?";
+            $params[]     = $tratamientoId;
+        }
+        
+        if ($pacienteId) {
+            $conditions[] = "h.id_paciente = ?";
+            $params[]     = $pacienteId;
+        }
+        
+        if (empty($conditions)) {
             return [];
         }
+        
+        $whereClause = implode(' OR ', $conditions);
+        
+        $sql = "
+            SELECT
+              dc.id_documento,
+              COALESCE(dc.nombre_archivo, 'documento')  AS nombre_original,
+              dc.tipo,
+              dc.fecha_subida,
+              dc.ruta,
+              dc.id_tratamiento,
+              (p.nombre || ' ' || p.apellido1)           AS profesional_nombre,
+              h.diagnostico_preliminar,
+              h.diagnostico_final
+            FROM documento_clinico dc
+            LEFT JOIN historial_clinico h ON dc.id_historial = h.id_historial
+            LEFT JOIN persona p         ON dc.id_profesional = p.id_persona
+            WHERE {$whereClause}
+            ORDER BY dc.fecha_subida DESC
+        ";
+        
+        $stmt = $baseDatos->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } catch (\Exception $e) {
+        error_log('Error getting S3 documents from DB: ' . $e->getMessage());
+        return [];
     }
+}
 
     /* Eliminar documento de la base de datos */
     private function deleteDocumentFromDatabase($documentId) {
