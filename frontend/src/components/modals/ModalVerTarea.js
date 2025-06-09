@@ -80,9 +80,8 @@ const downloadDocument = async (documento) => {
               
               {tarea.documentos.map((documento, index) => {
                 const isDocImage = isImage(documento.tipo);
-                
-                // Usar URL de S3 si está disponible, sino mostrar solo descarga
-                const imageUrl = documento.url_descarga && documento.url_temporal ? documento.url_descarga : null;                return (
+                  // Usar URL de S3 si está disponible, sino usar URL temporal como fallback
+                const imageUrl = documento.url_descarga || documento.url_temporal;return (
                   <div key={documento.id_documento || index} className="tarea-documento-item">
                     {isDocImage ? (
                       <div className="imagen-container-center">
