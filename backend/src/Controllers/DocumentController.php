@@ -705,51 +705,42 @@ class DocumentController
         ]);
     }
 
+public function updateDocument($request, $response, $args) {
+    try {
+        $id     = (int)$args['id'];
+        $body   = (array)$request->getParsedBody();
+        $dfinal = isset($body['diagnostico_final']) ? trim($body['diagnostico_final']) : null;
 
-    public function updateDocument($request, $response, $args)
-    {
-        try {
-            $documentId = $args['id'];
-            $data       = (array)$request->getParsedBody();
-
-            // Obtenemos el documento existente
-            $document = $this->getDocumentFromDatabase($documentId);
-            if (!$document) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'Documento no encontrado'
-                ], 404);
-            }
-
-            // Sacamos el historial al que pertenece
-            $historialId = $document['id_historial'];
-
-            // Iniciamos transacción
-            $db = conectar();
-            $db->beginTransaction();
-
-            // Actualizamos los diagnósticos en historial_clinico
-            $this->updateHistorialDiagnosticos($historialId, $data, $db);
-
-            // Confirmamos
-            $db->commit();
-
-            return $this->jsonResponse($response, [
-                'ok'      => true,
-                'mensaje' => 'Diagnóstico final actualizado correctamente'
-            ]);
-        } catch (\Exception $e) {
-            error_log('Error updating document: ' . $e->getMessage());
-            // Si algo falló, rollback
-            if (isset($db) && $db->inTransaction()) {
-                $db->rollBack();
-            }
+        // 1. Verifico que existe
+        $doc = $this->getDocumentFromDatabase($id);
+        if (!$doc) {
             return $this->jsonResponse($response, [
                 'ok'      => false,
-                'mensaje' => 'Error interno del servidor'
-            ], 500);
+                'mensaje' => 'Documento no encontrado'
+            ], 404);
         }
+
+        // 2. Actualizo solo la columna diagnostico_final
+        $db   = conectar();
+        $sql  = "UPDATE documento_clinico
+                 SET diagnostico_final = ?
+                 WHERE id_documento = ?";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$dfinal, $id]);
+
+        return $this->jsonResponse($response, [
+            'ok'      => true,
+            'mensaje' => 'Diagnóstico final guardado correctamente'
+        ]);
+    } catch (\Exception $e) {
+        error_log("Error in updateDocument: ".$e->getMessage());
+        return $this->jsonResponse($response, [
+            'ok'      => false,
+            'mensaje' => 'Error interno del servidor'
+        ], 500);
     }
+}
+
 
 
 

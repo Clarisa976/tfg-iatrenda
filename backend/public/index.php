@@ -1341,14 +1341,16 @@ $app->get('/api/s3/health', function (Request $request, Response $response) {
     return $controller->healthCheck($request, $response);
 });
 // Obtener URL firmada de un documento
-$app->get('/api/s3/documentos/{idDoc}/url', function (Request $request, Response $response, array $args) {
+$app->put('/api/s3/documentos/{id}', function($req,$res,$args){
     $val = verificarTokenUsuario();
-    if ($val === false) {
-        return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    if(!$val) return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'],401);
+
+    if(!in_array(strtolower($val['usuario']['rol']), ['profesional','admin'])) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Acceso denegado'],403);
     }
-    // Permitir que el propietario lo vea o rol admin/profesional
-    $controller = new App\Controllers\DocumentController();
-    return $controller->getDocumentUrl($request, $response, $args);
+
+    $ctrl = new \App\Controllers\DocumentController();
+    return $ctrl->updateDocument($req,$res,$args);
 });
 
 
