@@ -4,7 +4,7 @@ import { setHours, setMinutes, format } from 'date-fns';
 import es from 'date-fns/locale/es';
 registerLocale('es', es);
 
-const HORA_INICIO = 9;
+const HORA_INICIO = 10;
 const HORA_FIN = 17;
 
 export default function ReservarCitaModal({ onClose, onSuccess, onError }) {

@@ -996,24 +996,38 @@ $app->get('/pac/citas', function (Request $req): Response {
 /* procesa solicitudes de cambio/cancelación */
 $app->post('/pac/citas/{id}/solicitud', function (Request $req, Response $res, array $args): Response {
     try {
-
+        error_log("=== INICIO /pac/citas/{id}/solicitud ===");
+        error_log("Headers: " . json_encode($req->getHeaders()));
+        error_log("Body raw: " . $req->getBody()->getContents());
+        $req->getBody()->rewind(); // Reset stream after reading
+        
         $val = verificarTokenUsuario();
         if ($val === false) {
+            error_log("Token inválido");
             return jsonResponse(['ok' => false, 'mensaje' => 'No autorizado'], 401);
         }
 
         if ($val['usuario']['rol'] !== 'PACIENTE') {
+            error_log("Rol inválido: " . $val['usuario']['rol']);
             return jsonResponse(['ok' => false, 'mensaje' => 'Acceso denegado'], 403);
         }
 
         $idPaciente = (int)$val['usuario']['id_persona'];
         $idCita = (int)$args['id'];
         $body = $req->getParsedBody();
+        
+        error_log("ID Paciente: $idPaciente");
+        error_log("ID Cita: $idCita");
+        error_log("Body parsed: " . json_encode($body));
 
         $accion = strtoupper(trim($body['accion'] ?? ''));
         $nuevaFecha = $body['nueva_fecha'] ?? null;
+        
+        error_log("Acción: '$accion'");
+        error_log("Nueva fecha: '$nuevaFecha'");
 
         if (!in_array($accion, ['CAMBIAR', 'CANCELAR'])) {
+            error_log("Acción no válida: '$accion'");
             return jsonResponse(['ok' => false, 'mensaje' => 'Acción no válida'], 400);
         }
 
@@ -1021,12 +1035,14 @@ $app->post('/pac/citas/{id}/solicitud', function (Request $req, Response $res, a
         $resultado = procesarSolicitudCitaPaciente($idCita, $accion, $idPaciente, $nuevaFecha);
 
         if ($resultado['ok']) {
+            error_log("Solicitud procesada exitosamente");
             return jsonResponse([
                 'ok' => true,
                 'mensaje' => $resultado['mensaje'],
                 'token' => $val['token']
             ]);
         } else {
+            error_log("Error procesando solicitud: " . $resultado['mensaje']);
             return jsonResponse([
                 'ok' => false,
                 'mensaje' => $resultado['mensaje']

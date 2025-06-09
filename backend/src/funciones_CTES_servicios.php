@@ -2527,6 +2527,9 @@ function getCitasPaciente(int $idPaciente): array
 /* Procesa una solicitud de cambio o cancelación de cita por parte del paciente. */
 function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPaciente, ?string $nuevaFecha = null)
 {
+    error_log("=== INICIO procesarSolicitudCitaPaciente ===");
+    error_log("ID Cita: $idCita, Acción: '$accion', ID Paciente: $idPaciente, Nueva fecha: '$nuevaFecha'");
+    
     $baseDatos = conectar();
 
     try {
@@ -2541,37 +2544,43 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
         $cita = $consulta->fetch(PDO::FETCH_ASSOC);
 
         if (!$cita) {
+            error_log("Cita no encontrada - ID: $idCita, Paciente: $idPaciente");
             throw new Exception('Cita no encontrada');
         }
+        
+        error_log("Cita encontrada - Estado actual: " . $cita['estado']);
 
         // Verificar que la cita se puede modificar
         if (in_array($cita['estado'], ['CANCELADA', 'ATENDIDA'])) {
+            error_log("Cita no modificable - Estado: " . $cita['estado']);
             throw new Exception('Esta cita no se puede modificar');
         }
 
         $nuevoEstado = '';
-        $mensaje = '';
-
-        switch (strtoupper($accion)) {
+        $mensaje = '';        switch (strtoupper($accion)) {
             case 'CANCELAR':
+                error_log("Procesando cancelación");
                 $nuevoEstado = 'CANCELAR';
                 $mensaje = 'Solicitud de cancelación enviada correctamente';
                 break;
 
             case 'CAMBIAR':
+                error_log("Procesando cambio - Nueva fecha: '$nuevaFecha'");
                 if (!$nuevaFecha) {
+                    error_log("Nueva fecha faltante para cambio");
                     throw new Exception('Se requiere una nueva fecha para el cambio');
                 }
 
                 // Validar la nueva fecha
+                error_log("Validando nueva fecha: $nuevaFecha");
                 $fechaObj = new DateTime($nuevaFecha);
                 $ahora = new DateTime();
 
                 if ($fechaObj <= $ahora) {
+                    error_log("Nueva fecha es en el pasado");
                     throw new Exception('La nueva fecha debe ser futura');
-                }
-
-                // Verificar disponibilidad (simplificado)
+                }                // Verificar disponibilidad (simplificado)
+                error_log("Verificando disponibilidad para profesional {$cita['id_profesional']} en fecha $nuevaFecha");
                 $consultaDisponibilidad = $baseDatos->prepare("
                     SELECT COUNT(*) FROM cita 
                     WHERE id_profesional = ? 
@@ -2580,13 +2589,19 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
                     AND id_cita != ?
                 ");
                 $consultaDisponibilidad->execute([$cita['id_profesional'], $nuevaFecha, $idCita]);
+                $citasConflicto = $consultaDisponibilidad->fetchColumn();
+                
+                error_log("Citas en conflicto encontradas: $citasConflicto");
 
-                if ($consultaDisponibilidad->fetchColumn() > 0) {
+                if ($citasConflicto > 0) {
+                    error_log("Fecha no disponible - ya existe cita");
                     throw new Exception('La fecha seleccionada no está disponible');
                 }
 
                 $nuevoEstado = 'CAMBIAR';
                 $mensaje = 'Solicitud de cambio enviada correctamente';
+                
+                error_log("Cambio procesado exitosamente - nuevo estado: $nuevoEstado");
 
                 // Actualizar la fecha en notas privadas para referencia
                 $baseDatos->prepare("
@@ -2602,9 +2617,8 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
 
             default:
                 throw new Exception('Acción no válida');
-        }
-
-        // Actualizar el estado de la cita
+        }        // Actualizar el estado de la cita
+        error_log("Actualizando estado de cita a: $nuevoEstado");
         $consulta = $baseDatos->prepare("
             UPDATE cita 
             SET estado = ? 
@@ -2613,6 +2627,13 @@ function procesarSolicitudCitaPaciente(int $idCita, string $accion, int $idPacie
         $consulta->execute([$nuevoEstado, $idCita]);
 
         $baseDatos->commit();
+        error_log("Solicitud procesada exitosamente");
+        
+        return [
+            'ok' => true,
+            'mensaje' => $mensaje
+        ];
+        
     } catch (Exception $e) {
         $baseDatos->rollBack();
         error_log("Error procesando solicitud de cita: " . $e->getMessage());
