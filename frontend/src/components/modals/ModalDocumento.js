@@ -10,17 +10,17 @@ const isImage = (filePath) => {
 
 export default function ModalDocumento({ doc, onClose, onChange }) {
   const API = process.env.REACT_APP_API_URL;
-  const tk = localStorage.getItem('token');
+  const tk  = localStorage.getItem('token');
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
-  const [editMode, setEditMode] = useState(false);
+  const [isDeleting,       setIsDeleting]       = useState(false);
+  const [error,            setError]            = useState('');
+  const [editMode,         setEditMode]         = useState(false);
   const [diagnosticoFinal, setDiagnosticoFinal] = useState(doc.diagnostico_final || '');
-  const [diagError, setDiagError] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [signedUrl, setSignedUrl] = useState(null);
-  const [imgError, setImgError] = useState(false);
+  const [diagError,        setDiagError]        = useState('');
+  const [isUpdating,       setIsUpdating]       = useState(false);
+  const [signedUrl,        setSignedUrl]        = useState(null);
+  const [imgError,         setImgError]         = useState(false);
 
   const isDocImage = isImage(doc.ruta);
 
@@ -43,9 +43,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
   }, [API, doc.id_documento, tk]);
 
   useEffect(() => {
-    if (isDocImage) {
-      fetchSignedUrl();
-    }
+    if (isDocImage) fetchSignedUrl();
   }, [isDocImage, fetchSignedUrl]);
 
   const deleteDocument = async () => {
@@ -88,7 +86,8 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       console.error('Error updating diagnóstico:', e);
       setDiagError('Error al actualizar el diagnóstico. Inténtalo de nuevo.');
     } finally {
-      setIsUpdating(false);    }
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -174,36 +173,26 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
             </div>
 
             <div className="documento-preview">
-              <h4>Vista previa</h4>
-
-              {isDocImage && signedUrl && !imgError && (
-                <img
-                  src={signedUrl}
-                  alt={`Documento ${doc.id_documento}`}
-                  className="documento-imagen"
-                  onError={() => setImgError(true)}
-                />
-              )}              <div className="documento-enlace-container">
+              <h4>Descargar fichero</h4>
+              {signedUrl ? (
                 <a
-                  href={signedUrl || '#'}
+                  href={signedUrl}
                   download={doc.nombre_archivo || 'documento'}
                   className="documento-descarga-archivo"
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    const url = signedUrl || await fetchSignedUrl();
-                    if (url) {
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = doc.nombre_archivo || 'documento';
-                      link.click();
-                    } else {
-                      alert('No se pudo obtener la URL del archivo');
-                    }
-                  }}
+                  target="_blank"
+                  rel="noreferrer"
                 >
                   Descargar archivo
                 </a>
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  className="documento-descarga-archivo loading"
+                  onClick={fetchSignedUrl}
+                >
+                  Cargando…
+                </button>
+              )}
             </div>
           </div>
 
