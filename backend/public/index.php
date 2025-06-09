@@ -1966,5 +1966,184 @@ $app->post('/test/pgdump', function ($req) {
         return jsonResponse(['ok' => false, 'error' => $e->getMessage()], 500);
     }
 });
+
+// Agregar esta ruta a tu archivo de rutas para diagnosticar mejor
+
+$app->post('/test/pgdump-debug', function ($req) {
+    try {
+        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? '';
+        if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
+        }
+        
+        error_log("=== DEBUG PG_DUMP ===");
+        
+        // 1. Verificar variables de entorno
+        $dbVars = [
+            'DB_HOST' => $_ENV['DB_HOST'] ?? 'NO_DEFINIDA',
+            'DB_USER' => $_ENV['DB_USER'] ?? 'NO_DEFINIDA', 
+            'DB_NAME' => $_ENV['DB_NAME'] ?? 'NO_DEFINIDA',
+            'DB_PORT' => $_ENV['DB_PORT'] ?? 'NO_DEFINIDA'
+        ];
+        
+        error_log("Variables DB: " . json_encode($dbVars));
+        
+        // 2. Verificar pg_dump
+        $output = [];
+        exec('which pg_dump 2>&1', $output, $returnCode);
+        $pgDumpPath = $returnCode === 0 ? $output[0] : 'NO_ENCONTRADO';
+        error_log("pg_dump path: {$pgDumpPath}");
+        
+        if ($pgDumpPath === 'NO_ENCONTRADO') {
+            return jsonResponse([
+                'ok' => false,
+                'error' => 'pg_dump no encontrado',
+                'db_vars' => $dbVars
+            ]);
+        }
+        
+        // 3. Verificar versión de pg_dump
+        $versionOutput = [];
+        exec('pg_dump --version 2>&1', $versionOutput);
+        error_log("pg_dump version: " . implode(' ', $versionOutput));
+        
+        // 4. Probar conexión simple con psql si está disponible
+        $host = $_ENV['DB_HOST'];
+        $user = $_ENV['DB_USER'];
+        $pass = $_ENV['DB_PASS'];
+        $name = $_ENV['DB_NAME'];
+        $port = $_ENV['DB_PORT'];
+        
+        // 5. Construir URL de conexión
+        $databaseUrl = "postgresql://{$user}:{$pass}@{$host}:{$port}/{$name}?sslmode=require";
+        error_log("Database URL (sin password): postgresql://{$user}:***@{$host}:{$port}/{$name}?sslmode=require");
+        
+        // 6. Probar con diferentes comandos de pg_dump
+        $fileName = "debug_backup_" . date('Y-m-d-H-i-s') . ".sql";
+        $filePath = "/tmp/" . $fileName;
+        
+        // Comando 1: Solo listado de tablas
+        error_log("=== Probando listado de tablas ===");
+        $listCommand = "pg_dump \"$databaseUrl\" --schema-only --table='*' 2>&1";
+        $listOutput = [];
+        $listReturn = 0;
+        exec($listCommand, $listOutput, $listReturn);
+        error_log("List tables return code: {$listReturn}");
+        error_log("List tables output: " . implode("\n", array_slice($listOutput, 0, 10))); // Solo primeras 10 líneas
+        
+        // Comando 2: Dump mínimo
+        error_log("=== Probando dump mínimo ===");
+        $minCommand = "pg_dump \"$databaseUrl\" --no-owner --no-privileges --schema-only > \"$filePath\" 2>&1";
+        $minOutput = [];
+        $minReturn = 0;
+        exec($minCommand, $minOutput, $minReturn);
+        
+        $fileExists = file_exists($filePath);
+        $fileSize = $fileExists ? filesize($filePath) : 0;
+        
+        error_log("Min dump return code: {$minReturn}");
+        error_log("Min dump output: " . implode("\n", array_slice($minOutput, 0, 5)));
+        error_log("File exists: " . ($fileExists ? 'YES' : 'NO'));
+        error_log("File size: {$fileSize}");
+        
+        // Leer contenido del archivo si es pequeño
+        $fileContent = '';
+        if ($fileExists && $fileSize > 0 && $fileSize < 1000) {
+            $fileContent = file_get_contents($filePath);
+            error_log("File content: " . $fileContent);
+        }
+        
+        // Limpiar archivo
+        if ($fileExists) {
+            unlink($filePath);
+        }
+        
+        // 7. Probar conexión directa con PDO
+        error_log("=== Probando conexión PDO ===");
+        try {
+            $dsn = "pgsql:host={$host};port={$port};dbname={$name};sslmode=require";
+            $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            
+            // Obtener lista de tablas
+            $stmt = $pdo->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+            $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            error_log("Tables found via PDO: " . implode(', ', $tables));
+            
+            $pdoConnection = 'OK';
+            $tableCount = count($tables);
+        } catch (Exception $e) {
+            $pdoConnection = 'ERROR: ' . $e->getMessage();
+            $tableCount = 0;
+            $tables = [];
+            error_log("PDO connection failed: " . $e->getMessage());
+        }
+        
+        return jsonResponse([
+            'ok' => true,
+            'debug_info' => [
+                'db_vars' => $dbVars,
+                'pg_dump_path' => $pgDumpPath,
+                'pg_dump_version' => implode(' ', $versionOutput),
+                'list_command_return' => $listReturn,
+                'list_command_output' => array_slice($listOutput, 0, 5),
+                'min_dump_return' => $minReturn,
+                'min_dump_output' => array_slice($minOutput, 0, 5),
+                'file_size' => $fileSize,
+                'file_content' => $fileContent,
+                'pdo_connection' => $pdoConnection,
+                'tables_found' => $tables,
+                'table_count' => $tableCount
+            ]
+        ]);
+        
+    } catch (Exception $e) {
+        error_log('Error en debug: ' . $e->getMessage());
+        return jsonResponse(['ok' => false, 'error' => $e->getMessage()], 500);
+    }
+});
+
+// Ruta simplificada para probar solo la conexión
+$app->post('/test/connection', function ($req) {
+    try {
+        $cronToken = $_SERVER['HTTP_X_CRON_TOKEN'] ?? '';
+        if ($cronToken !== $_ENV['CRON_SECRET_TOKEN']) {
+            return jsonResponse(['ok' => false, 'mensaje' => 'Token invalido'], 401);
+        }
+        
+        $host = $_ENV['DB_HOST'];
+        $user = $_ENV['DB_USER'];
+        $pass = $_ENV['DB_PASS'];
+        $name = $_ENV['DB_NAME'];
+        $port = $_ENV['DB_PORT'];
+        
+        $dsn = "pgsql:host={$host};port={$port};dbname={$name};sslmode=require";
+        $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        
+        // Información básica de la BD
+        $version = $pdo->query("SELECT version()")->fetchColumn();
+        $tableCount = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")->fetchColumn();
+        $tables = $pdo->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename")->fetchAll(PDO::FETCH_COLUMN);
+        
+        return jsonResponse([
+            'ok' => true,
+            'connection' => 'success',
+            'database_version' => substr($version, 0, 100),
+            'table_count' => $tableCount,
+            'tables' => $tables,
+            'host' => $host,
+            'port' => $port,
+            'database' => $name
+        ]);
+        
+    } catch (Exception $e) {
+        return jsonResponse([
+            'ok' => false,
+            'connection' => 'failed',
+            'error' => $e->getMessage()
+        ]);
+    }
+});
+
+
 /* corre la aplicación */
 $app->run();
