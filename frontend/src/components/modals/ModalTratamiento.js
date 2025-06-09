@@ -9,7 +9,14 @@ const isImage = (path) => {
   return extensions.some(ext => path.toLowerCase().endsWith(ext));
 };
 
-const getFileUrl = (path) => {
+const getFileUrl = (documento) => {
+  // Si tiene URL de S3, usarla
+  if (documento.url_descarga && documento.url_temporal) {
+    return documento.url_descarga;
+  }
+  
+  // Fallback a la URL antigua (no debería pasar)
+  const path = documento.ruta;
   if (!path) return '';
   if (path.startsWith('http')) return path;
 
@@ -28,7 +35,6 @@ const getFileUrl = (path) => {
   const finalUrl = `${baseUrl}/uploads/${fileName}?t=${Date.now()}`;
   return finalUrl;
 };
-
 export default function ModalTratamiento({ idPac, treat, onClose, onChange }) {
   const tk = localStorage.getItem('token');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
