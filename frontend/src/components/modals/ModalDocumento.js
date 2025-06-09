@@ -69,7 +69,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
     }
   };
 
-  const docFileUrl = `${process.env.REACT_APP_API_URL}/${doc.ruta}`;
+  const docFileUrl = `${process.env.REACT_APP_API_URL}/api/s3/download/${doc.id_documento}`;
   const isDocImage = isImage(doc.ruta);
 
   return (
@@ -145,7 +145,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
                     src={docFileUrl}
                     alt={`Documento ${doc.id_documento}`}
                     className="documento-imagen"
-                    onError={e => {
+                    onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.nextSibling.style.display = 'block';
                     }}
@@ -157,7 +157,12 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
                 </div>
               ) : (
                 <div className="documento-enlace-container">
-                  <a href={docFileUrl} target="_blank" rel="noreferrer" className="documento-enlace-archivo">
+                  <a
+                    href={docFileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="documento-enlace-archivo"
+                  >
                     Ver archivo
                   </a>
                 </div>
