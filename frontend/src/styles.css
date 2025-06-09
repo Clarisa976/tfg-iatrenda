@@ -2626,23 +2626,17 @@ input[type="checkbox"]:checked::after {
   .nav-links a:not(.btn-reserva) {
     text-decoration: underline;
   }
-
-  /* User dropdown desktop */
+  /* User dropdown desktop - DISABLED, usar sidebar instead */
   .user-dropdown {
-    display: block;
-    position: absolute;
-    right: 0;
-    top: 100%;
-    width: 200px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  /* Ocultar sidebar en desktop */
-  .sidebar {
     display: none !important;
   }
 
-  .overlay.show {
+  /* Ocultar sidebar en desktop by default, shown when .show class */
+  .sidebar {
+    display: none;
+  }
+
+  .overlay {
     display: none;
   }
 }
@@ -3266,7 +3260,7 @@ input[type="checkbox"]:checked::after {
 
 /* Comportamiento responsive correcto para el menú de usuario */
 
-/* Por defecto: dropdown oculto, controlado por responsive */
+/* Por defecto: ambos ocultos, controlado por responsive */
 .user-dropdown {
   display: none;
 }
@@ -3276,34 +3270,34 @@ input[type="checkbox"]:checked::after {
   display: none;
 }
 
-/* MÓVIL (≤767px): Solo sidebar cuando userOpen = true */
+/* MÓVIL (≤767px): Solo dropdown cuando userOpen = true */
 @media (max-width: 767px) {
-  /* Ocultar dropdown en móvil */
+  /* Mostrar dropdown en móvil */
+  .user-dropdown {
+    display: flex !important;
+    flex-direction: column;
+  }
+  
+  /* Ocultar sidebar en móvil */
+  .overlay,
+  .sidebar {
+    display: none !important;
+  }
+}
+
+/* TABLET Y DESKTOP (≥768px): Solo sidebar cuando userOpen = true */
+@media (min-width: 768px) {
+  /* Ocultar dropdown en desktop */
   .user-dropdown {
     display: none !important;
   }
   
-  /* Mostrar overlay y sidebar cuando están activos */
+  /* Mostrar sidebar y overlay cuando están activos */
   .overlay.show {
     display: block;
   }
   
   .sidebar.show {
     display: block;
-  }
-}
-
-/* TABLET Y DESKTOP (≥768px): Solo dropdown cuando userOpen = true */
-@media (min-width: 768px) {
-  /* Mostrar dropdown en desktop */
-  .user-dropdown {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  /* Ocultar sidebar en desktop */
-  .overlay,
-  .sidebar {
-    display: none !important;
   }
 }
