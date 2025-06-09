@@ -3098,26 +3098,36 @@ input[type="checkbox"]:checked::after {
     right: 5px;
 }
 
-/* ========================================
-   CORRECCIONES DE POSICIONAMIENTO UX
-======================================== */
 
 /* Password field con ícono del ojo - Login Modal */
 .password-field {
   position: relative;
-  display: flex;
-  align-items: center;
+  display: block;
+  width: 100%;
 }
 
 .password-field input {
   width: 100%;
-  padding-right: 45px; /* Espacio para el botón del ojo */
+  padding: 12px 45px 12px 12px !important; /* Espacio para el botón del ojo */
   box-sizing: border-box;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.password-field input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.password-field input.invalid {
+  border-color: var(--red);
 }
 
 .password-toggle {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -3127,13 +3137,15 @@ input[type="checkbox"]:checked::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 5px;
-  z-index: 1;
+  padding: 8px;
+  z-index: 10;
   transition: color 0.2s ease;
+  border-radius: 4px;
 }
 
 .password-toggle:hover {
   color: var(--blue);
+  background-color: rgba(47, 128, 237, 0.1);
 }
 
 .password-toggle:focus {
@@ -3142,7 +3154,7 @@ input[type="checkbox"]:checked::after {
   border-radius: 4px;
 }
 
-/* User dropdown menu - Header */
+/* User dropdown menu - Solo móvil */
 .user-dropdown {
   position: absolute;
   top: 100%;
@@ -3155,6 +3167,8 @@ input[type="checkbox"]:checked::after {
   min-width: 200px;
   padding: 8px 0;
   margin-top: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
 .user-dropdown a {
@@ -3164,10 +3178,20 @@ input[type="checkbox"]:checked::after {
   text-decoration: none;
   transition: all 0.2s ease;
   border-bottom: 1px solid #f5f5f5;
+  white-space: nowrap;
 }
 
 .user-dropdown a:last-child {
   border-bottom: none;
+  color: var(--red);
+  font-weight: 500;
+  margin-top: 4px;
+  border-top: 1px solid #f5f5f5;
+}
+
+.user-dropdown a:last-child:hover {
+  background-color: #fef2f2;
+  color: var(--red);
 }
 
 .user-dropdown a:hover {
@@ -3175,7 +3199,7 @@ input[type="checkbox"]:checked::after {
   color: var(--blue);
 }
 
-/* Sidebar móvil - User menu */
+/* Sidebar para desktop/tablet - User menu */
 .overlay {
   position: fixed;
   top: 0;
@@ -3231,6 +3255,8 @@ input[type="checkbox"]:checked::after {
 
 .sidebar-links {
   padding: 60px 0 20px 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-links a {
@@ -3271,26 +3297,27 @@ input[type="checkbox"]:checked::after {
   position: relative;
 }
 
-/* Mejoras responsive para el sidebar */
-@media (min-width: 768px) {
+/* Mejoras responsive para el menú de usuario */
+/* MÓVIL: Solo dropdown, NO sidebar */
+@media (max-width: 767px) {
   .overlay,
   .sidebar {
     display: none !important;
   }
+  
+  .user-dropdown {
+    display: flex !important;
+  }
 }
 
-@media (max-width: 767px) {
+/* TABLET Y DESKTOP: Solo sidebar, NO dropdown */
+@media (min-width: 768px) {
   .user-dropdown {
     display: none !important;
   }
   
+  .overlay,
   .sidebar {
-    width: 100%;
-    right: -100%;
+    display: block !important;
   }
-  
-  .sidebar.show {
-    right: 0;
-  }
-}
-}
+}}

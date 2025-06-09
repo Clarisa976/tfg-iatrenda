@@ -204,12 +204,10 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
             </a>
           )}
         </nav>
-      </div>
-
-      {/* MENÚ DE USUARIO */}
+      </div>      {/* MENÚ DE USUARIO */}
       {userOpen && (
         <>
-          {/* dropdown desktop */}
+          {/* dropdown desktop/tablet */}
           <div ref={dropdownRef} className="user-dropdown">
             {userRole ? (
               <>
@@ -237,8 +235,8 @@ export default function Header({ user, onAccessClick, onReservarCita, onLogout }
           </div>
 
           {/* overlay + sidebar móvil */}
-          <div className="overlay show" onClick={() => setUserOpen(false)} />
-          <aside ref={sidebarRef} className="sidebar show">
+          <div className={`overlay ${userOpen ? 'show' : ''}`} onClick={() => setUserOpen(false)} />
+          <aside ref={sidebarRef} className={`sidebar ${userOpen ? 'show' : ''}`}>
             <button className="close-btn" onClick={() => setUserOpen(false)} aria-label="Cerrar">
               <X size={20} />
             </button>
