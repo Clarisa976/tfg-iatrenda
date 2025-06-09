@@ -532,50 +532,68 @@ class DocumentController
     }
 
     /* Eliminar documento */
-    public function deleteDocument($request, $response, $args)
-    {
-        try {
-            $documentId = $args['id'];
+public function deleteDocument($request, $response, $args)
+{
+    try {
+        $documentId = $args['id'];
 
-            // Obtener documento de la base de datos
-            $document = $this->getDocumentFromDatabase($documentId);
+        // Obtener documento de la base de datos
+        $document = $this->getDocumentFromDatabase($documentId);
 
-            if (!$document) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'Documento no encontrado'
-                ], 404);
-            }
-
-            // Eliminar de S3
-            $deleteResult = $this->s3Service->deleteFile($document['ruta']);
-
-            if (!$deleteResult['success']) {
-                error_log('S3 delete error for document ' . $documentId . ': ' . $deleteResult['error']);
-            }
-
-            // Eliminar de base de datos
-            $deleted = $this->deleteDocumentFromDatabase($documentId);
-
-            if (!$deleted) {
-                return $this->jsonResponse($response, [
-                    'ok' => false,
-                    'mensaje' => 'Error al eliminar el documento de la base de datos'
-                ], 500);
-            }
-
-            return $this->jsonResponse($response, [
-                'ok' => true,
-                'mensaje' => 'Documento eliminado correctamente'
-            ]);
-        } catch (\Exception $e) {
-            error_log('Error deleting S3 document: ' . $e->getMessage());
+        if (!$document) {
             return $this->jsonResponse($response, [
                 'ok' => false,
-                'mensaje' => 'Error interno del servidor'
+                'mensaje' => 'Documento no encontrado'
+            ], 404);
+        }
+
+        error_log("Eliminando documento ID: $documentId, S3 key: " . $document['ruta']);
+
+        // 1. PRIMERO eliminar de S3
+        $deleteResult = $this->s3Service->deleteFile($document['ruta']);
+
+        if (!$deleteResult['success']) {
+            error_log('Error eliminando de S3: ' . $deleteResult['error']);
+            // Continuar con BD aunque falle S3
+        } else {
+            error_log('Archivo eliminado de S3 exitosamente');
+        }
+
+        // 2. DESPUÉS eliminar de base de datos
+        $deleted = $this->deleteDocumentFromDatabase($documentId);
+
+        if (!$deleted) {
+            return $this->jsonResponse($response, [
+                'ok' => false,
+                'mensaje' => 'Error al eliminar el documento de la base de datos'
             ], 500);
         }
+
+        // 3. Registrar actividad
+        registrarActividad(
+            $_SESSION['user_id'] ?? 0,
+            null,
+            'documento_clinico',
+            'DELETE',
+            json_encode(['id_documento' => $documentId, 'archivo' => $document['nombre_archivo']]),
+            null
+        );
+
+        error_log("Documento $documentId eliminado exitosamente");
+
+        return $this->jsonResponse($response, [
+            'ok' => true,
+            'mensaje' => 'Documento eliminado correctamente'
+        ]);
+    } catch (\Exception $e) {
+        error_log('Error deleting document: ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+        return $this->jsonResponse($response, [
+            'ok' => false,
+            'mensaje' => 'Error interno del servidor: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /* Health check para S3 */
     public function healthCheck($request, $response)

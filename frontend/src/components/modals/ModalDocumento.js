@@ -20,25 +20,30 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
   const [diagErr, setDiagErr] = useState('');
   const [updating, setUpdating] = useState(false);
 
+  // Determinar si es imagen
   const isImage = (filename) => {
     if (!filename) return false;
     const extension = filename.toLowerCase().split('.').pop();
     return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension);
   };
 
-
+  // Obtener URL firmada del documento
   const fetchUrl = useCallback(async () => {
     setLoadingUrl(true);
     setUrlErr('');
     
     try {
+      console.log('Obteniendo URL para documento ID:', doc.id_documento);
+      
       const res = await axios.get(
         `${API}/api/s3/documentos/${doc.id_documento}/url`,
         { 
           headers: { Authorization: `Bearer ${tk}` },
-          timeout: 10000
+          timeout: 15000
         }
       );
+      
+      console.log('Respuesta URL:', res.data);
       
       if (res.data.ok && res.data.url) {
         setUrl(res.data.url);
@@ -47,8 +52,20 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
         throw new Error(res.data.mensaje || 'Error al obtener URL del documento');
       }
     } catch (e) {
-      console.error('Error fetching document URL:', e);
-      const errorMsg = e.response?.data?.mensaje || e.message || 'No se pudo cargar el archivo';
+      console.error('Error obteniendo URL:', e);
+      
+      let errorMsg = 'No se pudo obtener la URL del archivo';
+      
+      if (e.response?.status === 404) {
+        errorMsg = 'Documento no encontrado en el servidor';
+      } else if (e.response?.status === 401) {
+        errorMsg = 'No autorizado para acceder al documento';
+      } else if (e.response?.data?.mensaje) {
+        errorMsg = e.response.data.mensaje;
+      } else if (e.code === 'ECONNABORTED') {
+        errorMsg = 'Tiempo de espera agotado';
+      }
+      
       setUrlErr(errorMsg);
     } finally {
       setLoadingUrl(false);
@@ -59,35 +76,52 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
     fetchUrl();
   }, [fetchUrl]);
 
-  // Manejar eliminación del documento
+  // Eliminar documento COMPLETO (S3 + BD)
   const handleDelete = async () => {
     setDeleting(true);
     setDelErr('');
     
     try {
+      console.log('Eliminando documento ID:', doc.id_documento);
+      
       const res = await axios.delete(
         `${API}/api/s3/documentos/${doc.id_documento}`,
         { 
           headers: { Authorization: `Bearer ${tk}` },
-          timeout: 15000
+          timeout: 30000 // 30 segundos para eliminación
         }
       );
       
+      console.log('Respuesta eliminación:', res.data);
+      
       if (res.data.ok) {
+        console.log('Documento eliminado exitosamente');
         if (onChange) onChange();
         onClose();
       } else {
         throw new Error(res.data.mensaje || 'Error al eliminar documento');
       }
     } catch (e) {
-      console.error('Error deleting document:', e);
-      const errorMsg = e.response?.data?.mensaje || e.message || 'Error al eliminar el documento';
+      console.error('Error eliminando documento:', e);
+      
+      let errorMsg = 'Error al eliminar el documento';
+      
+      if (e.response?.status === 404) {
+        errorMsg = 'Documento no encontrado';
+      } else if (e.response?.status === 401) {
+        errorMsg = 'No autorizado para eliminar este documento';
+      } else if (e.response?.data?.mensaje) {
+        errorMsg = e.response.data.mensaje;
+      } else if (e.code === 'ECONNABORTED') {
+        errorMsg = 'Tiempo de espera agotado al eliminar';
+      }
+      
       setDelErr(errorMsg);
       setDeleting(false);
     }
   };
 
-  // Guardar diagnóstico final al historial
+  // Guardar diagnóstico final en historial
   const saveDiagnostico = async () => {
     const diagnosticoTrimmed = diagnosticoFinal.trim();
     
@@ -100,27 +134,44 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
     setDiagErr('');
     
     try {
-      // Actualizar el historial, no el documento
+      console.log('Guardando diagnóstico para historial ID:', doc.id_historial);
+      
       const res = await axios.put(
-        `${API}/api/s3/historial/${doc.id_historial}/diagnosticos`,
+        `${API}/historial/${doc.id_historial}/diagnostico`,
         { diagnostico_final: diagnosticoTrimmed },
         { 
-          headers: { Authorization: `Bearer ${tk}` },
+          headers: { 
+            'Authorization': `Bearer ${tk}`,
+            'Content-Type': 'application/json'
+          },
           timeout: 10000
         }
       );
       
+      console.log('Respuesta diagnóstico:', res.data);
+      
       if (res.data.ok) {
         setEditMode(false);
-        // Actualizar el objeto local
+        // Actualizar el documento local
         doc.diagnostico_final = diagnosticoTrimmed;
         if (onChange) onChange();
+        console.log('Diagnóstico guardado exitosamente');
       } else {
         throw new Error(res.data.mensaje || 'Error al guardar diagnóstico');
       }
     } catch (e) {
-      console.error('Error saving diagnosis:', e);
-      const errorMsg = e.response?.data?.mensaje || e.message || 'Error al guardar el diagnóstico';
+      console.error('Error guardando diagnóstico:', e);
+      
+      let errorMsg = 'Error al guardar el diagnóstico';
+      
+      if (e.response?.status === 404) {
+        errorMsg = 'Historial clínico no encontrado';
+      } else if (e.response?.status === 401) {
+        errorMsg = 'No autorizado para modificar este historial';
+      } else if (e.response?.data?.mensaje) {
+        errorMsg = e.response.data.mensaje;
+      }
+      
       setDiagErr(errorMsg);
     } finally {
       setUpdating(false);
@@ -258,29 +309,41 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
             <div className="documento-preview">
               <h4>Archivo</h4>
               {loadingUrl ? (
-                <div className="documento-loading">Cargando archivo...</div>
+                <div className="documento-loading">Obteniendo archivo...</div>
               ) : url ? (
                 isImage(doc.nombre_archivo) ? (
-                  <img 
-                    src={url} 
-                    alt={doc.nombre_archivo} 
-                    className="documento-imagen"
-                    onError={() => setUrlErr('Error al cargar la imagen')}
-                  />
+                  <div className="image-container">
+                    <img 
+                      src={url} 
+                      alt={doc.nombre_archivo} 
+                      className="documento-imagen"
+                      onError={() => setUrlErr('Error al cargar la imagen')}
+                    />
+                  </div>
                 ) : (
-                  <a
-                    href={url}
-                    download={doc.nombre_archivo}
-                    className="documento-descarga-archivo"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Descargar {doc.nombre_archivo}
-                  </a>
+                  <div className="file-link-container">
+                    <a
+                      href={url}
+                      download={doc.nombre_archivo}
+                      className="documento-descarga-archivo"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Descargar {doc.nombre_archivo}
+                    </a>
+                  </div>
                 )
               ) : (
                 <div className="documento-error">
-                  {urlErr || 'No se pudo cargar el archivo'}
+                  <p>⚠️ {urlErr}</p>
+                  <p><small>Archivo: {doc.nombre_archivo}</small></p>
+                  <button 
+                    className="btn-retry" 
+                    onClick={fetchUrl}
+                    disabled={loadingUrl}
+                  >
+                    Reintentar
+                  </button>
                 </div>
               )}
             </div>
@@ -311,6 +374,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
             </div>
             <div className="modal-body">
               <p>¿Está seguro de que desea eliminar <strong>{doc.nombre_archivo}</strong>?</p>
+              <p className="warning-text">Se eliminará tanto de la base de datos como del almacenamiento en la nube.</p>
               <p className="warning-text">Esta acción no se puede deshacer.</p>
               {delErr && <div className="error-eliminacion-container">{delErr}</div>}
             </div>
@@ -327,7 +391,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
                 onClick={handleDelete}
                 disabled={deleting}
               >
-                {deleting ? 'Eliminando...' : 'Eliminar'}
+                {deleting ? 'Eliminando...' : 'Eliminar definitivamente'}
               </button>
             </div>
           </div>

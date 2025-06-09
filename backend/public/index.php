@@ -1402,7 +1402,35 @@ $app->put('/api/s3/historial/{historial_id}/diagnosticos', function (Request $re
         return jsonResponse(['ok'=>false,'mensaje'=>'Error interno'], 500);
     }
 });
-
+/* Actualizar diagnóstico final del historial */
+$app->put('/historial/{historial_id}/diagnostico', function ($req, $res, $args) {
+    $val = verificarTokenUsuario();
+    if (!$val) return jsonResponse(['ok'=>false,'mensaje'=>'No autorizado'], 401);
+    
+    $historialId = (int)$args['historial_id'];
+    $data = $req->getParsedBody() ?? [];
+    
+    if (!isset($data['diagnostico_final'])) {
+        return jsonResponse(['ok'=>false,'mensaje'=>'Diagnóstico final requerido'], 400);
+    }
+    
+    try {
+        $baseDatos = conectar();
+        $sql = "UPDATE historial_clinico SET diagnostico_final = ? WHERE id_historial = ?";
+        $stmt = $baseDatos->prepare($sql);
+        $success = $stmt->execute([trim($data['diagnostico_final']), $historialId]);
+        
+        if ($success && $stmt->rowCount() > 0) {
+            error_log("Diagnóstico actualizado para historial $historialId");
+            return jsonResponse(['ok'=>true, 'mensaje'=>'Diagnóstico guardado correctamente']);
+        } else {
+            return jsonResponse(['ok'=>false,'mensaje'=>'Historial no encontrado'], 404);
+        }
+    } catch (Exception $e) {
+        error_log('Error updating diagnosis: ' . $e->getMessage());
+        return jsonResponse(['ok'=>false,'mensaje'=>'Error interno: ' . $e->getMessage()], 500);
+    }
+});
 //Subir documento (tratamiento o historial)
 $app->post('/api/s3/upload', function (Request $req, Response $res) {
     try {
