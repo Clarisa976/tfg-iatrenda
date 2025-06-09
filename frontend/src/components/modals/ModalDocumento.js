@@ -3,11 +3,6 @@ import { X } from 'lucide-react';
 import axios from 'axios';
 import '../../styles.css';
 
-const isImage = (filePath) => {
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-  return imageExtensions.some(ext => filePath.toLowerCase().includes(ext));
-};
-
 export default function ModalDocumento({ doc, onClose, onChange }) {
   const API = process.env.REACT_APP_API_URL;
   const tk  = localStorage.getItem('token');
@@ -20,9 +15,7 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
   const [diagError,        setDiagError]        = useState('');
   const [isUpdating,       setIsUpdating]       = useState(false);
   const [signedUrl,        setSignedUrl]        = useState(null);
-  const [imgError,         setImgError]         = useState(false);
-
-  const isDocImage = isImage(doc.ruta);
+  const [urlError,         setUrlError]         = useState('');
 
   const fetchSignedUrl = useCallback(async () => {
     try {
@@ -32,19 +25,19 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
       );
       if (res.data.ok) {
         setSignedUrl(res.data.url);
-        return res.data.url;
+        setUrlError('');
+        return;
       }
       throw new Error(res.data.mensaje);
     } catch (e) {
       console.error('Error fetching signed URL:', e);
-      setImgError(true);
-      return null;
+      setUrlError('No se pudo obtener la URL de descarga');
     }
   }, [API, doc.id_documento, tk]);
 
   useEffect(() => {
-    if (isDocImage) fetchSignedUrl();
-  }, [isDocImage, fetchSignedUrl]);
+    fetchSignedUrl();
+  }, [fetchSignedUrl]);
 
   const deleteDocument = async () => {
     setIsDeleting(true);
@@ -173,24 +166,22 @@ export default function ModalDocumento({ doc, onClose, onChange }) {
             </div>
 
             <div className="documento-preview">
-              <h4>Descargar fichero</h4>
+              <h4>Descargar archivo</h4>
               {signedUrl ? (
                 <a
                   href={signedUrl}
                   download={doc.nombre_archivo || 'documento'}
                   className="documento-descarga-archivo"
-                  target="_blank"
-                  rel="noreferrer"
+                  onClick={onClose}
                 >
-                  Descargar archivo
+                  Descargar
                 </a>
               ) : (
                 <button
-                  type="button"
                   className="documento-descarga-archivo loading"
                   onClick={fetchSignedUrl}
                 >
-                  Cargando…
+                  {urlError || 'Cargando...'}
                 </button>
               )}
             </div>
