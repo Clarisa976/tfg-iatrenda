@@ -1726,12 +1726,12 @@ input[type="checkbox"]:checked::after {
   font-weight: 600;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  color: var(--white);
+  color: var(--black);
 }
 
 .filtro-btn:nth-child(2) {
   background: #d9d9d9;
-  color: var(--white);
+  color: var(--black);
 }
 
 .filtro-btn.active {
