@@ -2042,8 +2042,8 @@ input[type="checkbox"]:checked::after {
 
 /* Contenedor específico del modal ver tarea */
 .modal-ver-tarea-container {
-  max-width: 900px !important;
-  width: 95% !important;
+  max-width: 650px !important;
+  width: 85% !important;
   max-height: 90vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -3434,8 +3434,8 @@ input[type="checkbox"]:checked::after {
 
 /* Contenedor específico del modal ver tarea */
 .modal-ver-tarea-container {
-  max-width: 900px !important;
-  width: 95% !important;
+  max-width: 650px !important;
+  width: 85% !important;
   max-height: 90vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -3611,7 +3611,7 @@ input[type="checkbox"]:checked::after {
 /* Estilos específicos para modal de reservar citas */
 .modal-reservar-cita {
   max-width: 450px !important;
-  width: 95% !important;
+  width: 85% !important;
   padding: 1.5rem !important;
   max-height: 90vh !important;
   overflow-y: auto !important;
@@ -5030,8 +5030,8 @@ input[type="checkbox"]:checked::after {
 
 /* Contenedor específico del modal ver tarea */
 .modal-ver-tarea-container {
-  max-width: 900px !important;
-  width: 95% !important;
+  max-width: 650px !important;
+  width: 85% !important;
   max-height: 90vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -5458,15 +5458,16 @@ input[type="checkbox"]:checked::after {
 /* COOKIES RESPONSIVE */
 @media (min-width: 768px) {
   .cookie-banner {
-    flex-direction: row;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
     padding: 1rem 2rem;
+    gap: 2rem;
   }
 
   .cookie-text {
-    flex: 1;
-    text-align: left;
+    flex: 0 0 auto;
+    text-align: center;
   }
 
   .cookie-buttons {
@@ -5977,254 +5978,143 @@ input[type="checkbox"]:checked::after {
   
 
 /* ========================================
-         TABLAS DEL PERFIL PACIENTE 
+   TABLAS DEL PERFIL PACIENTE - LIMPIAS
 ======================================== */
 
-/* Tabla principal con estilo moderno */
+/* Tabla básica limpia */
 .perfil-paciente-profesional-container .table {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  overflow: hidden;
-  background: white;
-  margin-bottom: 2rem;
-  border: none !important;
-}
-
-/* Header de la tabla más atractivo */
-.perfil-paciente-profesional-container .table thead th {
-  background: linear-gradient(135deg, #2f80ed 0%, #1e6bb8 100%);
-  color: white;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.85rem;
-  letter-spacing: 0.5px;
-  padding: 1rem 1.2rem;
-  border: none;
-  position: relative;
-}
-
-.perfil-paciente-profesional-container .table thead th:first-child {
-  border-top-left-radius: 12px;
-}
-
-.perfil-paciente-profesional-container .table thead th:last-child {
-  border-top-right-radius: 12px;
-}
-
-/* Efecto brillante en headers */
-.perfil-paciente-profesional-container .table thead th::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
   width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  animation: shine 3s infinite;
+  border-collapse: collapse;
+  background: white;
+  margin-bottom: 1.5rem;
+  border: 1px solid #dee2e6;
 }
 
-@keyframes shine {
-  0% { left: -100%; }
-  100% { left: 100%; }
+/* Headers normales */
+.perfil-paciente-profesional-container .table thead th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
 }
 
-/* Filas con hover bonito */
-.perfil-paciente-profesional-container .table tbody tr {
-  transition: all 0.3s ease;
-  border: none;
-  animation: fadeInUp 0.5s ease-out;
-}
-
-.perfil-paciente-profesional-container .table tbody tr:nth-child(even) {
-  animation-delay: 0.1s;
-}
-
-.perfil-paciente-profesional-container .table tbody tr:nth-child(odd) {
-  animation-delay: 0.2s;
-}
-
-.perfil-paciente-profesional-container .table tbody tr:hover {
-  background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(47, 128, 237, 0.15);
-}
-
-/* Celdas con mejor espaciado */
+/* Celdas normales */
 .perfil-paciente-profesional-container .table tbody td {
-  padding: 1.2rem 1.2rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid #dee2e6;
   vertical-align: middle;
-  border: none;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 0.95rem;
   color: #333;
 }
 
-.perfil-paciente-profesional-container .table tbody tr:last-child td {
-  border-bottom: none;
+/* Filas alternas simples */
+.perfil-paciente-profesional-container .table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
 }
 
-/* Badges más chulos */
+/* Hover simple */
+.perfil-paciente-profesional-container .table tbody tr:hover {
+  background-color: #f0f8ff;
+}
+
+/* Badges normales sin gradientes */
 .perfil-paciente-profesional-container .badge {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
   font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
-.perfil-paciente-profesional-container .badge:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Gradientes para badges */
 .perfil-paciente-profesional-container .badge-success {
-  background: linear-gradient(135deg, #27ae60 0%, #1e8e3e 100%);
-  color: white;
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
 }
 
 .perfil-paciente-profesional-container .badge-warning {
-  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-  color: white;
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
 }
 
 .perfil-paciente-profesional-container .badge-info {
-  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-  color: white;
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
 }
 
 .perfil-paciente-profesional-container .badge-secondary {
-  background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
-  color: white;
+  background-color: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
 }
 
-/* Iconos con animaciones */
-.perfil-paciente-profesional-container .badge svg {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-
-/* Botones más atractivos */
+/* Botones normales */
 .perfil-paciente-profesional-container .btn-sm {
-  padding: 0.6rem 1.2rem;
-  border-radius: 25px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: all 0.3s ease;
-  border: none;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-weight: 400;
+  cursor: pointer;
 }
 
 .perfil-paciente-profesional-container .btn-primary {
-  background: linear-gradient(135deg, #2f80ed 0%, #1e6bb8 100%);
+  background-color: var(--blue);
+  border-color: var(--blue);
   color: white;
 }
 
 .perfil-paciente-profesional-container .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(47, 128, 237, 0.3);
-  background: linear-gradient(135deg, #1e6bb8 0%, #2f80ed 100%);
+  background-color: #1e6bb8;
+  border-color: #1e6bb8;
+  color: white;
+  text-decoration: none;
 }
 
-/* Paginación con estilo */
+/* Paginación normal */
 .perfil-paciente-profesional-container .pagination {
-  margin: 2rem 0;
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
 }
 
 .perfil-paciente-profesional-container .page-link {
-  border: none;
-  padding: 0.75rem 1rem;
-  margin: 0 0.25rem;
-  border-radius: 50px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  color: #2f80ed;
-  background: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  color: var(--blue);
+  text-decoration: none;
+  background-color: white;
 }
 
 .perfil-paciente-profesional-container .page-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(47, 128, 237, 0.2);
-  background: linear-gradient(135deg, #2f80ed 0%, #1e6bb8 100%);
-  color: white;
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+  color: #1e6bb8;
+  text-decoration: none;
 }
 
 .perfil-paciente-profesional-container .page-item.active .page-link {
-  background: linear-gradient(135deg, #2f80ed 0%, #1e6bb8 100%);
+  background-color: var(--blue);
+  border-color: var(--blue);
   color: white;
-  transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(47, 128, 237, 0.3);
 }
 
 .perfil-paciente-profesional-container .page-item.disabled .page-link {
-  background: #f8f9fa;
   color: #6c757d;
-  box-shadow: none;
-  opacity: 0.6;
+  background-color: white;
+  border-color: #dee2e6;
 }
 
-/* Animaciones suaves */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Estilo para cuando no hay datos */
+/* Mensaje sin datos normal */
 .perfil-paciente-profesional-container p {
   text-align: center;
   color: #6c757d;
   font-style: italic;
   padding: 2rem;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
   margin: 1rem 0;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .perfil-paciente-profesional-container .table {
-    border-radius: 8px;
-  }
-  
-  .perfil-paciente-profesional-container .table thead th {
-    padding: 0.8rem 0.6rem;
-    font-size: 0.75rem;
-  }
-  
-  .perfil-paciente-profesional-container .table tbody td {
-    padding: 1rem 0.6rem;
-    font-size: 0.85rem;
-  }
-  
-  .perfil-paciente-profesional-container .badge {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.7rem;
-  }
-  
-  .perfil-paciente-profesional-container .btn-sm {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.75rem;
-  }
-  
-  .perfil-paciente-profesional-container .page-link {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
-  }
 }
