@@ -6,7 +6,6 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
 
-// Capturar cualquier output buffering early
 ob_start();
 
 error_log("=== API INICIANDO ===");
@@ -16,7 +15,6 @@ error_log("REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'UNKNOWN'));
 require __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/funciones_CTES_servicios.php';
 
-//error_log("=== ARCHIVOS CARGADOS ===");
 
 /* Permitir CORS */
 header('Access-Control-Allow-Origin: https://clinica-petaka.netlify.app');
@@ -1786,7 +1784,7 @@ $app->post('/prof/citas/{id}/accion', function (Request $req, Response $res, arr
 });
 
 
-// ========== RUTAS DE BACKUP ==========
+// -------- RUTAS DE BACKUP --------
 
 /* crear backup manual para admins */
 $app->post('/admin/backup/create', function ($req) {
@@ -1871,7 +1869,7 @@ $app->post('/admin/backup/cleanup', function ($req) {
     }
 });
 
-/* ===== RUTAS PARA CRON AUTOMÁTICO ===== */
+/* ------ RUTAS PARA CRON AUTOMÁTICO ------ */
 
 // Ruta única que acepta GET y POST para máxima compatibilidad
 $app->map(['GET', 'POST'], '/cron/backup/run', function ($req) {

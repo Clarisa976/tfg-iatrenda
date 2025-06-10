@@ -110,7 +110,7 @@ export const useS3Documents = (documentos) => {
           link.click();
         }
       } catch {
-        // Fallback: usar el enlace directo
+        // Fallback
         link.click();
       }
 

@@ -5,6 +5,7 @@ import { CheckCircle, X, XCircle, EllipsisVertical, Paperclip } from 'lucide-rea
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { setHours, setMinutes } from 'date-fns';
 import es from 'date-fns/locale/es';
+import { Table, Pagination, PaginationItem, PaginationLink, Badge, Button } from 'reactstrap';
 
 import '../../styles.css';
 
@@ -261,6 +262,10 @@ export default function PerfilPacienteProfesional() {
   const [selDoc, setSelDoc] = useState(null);
   const [selT, setSelT] = useState(null);
   const [toast, setToast] = useState({ show: false, ok: true, t: '', m: '' });
+  // Estados para paginación de documentos y tareas
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageTareas, setCurrentPageTareas] = useState(1);
+  const itemsPerPage = 10;
 
   const [pPer, setPPer] = useState({});
   const [pPac, setPPac] = useState({});
@@ -306,12 +311,16 @@ export default function PerfilPacienteProfesional() {
         console.warn('Error cargando desde S3, usando datos originales:', s3Error);
       }
 
-      console.log('Patient data updated:', d);
-      setData(d);
+      console.log('Patient data updated:', d);      setData(d);
       setPPer(d.persona || {});
       setPPac(d.paciente || {});
       setPTut(d.tutor || {});
       setRgpd(d.consentimiento_activo || false);
+      
+      // Resetear paginación cuando se actualicen los datos
+      setCurrentPage(1);
+      setCurrentPageTareas(1);
+      
       if (r.data.token) localStorage.setItem('token', r.data.token);
     } catch (e) {
       console.error(e);
@@ -407,27 +416,116 @@ export default function PerfilPacienteProfesional() {
       </div>
     </>
   );
-
   const Trat = (
     <>
       <h4>Tareas</h4>
       {(data.tratamientos || []).length === 0
         ? <p>No hay tareas aún.</p>
-        : <ul className="lista-simple tratamientos-lista">
-          {data.tratamientos.map(t => (
-            <li key={t.id_tratamiento}
-              className="tratamiento-item"
-              onClick={() => setSelT(t)}>
-              <h5>{t.titulo || 'Sin título'}</h5>
-              <p>{t.notas?.substring(0, 120) || 'Sin descripción'}</p>
-              {t.documentos && t.documentos.length > 0 && (
-                <span className="badge-archivo">
-                  <Paperclip size={14} style={{ marginRight: '4px' }} /> {t.documentos.length} archivo{t.documentos.length > 1 ? 's' : ''}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>}
+        : <>
+          {/* Tabla de tareas */}
+          <Table striped hover responsive>
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Descripción</th>
+                <th>Archivos</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const indexOfLastItem = currentPageTareas * itemsPerPage;
+                const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                const currentItems = data.tratamientos.slice(indexOfFirstItem, indexOfLastItem);
+                
+                return currentItems.map(t => (
+                  <tr key={t.id_tratamiento}>
+                    <td>{t.titulo || 'Sin título'}</td>
+                    <td>{t.notas ? (t.notas.length > 100 ? t.notas.substring(0, 100) + '...' : t.notas) : 'Sin descripción'}</td>
+                    <td>
+                      {t.documentos && t.documentos.length > 0 ? (
+                        <Badge color="info">
+                          <Paperclip size={14} style={{ marginRight: '4px' }} />
+                          {t.documentos.length} archivo{t.documentos.length > 1 ? 's' : ''}
+                        </Badge>
+                      ) : (
+                        <Badge color="secondary">Sin archivos</Badge>
+                      )}
+                    </td>
+                    <td>
+                      <Button 
+                        color="primary" 
+                        size="sm"
+                        onClick={() => setSelT(t)}
+                      >
+                        Ver tarea
+                      </Button>
+                    </td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+          </Table>
+          
+          {/* Paginación para tareas */}
+          {data.tratamientos.length > itemsPerPage && (
+            <div className="d-flex justify-content-center mt-3">
+              <Pagination>
+                <PaginationItem disabled={currentPageTareas === 1}>
+                  <PaginationLink 
+                    first 
+                    onClick={() => setCurrentPageTareas(1)}
+                  />
+                </PaginationItem>
+                <PaginationItem disabled={currentPageTareas === 1}>
+                  <PaginationLink 
+                    previous 
+                    onClick={() => setCurrentPageTareas(currentPageTareas - 1)}
+                  />
+                </PaginationItem>
+                
+                {(() => {
+                  const totalPages = Math.ceil(data.tratamientos.length / itemsPerPage);
+                  const pages = [];
+                  
+                  // Mostrar máximo 5 páginas
+                  let startPage = Math.max(1, currentPageTareas - 2);
+                  let endPage = Math.min(totalPages, startPage + 4);
+                  
+                  if (endPage - startPage < 4) {
+                    startPage = Math.max(1, endPage - 4);
+                  }
+                  
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(
+                      <PaginationItem key={i} active={i === currentPageTareas}>
+                        <PaginationLink onClick={() => setCurrentPageTareas(i)}>
+                          {i}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  
+                  return pages;
+                })()}
+                
+                <PaginationItem disabled={currentPageTareas === Math.ceil(data.tratamientos.length / itemsPerPage)}>
+                  <PaginationLink 
+                    next 
+                    onClick={() => setCurrentPageTareas(currentPageTareas + 1)}
+                  />
+                </PaginationItem>
+                <PaginationItem disabled={currentPageTareas === Math.ceil(data.tratamientos.length / itemsPerPage)}>
+                  <PaginationLink 
+                    last 
+                    onClick={() => setCurrentPageTareas(Math.ceil(data.tratamientos.length / itemsPerPage))}
+                  />
+                </PaginationItem>
+              </Pagination>
+            </div>
+          )}
+        </>
+      }
       <SubirTratamiento onDone={fetchData} idPaciente={id} />
       {selT && (
         <ModalTratamiento idPac={id} treat={selT}
@@ -436,32 +534,113 @@ export default function PerfilPacienteProfesional() {
       )}
     </>
   );
-
   const Docs = (
     <>
       <h4>Documentos en historial</h4>
       {(data.documentos || []).length === 0
         ? <p>No hay documentos.</p>
-        : <div className="documentos-grid">
-          {data.documentos.map(d => (
-            <div key={d.id_documento} className="documento-card" onClick={() => setSelDoc(d)}>
-              <div className="documento-cabecera">
-                <div className="documento-titulo">
-                  {d.diagnostico_preliminar ? d.diagnostico_preliminar : 'Documento sin diagnóstico'}
-                </div>
-                <div className="documento-fecha">
-                  {d.fecha_subida ? new Date(d.fecha_subida).toLocaleDateString() : ''}
-                </div>
-              </div>
-              <div className="documento-footer">
-                {d.diagnostico_final ?
-                  <span className="diagnostico-completo">Diagnóstico final disponible</span> :
-                  <span className="diagnostico-pendiente">Diagnóstico final pendiente</span>
-                }
-              </div>
+        : <>
+          {/* Tabla de documentos */}
+          <Table striped hover responsive>
+            <thead>
+              <tr>
+                <th>Diagnóstico</th>
+                <th>Fecha subida</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const indexOfLastItem = currentPage * itemsPerPage;
+                const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                const currentItems = data.documentos.slice(indexOfFirstItem, indexOfLastItem);
+                
+                return currentItems.map(d => (
+                  <tr key={d.id_documento}>
+                    <td>{d.diagnostico_preliminar || 'Sin diagnóstico'}</td>
+                    <td>{d.fecha_subida ? new Date(d.fecha_subida).toLocaleDateString() : 'Sin fecha'}</td>
+                    <td>
+                      {d.diagnostico_final ? (
+                        <Badge color="success">Completo</Badge>
+                      ) : (
+                        <Badge color="warning">Pendiente</Badge>
+                      )}
+                    </td>
+                    <td>
+                      <Button 
+                        color="primary" 
+                        size="sm"
+                        onClick={() => setSelDoc(d)}
+                      >
+                        Ver documento
+                      </Button>
+                    </td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+          </Table>
+          
+          {/* Paginación */}
+          {data.documentos.length > itemsPerPage && (
+            <div className="d-flex justify-content-center mt-3">
+              <Pagination>
+                <PaginationItem disabled={currentPage === 1}>
+                  <PaginationLink 
+                    first 
+                    onClick={() => setCurrentPage(1)}
+                  />
+                </PaginationItem>
+                <PaginationItem disabled={currentPage === 1}>
+                  <PaginationLink 
+                    previous 
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                  />
+                </PaginationItem>
+                
+                {(() => {
+                  const totalPages = Math.ceil(data.documentos.length / itemsPerPage);
+                  const pages = [];
+                  
+                  // Mostrar máximo 5 páginas
+                  let startPage = Math.max(1, currentPage - 2);
+                  let endPage = Math.min(totalPages, startPage + 4);
+                  
+                  if (endPage - startPage < 4) {
+                    startPage = Math.max(1, endPage - 4);
+                  }
+                  
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(
+                      <PaginationItem key={i} active={i === currentPage}>
+                        <PaginationLink onClick={() => setCurrentPage(i)}>
+                          {i}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  
+                  return pages;
+                })()}
+                
+                <PaginationItem disabled={currentPage === Math.ceil(data.documentos.length / itemsPerPage)}>
+                  <PaginationLink 
+                    next 
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                  />
+                </PaginationItem>
+                <PaginationItem disabled={currentPage === Math.ceil(data.documentos.length / itemsPerPage)}>
+                  <PaginationLink 
+                    last 
+                    onClick={() => setCurrentPage(Math.ceil(data.documentos.length / itemsPerPage))}
+                  />
+                </PaginationItem>
+              </Pagination>
             </div>
-          ))}
-        </div>}
+          )}
+        </>
+      }
       <SubirDocumento onDone={fetchData} idPaciente={id} />
       {selDoc && (
         <ModalDocumento
@@ -865,11 +1044,10 @@ export default function PerfilPacienteProfesional() {
 
   return (
     <div className="usuarios-container perfil-paciente-profesional-container">
-      <h2 className="usuarios-title">{pPer.nombre} {pPer.apellido1}</h2>
-      <div className="tab-bar">
+      <h2 className="usuarios-title">{pPer.nombre} {pPer.apellido1}</h2>      <div className="tab-bar">
         <TabBtn label="Perfil" sel={tab === 'perfil'} onClick={() => setTab('perfil')} />
-        <TabBtn label="Tareas" sel={tab === 'trat'} onClick={() => setTab('trat')} />
-        <TabBtn label="Historial" sel={tab === 'docs'} onClick={() => setTab('docs')} />
+        <TabBtn label="Tareas" sel={tab === 'trat'} onClick={() => { setTab('trat'); setCurrentPageTareas(1); }} />
+        <TabBtn label="Historial" sel={tab === 'docs'} onClick={() => { setTab('docs'); setCurrentPage(1); }} />
         <TabBtn label="Citas" sel={tab === 'citas'} onClick={() => setTab('citas')} />
       </div>
       <div className="modal-body">

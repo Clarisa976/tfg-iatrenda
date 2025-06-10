@@ -5312,7 +5312,7 @@ input[type="checkbox"]:checked::after {
 }
 
 /* ========================================
-   SLIDER DE TAREAS - TARJETAS SIMPLES
+   SLIDER DE TAREAS 
 ======================================== */
 
 /* Contenedor principal de tareas */
@@ -5336,7 +5336,7 @@ input[type="checkbox"]:checked::after {
   width: fit-content;
 }
 
-/* Tarjeta individual de tarea - SIMPLE Y LIMPIA */
+/* Tarjeta individual de tarea  */
 .tarea-slide-item {
   flex: 0 0 300px;
   background: white;
