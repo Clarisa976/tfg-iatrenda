@@ -3610,21 +3610,206 @@ input[type="checkbox"]:checked::after {
 }
 /* Estilos específicos para modal de reservar citas */
 .modal-reservar-cita {
-  max-width: 700px !important;
+  max-width: 450px !important;
   width: 95% !important;
+  padding: 1.5rem !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
 }
 
 @media (min-width: 768px) {
   .modal-reservar-cita {
-    max-width: 750px !important;
+    max-width: 500px !important;
     width: 90% !important;
+    padding: 2rem !important;
   }
 }
 
 @media (min-width: 1024px) {
   .modal-reservar-cita {
-    max-width: 800px !important;
+    max-width: 550px !important;
     width: 85% !important;
+  }
+}
+
+/* Centrar el calendario DatePicker en el modal */
+.modal-reservar-cita .react-datepicker {
+  margin: 0 auto !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 350px !important;
+}
+
+.modal-reservar-cita .react-datepicker__month-container {
+  margin: 0 auto !important;
+}
+
+/* Centrar el contenedor del campo de fecha */
+.modal-reservar-cita .field:has(.react-datepicker) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.modal-reservar-cita .field label {
+  align-self: flex-start !important;
+  width: 100% !important;
+  text-align: left !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Mejorar diseño de campos en el modal */
+.modal-reservar-cita .field {
+  margin-bottom: 1.2rem !important;
+}
+
+.modal-reservar-cita .field input,
+.modal-reservar-cita .field textarea {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Estilos base para el checkbox (todos los dispositivos) */
+.modal-reservar-cita .consent-line {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 0.75rem !important;
+  flex-wrap: nowrap !important;
+  margin-bottom: 1rem !important;
+}
+
+.modal-reservar-cita .consent-line input[type="checkbox"] {
+  flex-shrink: 0 !important;
+  margin-top: 0.1rem !important;
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  cursor: pointer !important;
+}
+
+.modal-reservar-cita .consent-line span {
+  flex: 1 !important;
+  font-size: 0.9rem !important;
+  line-height: 1.4 !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.modal-reservar-cita .consent-line span a {
+  color: #2f80ed !important;
+  text-decoration: underline !important;
+}
+
+/* Ajustes específicos para móviles */
+@media (max-width: 767px) {
+  .modal-reservar-cita {
+    padding: 1rem !important;
+    max-width: 380px !important;
+    width: 98% !important;
+  }
+  
+  /* Calendario más compacto en móvil */
+  .modal-reservar-cita .react-datepicker {
+    max-width: 280px !important;
+    font-size: 0.8rem !important;
+    transform: scale(0.85) !important;
+    transform-origin: center !important;
+  }
+  
+  .modal-reservar-cita .react-datepicker__month-container {
+    width: 280px !important;
+  }
+  
+  .modal-reservar-cita .react-datepicker__day {
+    width: 1.6rem !important;
+    height: 1.6rem !important;
+    line-height: 1.6rem !important;
+    margin: 0.03rem !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .modal-reservar-cita .react-datepicker__day-name {
+    width: 1.6rem !important;
+    font-size: 0.7rem !important;
+    margin: 0.03rem !important;
+  }
+  
+  .modal-reservar-cita .react-datepicker__time-list-item {
+    height: 26px !important;
+    padding: 3px 6px !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .modal-reservar-cita .react-datepicker__header {
+    padding: 6px 0 !important;
+    font-size: 0.85rem !important;
+  }
+  
+  .modal-reservar-cita .react-datepicker__current-month {
+    font-size: 0.85rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .modal-reservar-cita .react-datepicker__time-container {
+    width: 80px !important;
+  }
+  
+  .modal-reservar-cita .react-datepicker__time-list {
+    max-height: 120px !important;
+  }
+  
+  /* Checkbox más pequeño en móvil */
+  .modal-reservar-cita .consent-line {
+    gap: 0.5rem !important;
+  }
+  
+  .modal-reservar-cita .consent-line input[type="checkbox"] {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+  
+  .modal-reservar-cita .consent-line span {
+    font-size: 0.85rem !important;
+    line-height: 1.3 !important;
+  }
+}
+
+/* Ajustes para tablet */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .modal-reservar-cita .react-datepicker {
+    max-width: 320px !important;
+  }
+  
+  .modal-reservar-cita .consent-line {
+    gap: 0.8rem !important;
+  }
+  
+  .modal-reservar-cita .consent-line input[type="checkbox"] {
+    width: 1.1rem !important;
+    height: 1.1rem !important;
+  }
+  
+  .modal-reservar-cita .consent-line span {
+    font-size: 0.9rem !important;
+  }
+}
+
+/* Ajustes para escritorio */
+@media (min-width: 1024px) {
+  .modal-reservar-cita .react-datepicker {
+    max-width: 350px !important;
+  }
+  
+  .modal-reservar-cita .consent-line {
+    gap: 1rem !important;
+  }
+  
+  .modal-reservar-cita .consent-line input[type="checkbox"] {
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+  }
+  
+  .modal-reservar-cita .consent-line span {
+    font-size: 1rem !important;
   }
 }
 
@@ -5791,3 +5976,255 @@ input[type="checkbox"]:checked::after {
 }
   
 
+/* ========================================
+         TABLAS DEL PERFIL PACIENTE 
+======================================== */
+
+/* Tabla principal con estilo moderno */
+.perfil-paciente-profesional-container .table {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  margin-bottom: 2rem;
+  border: none !important;
+}
+
+/* Header de la tabla más atractivo */
+.perfil-paciente-profesional-container .table thead th {
+  background: linear-gradient(135deg, #2f80ed 0%, #1e6bb8 100%);
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 1rem 1.2rem;
+  border: none;
+  position: relative;
+}
+
+.perfil-paciente-profesional-container .table thead th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.perfil-paciente-profesional-container .table thead th:last-child {
+  border-top-right-radius: 12px;
+}
+
+/* Efecto brillante en headers */
+.perfil-paciente-profesional-container .table thead th::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Filas con hover bonito */
+.perfil-paciente-profesional-container .table tbody tr {
+  transition: all 0.3s ease;
+  border: none;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.perfil-paciente-profesional-container .table tbody tr:nth-child(even) {
+  animation-delay: 0.1s;
+}
+
+.perfil-paciente-profesional-container .table tbody tr:nth-child(odd) {
+  animation-delay: 0.2s;
+}
+
+.perfil-paciente-profesional-container .table tbody tr:hover {
+  background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(47, 128, 237, 0.15);
+}
+
+/* Celdas con mejor espaciado */
+.perfil-paciente-profesional-container .table tbody td {
+  padding: 1.2rem 1.2rem;
+  vertical-align: middle;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.perfil-paciente-profesional-container .table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badges más chulos */
+.perfil-paciente-profesional-container .badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.perfil-paciente-profesional-container .badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Gradientes para badges */
+.perfil-paciente-profesional-container .badge-success {
+  background: linear-gradient(135deg, #27ae60 0%, #1e8e3e 100%);
+  color: white;
+}
+
+.perfil-paciente-profesional-container .badge-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+  color: white;
+}
+
+.perfil-paciente-profesional-container .badge-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  color: white;
+}
+
+.perfil-paciente-profesional-container .badge-secondary {
+  background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+  color: white;
+}
+
+/* Iconos con animaciones */
+.perfil-paciente-profesional-container .badge svg {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Botones más atractivos */
+.perfil-paciente-profesional-container .btn-sm {
+  padding: 0.6rem 1.2rem;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.perfil-paciente-profesional-container .btn-primary {
+  background: linear-gradient(135deg, #2f80ed 0%, #1e6bb8 100%);
+  color: white;
+}
+
+.perfil-paciente-profesional-container .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(47, 128, 237, 0.3);
+  background: linear-gradient(135deg, #1e6bb8 0%, #2f80ed 100%);
+}
+
+/* Paginación con estilo */
+.perfil-paciente-profesional-container .pagination {
+  margin: 2rem 0;
+}
+
+.perfil-paciente-profesional-container .page-link {
+  border: none;
+  padding: 0.75rem 1rem;
+  margin: 0 0.25rem;
+  border-radius: 50px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  color: #2f80ed;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.perfil-paciente-profesional-container .page-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(47, 128, 237, 0.2);
+  background: linear-gradient(135deg, #2f80ed 0%, #1e6bb8 100%);
+  color: white;
+}
+
+.perfil-paciente-profesional-container .page-item.active .page-link {
+  background: linear-gradient(135deg, #2f80ed 0%, #1e6bb8 100%);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(47, 128, 237, 0.3);
+}
+
+.perfil-paciente-profesional-container .page-item.disabled .page-link {
+  background: #f8f9fa;
+  color: #6c757d;
+  box-shadow: none;
+  opacity: 0.6;
+}
+
+/* Animaciones suaves */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Estilo para cuando no hay datos */
+.perfil-paciente-profesional-container p {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  margin: 1rem 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .perfil-paciente-profesional-container .table {
+    border-radius: 8px;
+  }
+  
+  .perfil-paciente-profesional-container .table thead th {
+    padding: 0.8rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .perfil-paciente-profesional-container .table tbody td {
+    padding: 1rem 0.6rem;
+    font-size: 0.85rem;
+  }
+  
+  .perfil-paciente-profesional-container .badge {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+  
+  .perfil-paciente-profesional-container .btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+  }
+  
+  .perfil-paciente-profesional-container .page-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+}
