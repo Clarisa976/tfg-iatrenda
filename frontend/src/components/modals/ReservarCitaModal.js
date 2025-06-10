@@ -128,7 +128,7 @@ export default function ReservarCitaModal({ onClose, onSuccess, onError }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal modal-reservar-cita" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <h2 className="appt-title">Reserva tu cita</h2>
 

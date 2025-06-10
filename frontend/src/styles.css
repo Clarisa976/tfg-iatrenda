@@ -3608,6 +3608,26 @@ input[type="checkbox"]:checked::after {
     width: 100%;
   }
 }
+/* Estilos específicos para modal de reservar citas */
+.modal-reservar-cita {
+  max-width: 700px !important;
+  width: 95% !important;
+}
+
+@media (min-width: 768px) {
+  .modal-reservar-cita {
+    max-width: 750px !important;
+    width: 90% !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .modal-reservar-cita {
+    max-width: 800px !important;
+    width: 85% !important;
+  }
+}
+
 
 /* ========================================
    ELEMENTOS FLOTANTES Y OVERLAYS
