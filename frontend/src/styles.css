@@ -5755,8 +5755,8 @@ input[type="checkbox"]:checked::after {
 /* ========================================
    RESPONSIVE: FORMULARIOS EN MÓVIL
 ======================================== */
-/* MÓVIL (hasta 599px): Una columna para todos los formularios */
-@media (max-width: 599px) {
+/* MÓVILUna columna para todos los formularios */
+@media (max-width: 767px) {
   .form-grid {
     grid-template-columns: 1fr !important;
     gap: 0.75rem;
@@ -5775,4 +5775,19 @@ input[type="checkbox"]:checked::after {
   .field-wrapper {
     width: 100%;
   }
+  
+  /* Forzar todos los campos a una columna en modales y formularios */
+  .field.full {
+    grid-column: span 1 !important;
+  }
+  
+  /* Asegurar que los inputs ocupen todo el ancho disponible */
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
 }
+  
+
