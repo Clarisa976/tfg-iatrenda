@@ -927,7 +927,7 @@ h6 {
   margin-bottom: 0.25rem;
 }
 
-.field input,
+.field input:not([type="checkbox"]),
 .field select,
 .field textarea {
   width: 100%;
@@ -935,6 +935,11 @@ h6 {
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+.field input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
 }
 
 .field input:focus,
